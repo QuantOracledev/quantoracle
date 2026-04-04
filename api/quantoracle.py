@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 app = FastAPI(
     title="QuantOracle",
     version="2.0.0",
-    description="53 deterministic quant computation tools for autonomous agents. quantoracle.dev",
+    description="63 deterministic quant computation tools for autonomous agents. quantoracle.dev",
     docs_url="/docs",
     redoc_url=None,
 )
@@ -69,6 +69,18 @@ PRICES = {
     "stats/garch-forecast": 0.015, "derivatives/volatility-surface": 0.015,
     "derivatives/option-chain-analysis": 0.015, "fi/yield-curve-interpolate": 0.015,
     "stats/correlation-matrix": 0.015,
+    # Backtest support
+    "risk/transaction-cost": 0.005,
+    "stats/probabilistic-sharpe": 0.005,
+    # TVM + fundamentals
+    "tvm/present-value": 0.002,
+    "tvm/future-value": 0.002,
+    "tvm/irr": 0.005,
+    "tvm/npv": 0.002,
+    "stats/realized-volatility": 0.005,
+    "stats/normal-distribution": 0.002,
+    "stats/sharpe-ratio": 0.002,
+    "tvm/cagr": 0.002,
 }
 
 def hit(ep):
@@ -2399,12 +2411,395 @@ async def t53(req: T53In):
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# TOOL 54: TRANSACTION COST — $0.005
+# ══════════════════════════════════════════════════════════════════════════
+class T54In(BaseModel):
+    trade_value: float = Field(..., gt=0)
+    commission_per_share: float = 0
+    commission_flat: float = 0
+    commission_pct: float = 0
+    shares: int = Field(1, ge=1)
+    spread_bps: float = 5
+    market_impact_bps: float = 0
+    adv: Optional[float] = None  # average daily volume in dollars
+    participation_rate: float = 0.1
+
+@app.post("/v1/risk/transaction-cost", tags=["Risk"], dependencies=auth)
+async def t54(req: T54In):
+    """Transaction cost model: commission + spread + market impact estimation."""
+    t0 = time.perf_counter(); hit("risk/transaction-cost")
+    val = req.trade_value
+    # Commission
+    comm_ps = req.commission_per_share * req.shares
+    comm_flat = req.commission_flat
+    comm_pct = val * req.commission_pct / 100
+    total_commission = comm_ps + comm_flat + comm_pct
+    # Half-spread cost (you cross the bid-ask)
+    spread_cost = val * req.spread_bps / 10000 / 2
+    # Market impact — square-root model (Almgren et al.)
+    # Impact ≈ sigma * sqrt(Q / V) where Q = trade size, V = ADV
+    if req.adv and req.adv > 0:
+        participation = val / req.adv
+        # Simplified: impact_bps = 10 * sqrt(participation_rate)
+        impact_bps = 10 * math.sqrt(min(participation, 1))
+        market_impact = val * impact_bps / 10000
+    else:
+        market_impact = val * req.market_impact_bps / 10000
+    total_cost = total_commission + spread_cost + market_impact
+    cost_bps = total_cost / val * 10000 if val > 0 else 0
+    # Round-trip (buy + sell)
+    round_trip = total_cost * 2
+    # Breakeven move needed to profit
+    breakeven_pct = total_cost / val * 100 * 2  # need to overcome cost on both sides
+    return {
+        "total_cost": r4(total_cost), "cost_bps": r2(cost_bps),
+        "commission": r4(total_commission), "spread_cost": r4(spread_cost),
+        "market_impact": r4(market_impact),
+        "round_trip_cost": r4(round_trip), "round_trip_bps": r2(cost_bps * 2),
+        "breakeven_move_pct": r4(breakeven_pct),
+        "cost_as_pct": r4(total_cost / val * 100),
+        "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 55: PROBABILISTIC SHARPE RATIO — $0.005
+# ══════════════════════════════════════════════════════════════════════════
+class T55In(BaseModel):
+    returns: list[float] = Field(..., min_length=10)
+    benchmark_sharpe: float = 0
+    risk_free_rate: float = 0.05
+    annualization_factor: int = 252
+
+@app.post("/v1/stats/probabilistic-sharpe", tags=["Statistics"], dependencies=auth)
+async def t55(req: T55In):
+    """Probabilistic Sharpe Ratio — is the observed Sharpe statistically significant?
+    Based on Bailey & Lopez de Prado (2012)."""
+    t0 = time.perf_counter(); hit("stats/probabilistic-sharpe")
+    R = req.returns; n = len(R)
+    rf_daily = req.risk_free_rate / req.annualization_factor
+    excess = [r_val - rf_daily for r_val in R]
+    m = mu(excess); s = sd(excess)
+    sr_daily = m / s if s > 0 else 0
+    sr_annual = sr_daily * math.sqrt(req.annualization_factor)
+    # Skewness and kurtosis of returns
+    sk = sum(((r_val - m) / s) ** 3 for r_val in excess) * n / ((n - 1) * (n - 2)) if s > 0 and n > 2 else 0
+    ku = (sum(((r_val - m) / s) ** 4 for r_val in excess) * n * (n + 1) / ((n - 1) * (n - 2) * (n - 3)) - 3 * (n - 1) ** 2 / ((n - 2) * (n - 3))) if s > 0 and n > 3 else 0
+    # Standard error of Sharpe ratio (Lo 2002, adjusted for non-normality)
+    sr_ref = req.benchmark_sharpe / math.sqrt(req.annualization_factor)  # de-annualize benchmark
+    se_sr_var = (1 - sk * sr_daily + (ku / 4) * sr_daily ** 2) / (n - 1) if n > 1 else 1
+    se_sr = math.sqrt(max(0, se_sr_var)) if n > 1 else 1
+    # PSR = P(SR* > SR_benchmark) = Phi((SR - SR_benchmark) / SE(SR))
+    if se_sr > 0:
+        z_score = (sr_daily - sr_ref) / se_sr
+        psr = ncdf(z_score)
+    else:
+        psr = 0.5
+        z_score = 0
+    # Minimum track record length for 95% confidence
+    min_trl = ((1 - sk * sr_daily + (ku / 4) * sr_daily ** 2) / (sr_daily - sr_ref) ** 2) if abs(sr_daily - sr_ref) > 1e-10 else float('inf')
+    min_trl = max(0, min_trl) * (1.96 ** 2)  # For 95% confidence
+    return {
+        "probabilistic_sharpe_ratio": r4(psr),
+        "sharpe_ratio": r4(sr_annual),
+        "benchmark_sharpe": r4(req.benchmark_sharpe),
+        "z_score": r4(z_score),
+        "significant_at_95": psr > 0.95,
+        "significant_at_99": psr > 0.99,
+        "se_sharpe": r6(se_sr * math.sqrt(req.annualization_factor)),
+        "skewness": r4(sk), "excess_kurtosis": r4(ku),
+        "min_track_record_length": int(min(min_trl, 99999)) if min_trl != float('inf') else None,
+        "n": n, "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 56: PRESENT VALUE — $0.002
+# ══════════════════════════════════════════════════════════════════════════
+class T56In(BaseModel):
+    future_value: float = 0; payment: float = 0; rate: float = Field(..., gt=-1)
+    periods: int = Field(..., ge=1, le=1000)
+    payment_timing: Literal["end", "begin"] = "end"
+
+@app.post("/v1/tvm/present-value", tags=["TVM"], dependencies=auth)
+async def t56(req: T56In):
+    """Present value of a future lump sum and/or annuity stream."""
+    t0 = time.perf_counter(); hit("tvm/present-value")
+    r, n = req.rate, req.periods
+    if abs(r) < 1e-14:
+        pv_fv = req.future_value
+        pv_pmt = req.payment * n
+    else:
+        pv_fv = req.future_value / (1 + r) ** n
+        annuity_factor = (1 - (1 + r) ** -n) / r
+        if req.payment_timing == "begin":
+            annuity_factor *= (1 + r)
+        pv_pmt = req.payment * annuity_factor
+    total_pv = pv_fv + pv_pmt
+    return {
+        "present_value": r4(total_pv), "pv_of_lump_sum": r4(pv_fv),
+        "pv_of_annuity": r4(pv_pmt), "total_payments": r2(req.payment * n),
+        "discount_factor": r6(1 / (1 + r) ** n) if abs(r) > 1e-14 else 1.0,
+        "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 57: FUTURE VALUE — $0.002
+# ══════════════════════════════════════════════════════════════════════════
+class T57In(BaseModel):
+    present_value: float = 0; payment: float = 0; rate: float = Field(..., gt=-1)
+    periods: int = Field(..., ge=1, le=1000)
+    payment_timing: Literal["end", "begin"] = "end"
+
+@app.post("/v1/tvm/future-value", tags=["TVM"], dependencies=auth)
+async def t57(req: T57In):
+    """Future value of a present lump sum and/or annuity stream."""
+    t0 = time.perf_counter(); hit("tvm/future-value")
+    r, n = req.rate, req.periods
+    if abs(r) < 1e-14:
+        fv_pv = req.present_value
+        fv_pmt = req.payment * n
+    else:
+        fv_pv = req.present_value * (1 + r) ** n
+        annuity_factor = ((1 + r) ** n - 1) / r
+        if req.payment_timing == "begin":
+            annuity_factor *= (1 + r)
+        fv_pmt = req.payment * annuity_factor
+    total_fv = fv_pv + fv_pmt
+    return {
+        "future_value": r4(total_fv), "fv_of_lump_sum": r4(fv_pv),
+        "fv_of_annuity": r4(fv_pmt), "total_payments": r2(req.payment * n),
+        "growth_factor": r6((1 + r) ** n) if abs(r) > 1e-14 else 1.0,
+        "total_interest": r4(total_fv - req.present_value - req.payment * n),
+        "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 58: IRR — $0.005
+# ══════════════════════════════════════════════════════════════════════════
+class T58In(BaseModel):
+    cash_flows: list[float] = Field(..., min_length=2)
+
+@app.post("/v1/tvm/irr", tags=["TVM"], dependencies=auth)
+async def t58(req: T58In):
+    """Internal rate of return via Newton-Raphson. First cash flow is typically negative (investment)."""
+    t0 = time.perf_counter(); hit("tvm/irr")
+    cf = req.cash_flows; n = len(cf)
+    # Newton-Raphson
+    r = 0.1  # initial guess
+    for iteration in range(200):
+        npv = sum(cf[t] / (1 + r) ** t for t in range(n))
+        dnpv = sum(-t * cf[t] / (1 + r) ** (t + 1) for t in range(1, n))
+        if abs(dnpv) < 1e-14:
+            break
+        r_new = r - npv / dnpv
+        r_new = max(-0.99, min(r_new, 10))  # clamp to avoid divergence
+        if abs(r_new - r) < 1e-10:
+            r = r_new
+            break
+        r = r_new
+    npv_at_irr = sum(cf[t] / (1 + r) ** t for t in range(n))
+    total_invested = sum(c for c in cf if c < 0)
+    total_received = sum(c for c in cf if c > 0)
+    return {
+        "irr": r6(r), "irr_pct": r4(r * 100),
+        "npv_at_irr": r4(npv_at_irr),
+        "total_invested": r2(abs(total_invested)), "total_received": r2(total_received),
+        "profit_multiple": r4(total_received / abs(total_invested)) if total_invested != 0 else 0,
+        "periods": n - 1, "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 59: NPV — $0.002
+# ══════════════════════════════════════════════════════════════════════════
+class T59In(BaseModel):
+    cash_flows: list[float] = Field(..., min_length=1)
+    discount_rate: float = Field(..., gt=-1)
+
+@app.post("/v1/tvm/npv", tags=["TVM"], dependencies=auth)
+async def t59(req: T59In):
+    """Net present value of a cash flow series at a given discount rate."""
+    t0 = time.perf_counter(); hit("tvm/npv")
+    cf = req.cash_flows; r = req.discount_rate; n = len(cf)
+    pv_flows = [cf[t] / (1 + r) ** t if abs(r) > 1e-14 else cf[t] for t in range(n)]
+    npv = sum(pv_flows)
+    # Profitability index: PV of inflows / PV of outflows
+    pv_in = sum(pv for pv in pv_flows if pv > 0)
+    pv_out = abs(sum(pv for pv in pv_flows if pv < 0))
+    pi = pv_in / pv_out if pv_out > 0 else 0
+    # Payback period (undiscounted)
+    cumulative = 0; payback = None
+    for t in range(n):
+        cumulative += cf[t]
+        if cumulative >= 0 and payback is None:
+            payback = t
+    return {
+        "npv": r4(npv), "decision": "ACCEPT" if npv > 0 else "REJECT",
+        "profitability_index": r4(pi),
+        "pv_of_cash_flows": [r4(v) for v in pv_flows[:20]],
+        "payback_period": payback, "periods": n,
+        "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 60: REALIZED VOLATILITY — $0.005
+# ══════════════════════════════════════════════════════════════════════════
+class T60In(BaseModel):
+    close: list[float] = Field(..., min_length=5)
+    high: Optional[list[float]] = None; low: Optional[list[float]] = None
+    open: Optional[list[float]] = None
+    annualization_factor: int = 252
+
+@app.post("/v1/stats/realized-volatility", tags=["Statistics"], dependencies=auth)
+async def t60(req: T60In):
+    """Realized volatility: close-to-close, Parkinson, Garman-Klass, Yang-Zhang from OHLC."""
+    t0 = time.perf_counter(); hit("stats/realized-volatility")
+    c = req.close; n = len(c); af = req.annualization_factor
+    # Close-to-close (standard)
+    log_ret = [math.log(c[i] / c[i - 1]) for i in range(1, n) if c[i - 1] > 0 and c[i] > 0]
+    m = mu(log_ret)
+    cc_var = sum((r_val - m) ** 2 for r_val in log_ret) / (len(log_ret) - 1) if len(log_ret) > 1 else 0
+    cc_vol = math.sqrt(cc_var * af)
+    result = {
+        "close_to_close": r4(cc_vol), "close_to_close_daily": r6(math.sqrt(cc_var)),
+    }
+    # Parkinson (high-low)
+    if req.high and req.low and len(req.high) >= n and len(req.low) >= n:
+        h, l = req.high[:n], req.low[:n]
+        park_var = sum(math.log(h[i] / l[i]) ** 2 for i in range(n) if l[i] > 0 and h[i] > 0) / (4 * n * math.log(2))
+        park_vol = math.sqrt(park_var * af)
+        result["parkinson"] = r4(park_vol)
+        # Garman-Klass (OHLC)
+        if req.open and len(req.open) >= n:
+            o = req.open[:n]
+            gk_sum = 0
+            for i in range(n):
+                if o[i] > 0 and c[i] > 0 and h[i] > 0 and l[i] > 0:
+                    gk_sum += 0.5 * math.log(h[i] / l[i]) ** 2 - (2 * math.log(2) - 1) * math.log(c[i] / o[i]) ** 2
+            gk_var = gk_sum / n
+            gk_vol = math.sqrt(max(0, gk_var) * af)
+            result["garman_klass"] = r4(gk_vol)
+            # Yang-Zhang
+            log_oc = [math.log(o[i] / c[i - 1]) for i in range(1, n) if o[i] > 0 and c[i - 1] > 0]
+            log_co = [math.log(c[i] / o[i]) for i in range(n) if c[i] > 0 and o[i] > 0]
+            if log_oc and log_co:
+                m_oc = mu(log_oc); m_co = mu(log_co)
+                overnight_var = sum((v - m_oc) ** 2 for v in log_oc) / (len(log_oc) - 1) if len(log_oc) > 1 else 0
+                open_close_var = sum((v - m_co) ** 2 for v in log_co) / (len(log_co) - 1) if len(log_co) > 1 else 0
+                k = 0.34 / (1.34 + (n + 1) / (n - 1))
+                yz_var = overnight_var + k * open_close_var + (1 - k) * park_var
+                yz_vol = math.sqrt(max(0, yz_var) * af)
+                result["yang_zhang"] = r4(yz_vol)
+    result["n"] = n
+    result["annualization_factor"] = af
+    result["ms"] = r2((time.perf_counter() - t0) * 1000)
+    return result
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 61: NORMAL DISTRIBUTION — $0.002
+# ══════════════════════════════════════════════════════════════════════════
+class T61In(BaseModel):
+    x: Optional[float] = None; p: Optional[float] = None
+    mean: float = 0; std: float = Field(1, gt=0)
+    confidence_level: Optional[float] = None
+
+@app.post("/v1/stats/normal-distribution", tags=["Statistics"], dependencies=auth)
+async def t61(req: T61In):
+    """Normal distribution: CDF, PDF, quantile, and confidence intervals."""
+    t0 = time.perf_counter(); hit("stats/normal-distribution")
+    m, s = req.mean, req.std
+    result = {"mean": m, "std": s}
+    if req.x is not None:
+        z = (req.x - m) / s
+        result["x"] = req.x
+        result["z_score"] = r6(z)
+        result["cdf"] = r6(ncdf(z))
+        result["pdf"] = r6(npdf(z) / s)
+        result["survival"] = r6(1 - ncdf(z))
+    if req.p is not None:
+        # Quantile (inverse CDF)
+        p = max(0.0001, min(0.9999, req.p))
+        z_inv = _norm_inv(p)
+        result["quantile"] = r6(m + z_inv * s)
+        result["p"] = req.p
+    if req.confidence_level is not None:
+        cl = req.confidence_level
+        alpha = 1 - cl
+        z_cl = _norm_inv(1 - alpha / 2)
+        result["confidence_interval"] = {
+            "level": cl,
+            "lower": r6(m - z_cl * s),
+            "upper": r6(m + z_cl * s),
+            "z_critical": r6(z_cl)
+        }
+    result["ms"] = r2((time.perf_counter() - t0) * 1000)
+    return result
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 62: SHARPE RATIO (standalone) — $0.002
+# ══════════════════════════════════════════════════════════════════════════
+class T62In(BaseModel):
+    returns: list[float] = Field(..., min_length=5)
+    risk_free_rate: float = 0.05; annualization_factor: int = 252
+
+@app.post("/v1/stats/sharpe-ratio", tags=["Statistics"], dependencies=auth)
+async def t62(req: T62In):
+    """Standalone Sharpe ratio from a returns series."""
+    t0 = time.perf_counter(); hit("stats/sharpe-ratio")
+    R = req.returns; n = len(R); af = req.annualization_factor
+    m = mu(R); s = sd(R)
+    rf_period = req.risk_free_rate / af
+    excess_mean = m - rf_period
+    sharpe = excess_mean / s * math.sqrt(af) if s > 0 else 0
+    # Confidence interval (Lo 2002)
+    se = math.sqrt((1 + sharpe ** 2 / (2 * af)) / n) * math.sqrt(af) if n > 1 else 0
+    return {
+        "sharpe_ratio": r4(sharpe), "annualized_return": r4(m * af),
+        "annualized_vol": r4(s * math.sqrt(af)),
+        "excess_return": r4(excess_mean * af),
+        "se_sharpe": r4(se),
+        "ci_95_lower": r4(sharpe - 1.96 * se), "ci_95_upper": r4(sharpe + 1.96 * se),
+        "n": n, "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════
+# TOOL 63: CAGR — $0.002
+# ══════════════════════════════════════════════════════════════════════════
+class T63In(BaseModel):
+    start_value: float = Field(..., gt=0); end_value: float = Field(..., gt=0)
+    years: float = Field(..., gt=0)
+    include_projections: bool = False
+
+@app.post("/v1/tvm/cagr", tags=["TVM"], dependencies=auth)
+async def t63(req: T63In):
+    """Compound Annual Growth Rate with optional forward projections."""
+    t0 = time.perf_counter(); hit("tvm/cagr")
+    cagr = (req.end_value / req.start_value) ** (1 / req.years) - 1
+    total_return = req.end_value / req.start_value - 1
+    doubling_time = math.log(2) / math.log(1 + cagr) if cagr > 0 else float('inf')
+    result = {
+        "cagr": r6(cagr), "cagr_pct": r4(cagr * 100),
+        "total_return_pct": r4(total_return * 100),
+        "doubling_time_years": r2(min(doubling_time, 9999)),
+        "start_value": r2(req.start_value), "end_value": r2(req.end_value),
+        "years": r2(req.years),
+        "ms": r2((time.perf_counter() - t0) * 1000)
+    }
+    if req.include_projections:
+        projections = []
+        for yr in [1, 3, 5, 10, 20]:
+            proj = req.end_value * (1 + cagr) ** yr
+            projections.append({"years_forward": yr, "projected_value": r2(proj)})
+        result["projections"] = projections
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # HEALTH + TOOL DISCOVERY + METRICS
 # ══════════════════════════════════════════════════════════════════════════
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "quantoracle", "version": "2.0.0",
-            "domain": "quantoracle.dev", "tools": 53,
+            "domain": "quantoracle.dev", "tools": 63,
             "uptime": str(datetime.now(timezone.utc) - _boot)}
 
 @app.get("/metrics")

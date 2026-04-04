@@ -1,7 +1,7 @@
 {
   "name": "quantoracle",
   "version": "2.0.0",
-  "description": "53 deterministic quant computation tools for financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis. 1,000 free calls/day — no signup required.",
+  "description": "63 deterministic quant computation tools for financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis. 1,000 free calls/day — no signup required.",
   "homepage": "https://quantoracle.dev",
   "transport": { "type": "http", "url": "https://api.quantoracle.dev" },
   "free_tier": { "calls_per_day": 1000, "auth_required": false },
@@ -59,6 +59,16 @@
     { "name": "carry_trade", "path": "/v1/fx/carry-trade", "price": "$0.005", "method": "POST" },
     { "name": "inflation_adjusted", "path": "/v1/macro/inflation-adjusted", "price": "$0.002", "method": "POST" },
     { "name": "taylor_rule", "path": "/v1/macro/taylor-rule", "price": "$0.002", "method": "POST" },
-    { "name": "real_yield", "path": "/v1/macro/real-yield", "price": "$0.002", "method": "POST" }
+    { "name": "real_yield", "path": "/v1/macro/real-yield", "price": "$0.002", "method": "POST" },
+    { "name": "transaction_cost", "path": "/v1/risk/transaction-cost", "price": "$0.005", "method": "POST" },
+    { "name": "probabilistic_sharpe", "path": "/v1/stats/probabilistic-sharpe", "price": "$0.005", "method": "POST" },
+    { "name": "present_value", "path": "/v1/tvm/present-value", "price": "$0.002", "method": "POST" },
+    { "name": "future_value", "path": "/v1/tvm/future-value", "price": "$0.002", "method": "POST" },
+    { "name": "irr", "path": "/v1/tvm/irr", "price": "$0.005", "method": "POST" },
+    { "name": "npv", "path": "/v1/tvm/npv", "price": "$0.002", "method": "POST" },
+    { "name": "realized_volatility", "path": "/v1/stats/realized-volatility", "price": "$0.005", "method": "POST" },
+    { "name": "normal_distribution", "path": "/v1/stats/normal-distribution", "price": "$0.002", "method": "POST" },
+    { "name": "sharpe_ratio", "path": "/v1/stats/sharpe-ratio", "price": "$0.002", "method": "POST" },
+    { "name": "cagr", "path": "/v1/tvm/cagr", "price": "$0.002", "method": "POST" }
   ]
 }

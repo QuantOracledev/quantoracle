@@ -1,4 +1,4 @@
-"""Test all 53 QuantOracle endpoints. Usage: python tests/test_all.py [base_url]"""
+"""Test all 63 QuantOracle endpoints. Usage: python tests/test_all.py [base_url]"""
 import requests, sys, json
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
@@ -67,6 +67,18 @@ tests = [
     ("POST", "/v1/indicators/fibonacci-retracement", {"swing_high": 200, "swing_low": 150, "direction": "up"}),
     ("POST", "/v1/indicators/atr", {"high": [185, 187, 186, 188, 190, 189, 191, 193, 192, 194], "low": [180, 182, 181, 183, 185, 184, 186, 188, 187, 189], "close": [183, 185, 184, 186, 188, 187, 189, 191, 190, 192]}),
     ("POST", "/v1/portfolio/risk-parity-weights", {"volatilities": [0.15, 0.20, 0.05], "correlation_matrix": [[1, 0.6, -0.2], [0.6, 1, -0.1], [-0.2, -0.1, 1]], "asset_names": ["SPY", "QQQ", "TLT"]}),
+    # Backtest support
+    ("POST", "/v1/risk/transaction-cost", {"trade_value": 50000, "shares": 500, "commission_per_share": 0.005, "spread_bps": 5, "adv": 5000000}),
+    ("POST", "/v1/stats/probabilistic-sharpe", {"returns": [0.01, -0.005, 0.008, -0.012, 0.015, 0.003, -0.007, 0.011, -0.002, 0.006, -0.009, 0.013, -0.004, 0.007, 0.002, -0.008, 0.01, -0.003, 0.009, -0.006]}),
+    # TVM + fundamentals
+    ("POST", "/v1/tvm/present-value", {"future_value": 10000, "rate": 0.05, "periods": 10}),
+    ("POST", "/v1/tvm/future-value", {"present_value": 10000, "rate": 0.05, "periods": 10}),
+    ("POST", "/v1/tvm/irr", {"cash_flows": [-100000, 30000, 35000, 40000, 45000]}),
+    ("POST", "/v1/tvm/npv", {"cash_flows": [-100000, 30000, 35000, 40000, 45000], "discount_rate": 0.10}),
+    ("POST", "/v1/stats/realized-volatility", {"close": [100, 102, 101, 103, 105, 104, 106, 108, 107, 109], "high": [103, 104, 103, 105, 107, 106, 108, 110, 109, 111], "low": [99, 100, 99, 101, 103, 102, 104, 106, 105, 107], "open": [100, 101, 102, 102, 104, 105, 105, 107, 108, 108]}),
+    ("POST", "/v1/stats/normal-distribution", {"x": 1.96, "mean": 0, "std": 1, "confidence_level": 0.95}),
+    ("POST", "/v1/stats/sharpe-ratio", {"returns": [0.01, -0.005, 0.008, -0.012, 0.015, 0.003, -0.007, 0.011, -0.002, 0.006]}),
+    ("POST", "/v1/tvm/cagr", {"start_value": 10000, "end_value": 25000, "years": 5, "include_projections": True}),
 ]
 
 print(f"\nTesting {BASE}\n{'=' * 60}")

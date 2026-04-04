@@ -71,6 +71,18 @@ const PRICES: Record<string, number> = {
   '/v1/derivatives/option-chain-analysis': 0.015,
   '/v1/fi/yield-curve-interpolate': 0.015,
   '/v1/stats/correlation-matrix': 0.015,
+  // Backtest support
+  '/v1/risk/transaction-cost': 0.005,
+  '/v1/stats/probabilistic-sharpe': 0.005,
+  // TVM + fundamentals
+  '/v1/tvm/present-value': 0.002,
+  '/v1/tvm/future-value': 0.002,
+  '/v1/tvm/irr': 0.005,
+  '/v1/tvm/npv': 0.002,
+  '/v1/stats/realized-volatility': 0.005,
+  '/v1/stats/normal-distribution': 0.002,
+  '/v1/stats/sharpe-ratio': 0.002,
+  '/v1/tvm/cagr': 0.002,
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────

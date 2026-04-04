@@ -1,6 +1,6 @@
 # QuantOracle
 
-53 deterministic quant computation tools for autonomous financial agents.
+63 deterministic quant computation tools for autonomous financial agents.
 
 **quantoracle.dev** | x402 micropayments on Base (USDC)
 
@@ -16,6 +16,8 @@
 - **Statistics** (8) — Regression, cointegration, Hurst, GARCH, z-score, distribution fit, correlation matrix
 - **Crypto/DeFi** (7) — Impermanent loss, APY/APR, liquidation, funding rates, slippage, vesting, rebalance
 - **Macro/FX** (7) — Interest rate parity, PPP, forward rates, carry trade, inflation, Taylor rule, real yield
+- **TVM** (4) — Present value, future value, IRR, NPV, CAGR
+- **Backtest Support** (2) — Transaction costs, probabilistic Sharpe ratio
 
 ## Quick Start
 
