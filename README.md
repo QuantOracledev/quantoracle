@@ -26,7 +26,13 @@ cd api && python quantoracle.py
 # Docs at http://localhost:8000/docs
 ```
 
-## Pricing
+## Free Tier
+
+**1,000 free calls per IP per day. No signup. No API key. Just call the API.**
+
+Agents discover QuantOracle, call it, get instant results. Zero friction.
+
+After 1,000 calls/day, attach an x402 micropayment to continue:
 
 | Tier | Price | Examples |
 |------|-------|---------|
@@ -34,6 +40,8 @@ cd api && python quantoracle.py
 | Medium | $0.005 | Black-Scholes, RSI, Kelly, position sizing |
 | Complex | $0.008 | Portfolio risk, binomial tree, regression, VaR |
 | Heavy | $0.015 | Monte Carlo, GARCH, portfolio optimization |
+
+Check your usage anytime: `GET /usage`
 
 ## Deploy
 

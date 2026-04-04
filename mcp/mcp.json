@@ -1,9 +1,10 @@
 {
   "name": "quantoracle",
   "version": "2.0.0",
-  "description": "53 deterministic quant computation tools for financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis. $0.002-$0.015/call via x402 USDC on Base.",
+  "description": "53 deterministic quant computation tools for financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis. 1,000 free calls/day — no signup required.",
   "homepage": "https://quantoracle.dev",
   "transport": { "type": "http", "url": "https://api.quantoracle.dev" },
+  "free_tier": { "calls_per_day": 1000, "auth_required": false },
   "payment": { "protocol": "x402", "network": "base", "currency": "USDC" },
   "tools": [
     { "name": "options_price", "path": "/v1/options/price", "price": "$0.005", "method": "POST" },

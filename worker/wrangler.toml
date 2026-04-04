@@ -4,7 +4,16 @@ compatibility_date = "2024-12-01"
 
 [vars]
 BACKEND_URL = "https://your-droplet-ip-or-internal-domain:8000"
-# Replace with your actual droplet IP after deploy
+FREE_DAILY_LIMIT = "1000"
+WALLET_ADDRESS = "YOUR_WALLET_ADDRESS_HERE"
+# Replace with your actual values after deploy
+
+# KV namespace for rate limiting (1000 free calls/IP/day)
+# Create with: npx wrangler kv namespace create RATE_LIMITS
+# Then paste the binding ID below
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "YOUR_KV_NAMESPACE_ID_HERE"
 
 # Custom domain routing
 # After deploy, add custom domain in Cloudflare dashboard:

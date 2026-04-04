@@ -3,13 +3,16 @@ import { cors } from 'hono/cors';
 
 interface Env {
   BACKEND_URL: string;
+  RATE_LIMITS: KVNamespace;
+  FREE_DAILY_LIMIT: string; // "1000" — configurable via wrangler.toml
+  WALLET_ADDRESS: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors());
 
-// Pricing table — 50% cheaper than LLM token cost
+// ── Pricing table — 50% cheaper than LLM token cost ────────────────────
 const PRICES: Record<string, number> = {
   // $0.002 — Simple formulas
   '/v1/stats/zscore': 0.002,
@@ -70,7 +73,24 @@ const PRICES: Record<string, number> = {
   '/v1/stats/correlation-matrix': 0.015,
 };
 
-// Free endpoints
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+function getClientIP(c: any): string {
+  return (
+    c.req.header('CF-Connecting-IP') ||
+    c.req.header('X-Real-IP') ||
+    c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ||
+    'unknown'
+  );
+}
+
+function todayKey(ip: string): string {
+  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return `calls:${ip}:${date}`;
+}
+
+// ── Free endpoints ──────────────────────────────────────────────────────
+
 app.get('/health', async (c) => {
   const resp = await fetch(`${c.env.BACKEND_URL}/health`);
   return c.json(await resp.json());
@@ -90,35 +110,66 @@ app.get('/docs', async (c) => {
   return c.redirect(`${c.env.BACKEND_URL}/docs`);
 });
 
-// Paid endpoints — x402 payment check
+// ── Usage check endpoint ────────────────────────────────────────────────
+
+app.get('/usage', async (c) => {
+  const ip = getClientIP(c);
+  const key = todayKey(ip);
+  const limit = parseInt(c.env.FREE_DAILY_LIMIT || '1000');
+  const count = parseInt((await c.env.RATE_LIMITS.get(key)) || '0');
+  return c.json({
+    calls_today: count,
+    daily_limit: limit,
+    remaining: Math.max(0, limit - count),
+    resets_at: new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() + 86400000,
+  });
+});
+
+// ── Paid endpoints — free tier + x402 ───────────────────────────────────
+
 app.all('/v1/*', async (c) => {
   const path = new URL(c.req.url).pathname;
   const price = PRICES[path];
+  const ip = getClientIP(c);
+  const limit = parseInt(c.env.FREE_DAILY_LIMIT || '1000');
+  const wallet = c.env.WALLET_ADDRESS || 'YOUR_WALLET_ADDRESS_HERE';
 
   if (price !== undefined) {
     const paymentReceipt = c.req.header('X-Payment-Receipt');
     const paymentAuth = c.req.header('X-Payment-Authorization');
-    const apiKey = c.req.header('X-Api-Key');
 
-    // If no payment proof AND no API key, return 402
-    if (!paymentReceipt && !paymentAuth && !apiKey) {
-      return c.json({
-        error: 'payment_required',
-        status: 402,
-        payment: {
-          protocol: 'x402',
-          amount: price.toString(),
-          currency: 'USDC',
-          network: 'base',
-          recipient: 'YOUR_WALLET_ADDRESS_HERE',
-          description: `QuantOracle: ${path}`,
-        },
-        alternative: {
-          method: 'api_key',
-          header: 'X-Api-Key',
-          signup: 'https://quantoracle.dev',
-        },
-      }, 402);
+    // If paying with x402, skip free tier check
+    const hasPaid = paymentReceipt || paymentAuth;
+
+    if (!hasPaid) {
+      // Check free tier allowance
+      const key = todayKey(ip);
+      const count = parseInt((await c.env.RATE_LIMITS.get(key)) || '0');
+
+      if (count >= limit) {
+        // Free tier exhausted — require payment
+        return c.json({
+          error: 'payment_required',
+          status: 402,
+          message: `Free tier limit reached (${limit}/day). Attach x402 payment to continue.`,
+          usage: {
+            calls_today: count,
+            daily_limit: limit,
+            resets_at: new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() + 86400000,
+          },
+          payment: {
+            protocol: 'x402',
+            amount: price.toString(),
+            currency: 'USDC',
+            network: 'base',
+            recipient: wallet,
+            description: `QuantOracle: ${path}`,
+          },
+        }, 402);
+      }
+
+      // Increment counter — TTL 86400s (24 hours) auto-expires the key
+      await c.env.RATE_LIMITS.put(key, (count + 1).toString(), { expirationTtl: 86400 });
     }
 
     // TODO: Verify x402 payment receipt on-chain here
@@ -130,9 +181,6 @@ app.all('/v1/*', async (c) => {
     'Content-Type': c.req.header('Content-Type') || 'application/json',
   };
 
-  const apiKey = c.req.header('X-Api-Key');
-  if (apiKey) headers['X-Api-Key'] = apiKey;
-
   const resp = await fetch(backendUrl, {
     method: c.req.method,
     headers,
@@ -140,7 +188,20 @@ app.all('/v1/*', async (c) => {
   });
 
   const data = await resp.json();
-  return c.json(data, resp.status as any);
+
+  // Add usage headers so agents can track their allowance
+  const resHeaders = new Headers();
+  resHeaders.set('Content-Type', 'application/json');
+  resHeaders.set('X-RateLimit-Limit', limit.toString());
+  const key = todayKey(ip);
+  const currentCount = parseInt((await c.env.RATE_LIMITS.get(key)) || '0');
+  resHeaders.set('X-RateLimit-Remaining', Math.max(0, limit - currentCount).toString());
+  resHeaders.set('X-RateLimit-Reset', new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() + 86400000 + '');
+
+  return new Response(JSON.stringify(data), {
+    status: resp.status,
+    headers: resHeaders,
+  });
 });
 
 export default app;
