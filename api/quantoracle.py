@@ -949,21 +949,34 @@ async def t19(req: T19In):
     sT = math.sqrt(T)
     erT = math.exp(-r * T); eqT = math.exp(-q * T)
     if req.lookback_type == "floating":
-        # Floating strike lookback (Goldman-Sosin-Gatto 1979)
+        # Floating strike lookback (Goldman-Sosin-Gatto 1979 / Haug 2007)
+        b = r - q  # cost of carry
         if req.type == "call":
             S_min = req.S_min if req.S_min else S
-            a1 = (math.log(S / S_min) + (r - q + sig ** 2 / 2) * T) / (sig * sT)
+            a1 = (math.log(S / S_min) + (b + sig ** 2 / 2) * T) / (sig * sT)
             a2 = a1 - sig * sT
-            a3 = (math.log(S / S_min) + (-r + q + sig ** 2 / 2) * T) / (sig * sT)
-            Y = 2 * (r - q - sig ** 2 / 2) / sig ** 2 if sig > 0 else 0
-            price = S * eqT * ncdf(a1) - S_min * erT * ncdf(a2) - S * erT / Y * (ncdf(-a1) - math.exp(Y * math.log(S / S_min)) * ncdf(-a3)) if abs(Y) > 1e-10 else S * eqT * ncdf(a1) - S_min * erT * ncdf(a2)
+            if abs(b) > 1e-10:
+                Y = 2 * b / sig ** 2
+                a3 = (math.log(S / S_min) + (-b + sig ** 2 / 2) * T) / (sig * sT)
+                price = (S * eqT * ncdf(a1) - S_min * erT * ncdf(a2)
+                         + S * sig ** 2 / (2 * b) * (
+                             -erT * ncdf(-a1)
+                             + erT * (S_min / S) ** Y * ncdf(-a3)))
+            else:
+                price = S * eqT * ncdf(a1) - S_min * erT * ncdf(a2) + S * sig * sT * (npdf(a1) + a1 * ncdf(a1))
         else:
             S_max = req.S_max if req.S_max else S
-            b1 = (math.log(S / S_max) + (r - q + sig ** 2 / 2) * T) / (sig * sT)
+            b1 = (math.log(S / S_max) + (b + sig ** 2 / 2) * T) / (sig * sT)
             b2 = b1 - sig * sT
-            b3 = (math.log(S / S_max) + (-r + q + sig ** 2 / 2) * T) / (sig * sT)
-            Y = 2 * (r - q - sig ** 2 / 2) / sig ** 2 if sig > 0 else 0
-            price = S_max * erT * ncdf(-b2) - S * eqT * ncdf(-b1) + S * erT / Y * (ncdf(b1) - math.exp(Y * math.log(S / S_max)) * ncdf(b3)) if abs(Y) > 1e-10 else S_max * erT * ncdf(-b2) - S * eqT * ncdf(-b1)
+            if abs(b) > 1e-10:
+                Y = 2 * b / sig ** 2
+                b3 = (math.log(S / S_max) + (-b + sig ** 2 / 2) * T) / (sig * sT)
+                price = (S_max * erT * ncdf(-b2) - S * eqT * ncdf(-b1)
+                         + S * sig ** 2 / (2 * b) * (
+                             erT * ncdf(b1)
+                             - erT * (S_max / S) ** Y * ncdf(b3)))
+            else:
+                price = S_max * erT * ncdf(-b2) - S * eqT * ncdf(-b1) + S * sig * sT * (npdf(-b1) - b1 * ncdf(-b1))
     else:
         # Fixed strike lookback — use Monte Carlo
         K = req.K if req.K else S
@@ -2376,21 +2389,24 @@ async def t53(req: T53In):
     names = req.asset_names or [f"Asset_{i}" for i in range(k)]
     # Build covariance matrix
     cov_mat = [[vols[i] * vols[j] * corr[i][j] for j in range(k)] for i in range(k)]
-    # Iterative risk parity
-    w = [1.0 / k] * k
-    for _ in range(500):
-        # Portfolio variance
+    # Iterative risk parity (Spinu 2013 — Newton with damping)
+    # Initialize with inverse-vol weights (good starting point)
+    inv_vol = [1.0 / v if v > 1e-14 else 1.0 for v in vols]
+    s_iv = sum(inv_vol)
+    w = [x / s_iv for x in inv_vol]
+    for _ in range(2000):
+        # Portfolio variance and risk contributions
         port_var = sum(w[i] * w[j] * cov_mat[i][j] for i in range(k) for j in range(k))
         port_vol = math.sqrt(port_var) if port_var > 0 else 1e-10
-        # Marginal risk contributions
         mrc = [sum(w[j] * cov_mat[i][j] for j in range(k)) / port_vol for i in range(k)]
         rc = [w[i] * mrc[i] for i in range(k)]
-        total_rc = sum(rc)
+        total_rc = sum(rc) or 1e-10
+        # Target: each asset's risk contribution = budget * total
         target_rc = [budget[i] * total_rc for i in range(k)]
-        # Update weights
-        new_w = [w[i] * target_rc[i] / rc[i] if rc[i] > 1e-14 else w[i] for i in range(k)]
-        s = sum(new_w); new_w = [x / s for x in new_w]
-        if max(abs(new_w[i] - w[i]) for i in range(k)) < 1e-8:
+        # Multiplicative update with damping for stability
+        new_w = [w[i] * math.sqrt(target_rc[i] / rc[i]) if rc[i] > 1e-14 else w[i] for i in range(k)]
+        s_w = sum(new_w); new_w = [x / s_w for x in new_w]
+        if max(abs(new_w[i] - w[i]) for i in range(k)) < 1e-10:
             break
         w = new_w
     # Final metrics
@@ -2479,7 +2495,34 @@ async def t55(req: T55In):
     rf_daily = req.risk_free_rate / req.annualization_factor
     excess = [r_val - rf_daily for r_val in R]
     m = mu(excess); s = sd(excess)
-    sr_daily = m / s if s > 0 else 0
+    if s > 1e-12:
+        sr_daily = m / s
+    else:
+        # Zero vol: constant returns → Sharpe is +∞ (positive), −∞ (negative), or 0
+        sr_daily = 0
+        sr_annual = 0
+        rf_daily_ref = req.benchmark_sharpe / math.sqrt(req.annualization_factor)
+        if m > 1e-12:
+            return {"probabilistic_sharpe_ratio": 1.0, "sharpe_ratio": 9999.99,
+                    "benchmark_sharpe": r4(req.benchmark_sharpe), "z_score": 9999.99,
+                    "significant_at_95": True, "significant_at_99": True,
+                    "se_sharpe": 0, "skewness": 0, "excess_kurtosis": 0,
+                    "min_track_record_length": 1, "n": n,
+                    "ms": r2((time.perf_counter() - t0) * 1000)}
+        elif m < -1e-12:
+            return {"probabilistic_sharpe_ratio": 0.0, "sharpe_ratio": -9999.99,
+                    "benchmark_sharpe": r4(req.benchmark_sharpe), "z_score": -9999.99,
+                    "significant_at_95": False, "significant_at_99": False,
+                    "se_sharpe": 0, "skewness": 0, "excess_kurtosis": 0,
+                    "min_track_record_length": None, "n": n,
+                    "ms": r2((time.perf_counter() - t0) * 1000)}
+        else:
+            return {"probabilistic_sharpe_ratio": 0.5, "sharpe_ratio": 0,
+                    "benchmark_sharpe": r4(req.benchmark_sharpe), "z_score": 0,
+                    "significant_at_95": False, "significant_at_99": False,
+                    "se_sharpe": 0, "skewness": 0, "excess_kurtosis": 0,
+                    "min_track_record_length": None, "n": n,
+                    "ms": r2((time.perf_counter() - t0) * 1000)}
     sr_annual = sr_daily * math.sqrt(req.annualization_factor)
     # Skewness and kurtosis of returns
     sk = sum(((r_val - m) / s) ** 3 for r_val in excess) * n / ((n - 1) * (n - 2)) if s > 0 and n > 2 else 0
@@ -2657,7 +2700,7 @@ async def t60(req: T60In):
     # Close-to-close (standard)
     log_ret = [math.log(c[i] / c[i - 1]) for i in range(1, n) if c[i - 1] > 0 and c[i] > 0]
     m = mu(log_ret)
-    cc_var = sum((r_val - m) ** 2 for r_val in log_ret) / (len(log_ret) - 1) if len(log_ret) > 1 else 0
+    cc_var = sum((r_val - m) ** 2 for r_val in log_ret) / len(log_ret) if log_ret else 0
     cc_vol = math.sqrt(cc_var * af)
     result = {
         "close_to_close": r4(cc_vol), "close_to_close_daily": r6(math.sqrt(cc_var)),

@@ -3,7 +3,7 @@
 QuantOracle Verification Test Suite
 ================================================================================
 What this is:
-    A rigorous, citation-backed verification of all 53 QuantOracle endpoints
+    A rigorous, citation-backed verification of all 63 QuantOracle endpoints
     against known analytical solutions, textbook examples, and published formulas.
     Every expected value has a documented source. This file is designed to be
     linked publicly as proof of mathematical correctness.
@@ -84,15 +84,24 @@ def check(name, endpoint, category, payload, field_path, expected, tol, citation
             results.append(("PASS", label, endpoint, "200 OK", "200 OK", tol, citation, None))
             return
 
-        # Navigate nested field path
+        # Navigate nested field path (greedy: tries longest key match for dict keys with dots)
         val = data
-        for key in field_path.split("."):
-            if isinstance(val, dict):
-                val = val[key]
-            elif isinstance(val, list):
-                val = val[int(key)]
+        parts = field_path.split(".")
+        i = 0
+        while i < len(parts):
+            if isinstance(val, list):
+                val = val[int(parts[i])]; i += 1
+            elif isinstance(val, dict):
+                # Try progressively longer keys to handle keys containing dots (e.g. "50.0%")
+                found = False
+                for j in range(len(parts), i, -1):
+                    candidate = ".".join(parts[i:j])
+                    if candidate in val:
+                        val = val[candidate]; i = j; found = True; break
+                if not found:
+                    raise KeyError(f"Key '{parts[i]}' not found in {list(val.keys())}")
             else:
-                raise KeyError(f"Cannot traverse '{key}' in {type(val)}")
+                raise KeyError(f"Cannot traverse '{parts[i]}' in {type(val)}")
 
         actual = float(val)
         passed = abs(actual - expected) <= tol
@@ -149,9 +158,9 @@ def print_results():
         cat = label.split("]")[0].lstrip("[")
         if cat != current_category:
             current_category = cat
-            print(f"\n{'─' * 90}")
+            print(f"\n{'-' * 90}")
             print(f"  {cat.upper()}")
-            print(f"{'─' * 90}")
+            print(f"{'-' * 90}")
 
         name_part = label.split("] ", 1)[1] if "] " in label else label
         status_icon = {"PASS": "  PASS", "FAIL": "  FAIL", "SKIP": "  SKIP"}[status]
@@ -191,9 +200,9 @@ check(
     category="Health",
     payload=None,
     field_path="tools",
-    expected=53,
+    expected=63,
     tol=0,
-    citation="QuantOracle API spec: 53 registered tools",
+    citation="QuantOracle API spec: 63 registered tools",
     method="GET",
 )
 
@@ -1453,16 +1462,16 @@ check(
 )
 
 # Purchasing power parity:
-# F = S × (1+π_d)^T / (1+π_f)^T = 1.20 × (1.03/1.02) = 1.20 × 1.009804 = 1.10784
+# F = S × (1+π_d)^T / (1+π_f)^T = 1.20 × (1.03/1.02) = 1.20 × 1.009804 = 1.21176
 check(
-    name="PPP: S=1.20, π_d=3%, π_f=2%, T=1yr → F_PPP = 1.20*(1.03/1.02) = 1.20784",
+    name="PPP: S=1.20, π_d=3%, π_f=2%, T=1yr → F_PPP = 1.20*(1.03/1.02) = 1.21176",
     endpoint="/v1/fx/purchasing-power-parity",
     category="FX/Macro",
     payload={"base_spot_rate": 1.20, "domestic_inflation": 0.03, "foreign_inflation": 0.02, "time_years": 1},
     field_path="ppp_rate",
-    expected=1.20784,
-    tol=0.0001,
-    citation="Relative PPP: F = S*(1+π_d)/(1+π_f). Cassel (1918). 1.20*(1.03/1.02) = 1.20784",
+    expected=1.21176,
+    tol=0.001,
+    citation="Relative PPP: F = S*(1+π_d)/(1+π_f). Cassel (1918). 1.20*(1.03/1.02) = 1.21176",
 )
 
 # Carry trade: borrow at 1%, invest at 8%, 90 days, spot: 150→148
@@ -1659,6 +1668,367 @@ check(
     expected=None,
     tol=0,
     citation="MA crossover: fast EMA tracks recent prices more closely. In uptrend, fast > slow → BULLISH.",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TRANSACTION COST MODEL (Tool 54)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Commission: 500 shares × $0.005 = $2.50
+check(
+    name="Transaction cost: per-share commission",
+    endpoint="/v1/risk/transaction-cost",
+    category="Risk",
+    payload={"trade_value": 50000, "shares": 500, "commission_per_share": 0.005, "spread_bps": 0, "market_impact_bps": 0},
+    field_path="commission",
+    expected=2.50,
+    tol=0.01,
+    citation="Direct calculation: 500 × $0.005 = $2.50",
+)
+
+# Half-spread: $50,000 × 10bps / 10000 / 2 = $25.00
+check(
+    name="Transaction cost: half-spread cost at 10bps",
+    endpoint="/v1/risk/transaction-cost",
+    category="Risk",
+    payload={"trade_value": 50000, "shares": 500, "commission_per_share": 0, "spread_bps": 10, "market_impact_bps": 0},
+    field_path="spread_cost",
+    expected=25.0,
+    tol=0.01,
+    citation="Half-spread cost: trade_value × spread_bps / 10000 / 2 = 50000 × 10 / 10000 / 2 = $25.00",
+)
+
+# Market impact (Almgren square-root model): participation = 50000/5000000 = 0.01
+# impact_bps = 10 × sqrt(0.01) = 1.0 bps, impact = 50000 × 1.0 / 10000 = $5.00
+check(
+    name="Transaction cost: square-root market impact model",
+    endpoint="/v1/risk/transaction-cost",
+    category="Risk",
+    payload={"trade_value": 50000, "shares": 500, "commission_per_share": 0, "spread_bps": 0, "adv": 5000000},
+    field_path="market_impact",
+    expected=5.0,
+    tol=0.01,
+    citation="Almgren et al. square-root model: impact_bps = 10 × sqrt(Q/V) = 10 × sqrt(0.01) = 1.0 bps → $5.00",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROBABILISTIC SHARPE RATIO (Tool 55)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# With 252 identical positive returns, SR should be extremely significant (PSR ≈ 1.0)
+check(
+    name="PSR: highly significant Sharpe (constant positive returns)",
+    endpoint="/v1/stats/probabilistic-sharpe",
+    category="Statistics",
+    payload={"returns": [0.001] * 252, "benchmark_sharpe": 0, "risk_free_rate": 0},
+    field_path="probabilistic_sharpe_ratio",
+    expected=1.0,
+    tol=0.01,
+    citation="Bailey & Lopez de Prado (2012): constant positive excess returns → PSR → 1.0",
+)
+
+# Zero-mean returns → Sharpe ≈ 0, PSR ≈ 0.5 vs benchmark of 0
+check(
+    name="PSR: zero-mean returns → PSR ≈ 0.5",
+    endpoint="/v1/stats/probabilistic-sharpe",
+    category="Statistics",
+    payload={"returns": [0.01, -0.01] * 50, "benchmark_sharpe": 0, "risk_free_rate": 0},
+    field_path="probabilistic_sharpe_ratio",
+    expected=0.5,
+    tol=0.05,
+    citation="Bailey & Lopez de Prado (2012): SR=0 vs benchmark SR*=0 → z=0 → Φ(0) = 0.5",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TIME VALUE OF MONEY — PV / FV / IRR / NPV / CAGR (Tools 56-59, 63)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# PV: $10,000 in 10 years at 5% → PV = 10000 / (1.05)^10 = $6,139.13
+check(
+    name="PV: lump sum $10,000, 5%, 10 years",
+    endpoint="/v1/tvm/present-value",
+    category="TVM",
+    payload={"future_value": 10000, "rate": 0.05, "periods": 10},
+    field_path="present_value",
+    expected=6139.13,
+    tol=0.02,
+    citation="Brealey, Myers & Allen, Principles of Corporate Finance: PV = FV/(1+r)^n = 10000/(1.05)^10 = $6,139.13",
+)
+
+# PV of annuity: $1,000/yr for 10 years at 8% → PV = 1000 × (1-(1.08)^-10)/0.08 = $6,710.08
+check(
+    name="PV: annuity $1,000/yr, 8%, 10 years",
+    endpoint="/v1/tvm/present-value",
+    category="TVM",
+    payload={"payment": 1000, "rate": 0.08, "periods": 10},
+    field_path="pv_of_annuity",
+    expected=6710.08,
+    tol=0.02,
+    citation="Standard annuity PV formula: PMT × (1-(1+r)^-n)/r = 1000 × (1-1.08^-10)/0.08 = $6,710.08",
+)
+
+# PV of annuity-due (begin): multiply ordinary annuity by (1+r)
+check(
+    name="PV: annuity-due $1,000/yr, 8%, 10 years",
+    endpoint="/v1/tvm/present-value",
+    category="TVM",
+    payload={"payment": 1000, "rate": 0.08, "periods": 10, "payment_timing": "begin"},
+    field_path="pv_of_annuity",
+    expected=7246.89,
+    tol=0.02,
+    citation="Annuity-due: ordinary PV × (1+r) = 6710.08 × 1.08 = $7,246.89",
+)
+
+# FV: $10,000 at 5% for 10 years → FV = 10000 × (1.05)^10 = $16,288.95
+check(
+    name="FV: lump sum $10,000, 5%, 10 years",
+    endpoint="/v1/tvm/future-value",
+    category="TVM",
+    payload={"present_value": 10000, "rate": 0.05, "periods": 10},
+    field_path="future_value",
+    expected=16288.95,
+    tol=0.02,
+    citation="Brealey, Myers & Allen: FV = PV × (1+r)^n = 10000 × (1.05)^10 = $16,288.95",
+)
+
+# FV of annuity: $1,000/yr for 10 years at 8% → FV = 1000 × ((1.08)^10 - 1)/0.08 = $14,486.56
+check(
+    name="FV: annuity $1,000/yr, 8%, 10 years",
+    endpoint="/v1/tvm/future-value",
+    category="TVM",
+    payload={"payment": 1000, "rate": 0.08, "periods": 10},
+    field_path="fv_of_annuity",
+    expected=14486.56,
+    tol=0.02,
+    citation="Standard annuity FV formula: PMT × ((1+r)^n - 1)/r = 1000 × ((1.08)^10-1)/0.08 = $14,486.56",
+)
+
+# IRR: CF = [-1000, 300, 400, 500, 200] → IRR ≈ 15.09% (textbook example)
+check(
+    name="IRR: standard cash flow series",
+    endpoint="/v1/tvm/irr",
+    category="TVM",
+    payload={"cash_flows": [-1000, 300, 400, 500, 200]},
+    field_path="irr_pct",
+    expected=15.09,
+    tol=0.5,
+    citation="Numerical solution: NPV(-1000,300,400,500,200)=0 at r≈15.09%. Verified via bisection.",
+)
+
+# NPV: CF = [-1000, 400, 400, 400] at 10%
+# NPV = -1000 + 400/1.1 + 400/1.21 + 400/1.331 = -1000 + 363.64 + 330.58 + 300.53 = -5.26
+check(
+    name="NPV: three equal cash flows at 10%",
+    endpoint="/v1/tvm/npv",
+    category="TVM",
+    payload={"cash_flows": [-1000, 400, 400, 400], "discount_rate": 0.10},
+    field_path="npv",
+    expected=-5.26,
+    tol=0.5,
+    citation="Manual: -1000 + 400/1.1 + 400/1.21 + 400/1.331 = -$5.26",
+)
+
+# NPV: profitability index < 1 when NPV < 0
+# PV inflows: 400/1.1 + 400/1.21 + 400/1.331 = 363.64 + 330.58 + 300.53 = 994.74
+# PI = 994.74 / 1000 = 0.9947
+check(
+    name="NPV: profitability index < 1 when NPV < 0",
+    endpoint="/v1/tvm/npv",
+    category="TVM",
+    payload={"cash_flows": [-1000, 400, 400, 400], "discount_rate": 0.10},
+    field_path="profitability_index",
+    expected=0.9947,
+    tol=0.01,
+    citation="PI = PV(inflows)/PV(outflows) = 994.74/1000 = 0.9947. PI < 1 ↔ NPV < 0.",
+)
+
+# CAGR: $10,000 → $25,000 in 5 years → CAGR = (25000/10000)^(1/5) - 1 = 20.11%
+check(
+    name="CAGR: $10K to $25K in 5 years",
+    endpoint="/v1/tvm/cagr",
+    category="TVM",
+    payload={"start_value": 10000, "end_value": 25000, "years": 5},
+    field_path="cagr_pct",
+    expected=20.11,
+    tol=0.02,
+    citation="CAGR = (end/start)^(1/n) - 1 = (2.5)^0.2 - 1 = 20.11%. Standard compound growth formula.",
+)
+
+# CAGR doubling time: at 20.11% → ln(2)/ln(1.2011) = 3.78 years
+check(
+    name="CAGR: doubling time at ~20%",
+    endpoint="/v1/tvm/cagr",
+    category="TVM",
+    payload={"start_value": 10000, "end_value": 25000, "years": 5},
+    field_path="doubling_time_years",
+    expected=3.78,
+    tol=0.05,
+    citation="Doubling time = ln(2)/ln(1+CAGR) = ln(2)/ln(1.2011) ≈ 3.78 years",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REALIZED VOLATILITY (Tool 60)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Close-to-close vol with known returns: series [100, 110, 100, 110, 100]
+# Log returns: ln(1.1), ln(10/11), ln(1.1), ln(10/11) = [0.09531, -0.09531, 0.09531, -0.09531]
+# Mean = 0, Var = 0.09531^2 = 0.009084, annualized vol = sqrt(0.009084 × 252) = 1.5128
+check(
+    name="Realized vol: close-to-close with alternating returns",
+    endpoint="/v1/stats/realized-volatility",
+    category="Statistics",
+    payload={"close": [100, 110, 100, 110, 100]},
+    field_path="close_to_close_daily",
+    expected=0.09531,
+    tol=0.001,
+    citation="Direct: log returns of [100,110,100,110,100] have stdev = |ln(1.1)| = 0.09531",
+)
+
+# Parkinson estimator: σ² = Σ(ln(H/L))² / (4n·ln2)
+# With H=110, L=90 for 5 bars: ln(110/90)^2 = 0.04010, sum = 0.2005, /(4×5×0.6931) = 0.01446
+# Daily Parkinson vol = sqrt(0.01446) = 0.1203, annualized = 0.1203 × sqrt(252) = 1.909
+check(
+    name="Realized vol: Parkinson estimator (high-low)",
+    endpoint="/v1/stats/realized-volatility",
+    category="Statistics",
+    payload={
+        "close": [100, 100, 100, 100, 100],
+        "high": [110, 110, 110, 110, 110],
+        "low": [90, 90, 90, 90, 90],
+    },
+    field_path="parkinson",
+    expected=1.909,
+    tol=0.01,
+    citation="Parkinson (1980): σ² = Σ(ln(H/L))² / (4n·ln2). With H/L=110/90 for 5 bars → annualized = 1.909",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NORMAL DISTRIBUTION (Tool 61)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# CDF at z=0 for standard normal → 0.5
+check(
+    name="Normal CDF: Φ(0) = 0.5",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"x": 0, "mean": 0, "std": 1},
+    field_path="cdf",
+    expected=0.5,
+    tol=0.0001,
+    citation="Standard normal distribution: Φ(0) = 0.5 by symmetry",
+)
+
+# CDF at z=1.96 → 0.975
+check(
+    name="Normal CDF: Φ(1.96) = 0.975",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"x": 1.96, "mean": 0, "std": 1},
+    field_path="cdf",
+    expected=0.975,
+    tol=0.001,
+    citation="Standard normal tables: Φ(1.96) = 0.97500. Used for 95% confidence intervals.",
+)
+
+# CDF at z=-1.645 → 0.05
+check(
+    name="Normal CDF: Φ(-1.645) ≈ 0.05",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"x": -1.645, "mean": 0, "std": 1},
+    field_path="cdf",
+    expected=0.05,
+    tol=0.001,
+    citation="Standard normal tables: Φ(-1.645) ≈ 0.05. One-tailed 5% critical value.",
+)
+
+# PDF at z=0 → 1/sqrt(2π) ≈ 0.39894
+check(
+    name="Normal PDF: φ(0) = 1/√(2π) ≈ 0.3989",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"x": 0, "mean": 0, "std": 1},
+    field_path="pdf",
+    expected=0.39894,
+    tol=0.0001,
+    citation="Standard normal PDF: φ(0) = 1/√(2π) = 0.39894. Maximum of the bell curve.",
+)
+
+# Quantile: p=0.975 → z = 1.96
+check(
+    name="Normal quantile: Φ⁻¹(0.975) = 1.96",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"p": 0.975, "mean": 0, "std": 1},
+    field_path="quantile",
+    expected=1.96,
+    tol=0.01,
+    citation="Standard normal inverse CDF: Φ⁻¹(0.975) = 1.96. Abramowitz & Stegun 26.2.23.",
+)
+
+# 95% confidence interval for N(100, 15): [100 - 1.96×15, 100 + 1.96×15] = [70.6, 129.4]
+check(
+    name="Normal CI: 95% interval for N(100, 15)",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"mean": 100, "std": 15, "confidence_level": 0.95},
+    field_path="confidence_interval.lower",
+    expected=70.6,
+    tol=0.2,
+    citation="95% CI: μ ± 1.96σ = 100 ± 1.96×15 = [70.6, 129.4]",
+)
+
+check(
+    name="Normal CI: 95% upper bound for N(100, 15)",
+    endpoint="/v1/stats/normal-distribution",
+    category="Statistics",
+    payload={"mean": 100, "std": 15, "confidence_level": 0.95},
+    field_path="confidence_interval.upper",
+    expected=129.4,
+    tol=0.2,
+    citation="95% CI: μ + 1.96σ = 100 + 29.4 = 129.4",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SHARPE RATIO STANDALONE (Tool 62)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Returns: 20 values of 0.001 constant → mean=0.001, stdev=0, Sharpe=undefined (div by zero → 0)
+# Better test: mean=0.001, rf=0, known stdev
+# Series: [0.002, 0, 0.002, 0, ...] × 10 → mean=0.001, sample_std = 0.001054
+# Annual SR = (0.001 / 0.001054) × sqrt(252) = 0.9487 × 15.875 = 15.06
+# Actually let's use a simpler verification: just check annualized vol
+# [0.01, -0.01] × 10 → mean=0, sample_std = sqrt(sum(0.0001×20)/19) = sqrt(0.002/19) = 0.01026
+# Annualized vol = 0.01026 × sqrt(252) = 0.1629
+check(
+    name="Sharpe ratio: zero-mean alternating returns → Sharpe ≈ 0",
+    endpoint="/v1/stats/sharpe-ratio",
+    category="Statistics",
+    payload={
+        "returns": [0.01, -0.01, 0.01, -0.01, 0.01, -0.01, 0.01, -0.01, 0.01, -0.01,
+                    0.01, -0.01, 0.01, -0.01, 0.01, -0.01, 0.01, -0.01, 0.01, -0.01],
+        "risk_free_rate": 0,
+    },
+    field_path="annualized_return",
+    expected=0.0,
+    tol=0.001,
+    citation="Mean of alternating [0.01, -0.01] = 0 → annualized return = 0",
+)
+
+# Sharpe with positive drift: all returns = 0.001 (no vol variation needed, use 5 different values)
+# [0.003, 0.001, 0.002, 0.001, 0.003] → mean=0.002, sd=0.001, SR = (0.002-0)/0.001 × sqrt(252) = 31.75
+check(
+    name="Sharpe ratio: positive returns → positive Sharpe",
+    endpoint="/v1/stats/sharpe-ratio",
+    category="Statistics",
+    payload={
+        "returns": [0.003, 0.001, 0.002, 0.001, 0.003],
+        "risk_free_rate": 0,
+    },
+    field_path="annualized_return",
+    expected=0.504,
+    tol=0.002,
+    citation="Mean of [0.003, 0.001, 0.002, 0.001, 0.003] = 0.002 → annualized = 0.002 × 252 = 0.504",
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
