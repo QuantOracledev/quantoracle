@@ -12,6 +12,10 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors());
 
+app.onError((err, c) => {
+  return c.json({ error: 'worker_error', detail: err.message }, 500);
+});
+
 // ── Pricing table — 50% cheaper than LLM token cost ────────────────────
 const PRICES: Record<string, number> = {
   // $0.002 — Simple formulas
@@ -104,8 +108,14 @@ function todayKey(ip: string): string {
 // ── Free endpoints ──────────────────────────────────────────────────────
 
 app.get('/health', async (c) => {
-  const resp = await fetch(`${c.env.BACKEND_URL}/health`);
-  return c.json(await resp.json());
+  try {
+    const url = `${c.env.BACKEND_URL}/health`;
+    const resp = await fetch(url);
+    const text = await resp.text();
+    try { return c.json(JSON.parse(text)); } catch { return c.text(text); }
+  } catch (e: any) {
+    return c.json({ error: 'backend_unreachable', detail: e.message, backend: c.env.BACKEND_URL }, 502);
+  }
 });
 
 app.get('/tools', async (c) => {

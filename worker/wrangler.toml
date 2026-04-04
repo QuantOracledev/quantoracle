@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 [vars]
-BACKEND_URL = "http://142.93.191.231:8001"
+BACKEND_URL = "http://backend.quantoracle.dev:8001"
 FREE_DAILY_LIMIT = "1000"
 WALLET_ADDRESS = "0xC94f5F33ae446a50Ce31157db81253BfddFE2af6"
 # Replace with your actual values after deploy
@@ -13,7 +13,7 @@ WALLET_ADDRESS = "0xC94f5F33ae446a50Ce31157db81253BfddFE2af6"
 # Then paste the binding ID below
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "YOUR_KV_NAMESPACE_ID_HERE"
+id = "a3999e7ed36249508ea1c0ac9c79ad31"
 
 # Custom domain routing
 # After deploy, add custom domain in Cloudflare dashboard:
