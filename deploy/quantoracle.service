@@ -1,0 +1,15 @@
+[Unit]
+Description=QuantOracle API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/quantoracle
+ExecStart=/usr/local/bin/gunicorn quantoracle:app -w 4 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000
+Restart=always
+RestartSec=5
+Environment=QO_API_KEYS=
+
+[Install]
+WantedBy=multi-user.target

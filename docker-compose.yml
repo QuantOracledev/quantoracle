@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    restart: always
+    environment:
+      - QO_API_KEYS=${QO_API_KEYS:-}
