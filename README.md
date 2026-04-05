@@ -5,7 +5,14 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/quantoracle-mcp"><img src="https://img.shields.io/npm/v/quantoracle-mcp?label=npm&color=cb3837" alt="npm"></a>
+  <a href="https://smithery.ai/server/QuantOracle/quantoracle"><img src="https://smithery.ai/badge/QuantOracle/quantoracle" alt="Smithery"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
+</p>
+
+<p align="center">
   <a href="https://quantoracle.dev">quantoracle.dev</a> &nbsp;|&nbsp;
+  <a href="#mcp-server">MCP Server</a> &nbsp;|&nbsp;
   <a href="#free-tier">Free Tier</a> &nbsp;|&nbsp;
   <a href="#full-endpoint-reference">All 63 Endpoints</a> &nbsp;|&nbsp;
   <a href="#agent-integration">Agent Integration</a>
@@ -129,23 +136,52 @@ After 1,000 calls, attach an x402 micropayment (USDC on Base) to continue:
 
 ---
 
-## Agent Integration
+## MCP Server
 
-### MCP (Model Context Protocol)
+QuantOracle is available as a native MCP server with 63 tools. Works with Claude Desktop, Cursor, Windsurf, and any MCP-compatible client.
 
-QuantOracle ships an MCP manifest at [`mcp/mcp.json`](mcp/mcp.json) for direct integration with Claude, GPT, Gemini, and any MCP-compatible agent framework.
+### Install via npm
+
+```bash
+npx quantoracle-mcp
+```
+
+### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
-  "name": "quantoracle",
-  "transport": { "type": "http", "url": "https://api.quantoracle.dev" },
-  "free_tier": { "calls_per_day": 1000, "auth_required": false }
+  "mcpServers": {
+    "quantoracle": {
+      "command": "npx",
+      "args": ["quantoracle-mcp"]
+    }
+  }
 }
 ```
 
+### Remote MCP (Streamable HTTP)
+
+Connect directly to the hosted server — no install required:
+
+```
+https://mcp.quantoracle.dev/mcp
+```
+
+### Smithery
+
+```bash
+npx @smithery/cli mcp add https://server.smithery.ai/QuantOracle/quantoracle
+```
+
+---
+
+## Agent Integration
+
 ### OpenAPI
 
-Full OpenAPI 3.0 spec available at:
+Full OpenAPI 3.1 spec available at:
 - **Runtime**: `https://api.quantoracle.dev/openapi.json`
 - **Swagger UI**: `https://api.quantoracle.dev/docs`
 - **Static**: [`openapi.json`](openapi.json) in this repo
@@ -158,6 +194,18 @@ curl https://api.quantoracle.dev/tools
 
 # Health check
 curl https://api.quantoracle.dev/health
+```
+
+### MCP Manifest
+
+MCP manifest at [`mcp/mcp.json`](mcp/mcp.json) for agent frameworks:
+
+```json
+{
+  "name": "quantoracle",
+  "transport": { "type": "streamable-http", "url": "https://mcp.quantoracle.dev/mcp" },
+  "free_tier": { "calls_per_day": 1000, "auth_required": false }
+}
 ```
 
 ---

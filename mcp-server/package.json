@@ -1,14 +1,45 @@
 {
   "name": "quantoracle-mcp",
   "version": "2.0.0",
-  "description": "MCP server wrapping QuantOracle's 63 quant computation tools",
+  "description": "63 deterministic quant computation tools for AI agents via MCP. Options pricing, Greeks, derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. 1,000 free calls/day.",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "quantoracle-mcp": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"
   },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "quantitative-finance",
+    "options-pricing",
+    "black-scholes",
+    "greeks",
+    "derivatives",
+    "risk-metrics",
+    "portfolio-optimization",
+    "monte-carlo",
+    "statistics",
+    "crypto",
+    "defi",
+    "macro",
+    "fx",
+    "time-value-of-money",
+    "ai-agent",
+    "calculator",
+    "deterministic"
+  ],
+  "homepage": "https://quantoracle.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QuantOracledev/quantoracle"
+  },
+  "license": "MIT",
+  "author": "QuantOracle",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "express": "^4.21.0"
@@ -18,5 +49,12 @@
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
+  },
+  "files": [
+    "dist",
+    "config-schema.json"
+  ],
+  "engines": {
+    "node": ">=18"
   }
 }
