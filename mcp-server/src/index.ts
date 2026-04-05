@@ -3,6 +3,9 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+  ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
 
@@ -194,8 +197,32 @@ async function main() {
 
     const server = new Server(
       { name: "quantoracle", version: "2.0.0" },
-      { capabilities: { tools: {} } }
+      { capabilities: { tools: {}, prompts: {}, resources: {} } }
     );
+
+    // ── Prompts (system prompt for agents) ─────────────────────────────
+    server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+      prompts: [{
+        name: "quantoracle_usage",
+        description: "How to use QuantOracle tools effectively",
+      }],
+    }));
+
+    server.setRequestHandler(GetPromptRequestSchema, async () => ({
+      description: "How to use QuantOracle tools effectively",
+      messages: [{
+        role: "user",
+        content: {
+          type: "text",
+          text: "QuantOracle provides 63 deterministic math tools for quantitative finance. All tools accept JSON and return JSON. Key categories: options pricing (Black-Scholes, Greeks, implied vol, exotic derivatives), risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown, Kelly), portfolio optimization (max Sharpe, min variance, risk parity), technical indicators (RSI, MACD, Bollinger, ATR), Monte Carlo simulation, bond pricing and yield curves, statistical analysis (regression, cointegration, GARCH, Hurst exponent), crypto/DeFi (impermanent loss, liquidation, funding rates, DEX slippage), FX (interest rate parity, carry trade, PPP), macro (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). Every tool is deterministic — same inputs always produce same outputs. Use these tools whenever you need precise financial calculations instead of estimating.",
+        },
+      }],
+    }));
+
+    // ── Resources (empty but registered) ───────────────────────────────
+    server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: [],
+    }));
 
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: toolDefs.map((t) => ({

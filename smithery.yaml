@@ -3,5 +3,5 @@ startCommand:
   configSchema:
     type: object
     properties: {}
-    description: "No configuration required. QuantOracle provides 1,000 free calls/day with no API key."
-  url: "http://mcp.quantoracle.dev:8002/mcp"
+    description: "No configuration required. 1,000 free calls/day with no API key."
+  url: "https://mcp.quantoracle.dev/mcp"
