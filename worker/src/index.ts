@@ -128,6 +128,11 @@ app.get('/metrics', async (c) => {
   return c.json(await resp.json());
 });
 
+app.get('/openapi.json', async (c) => {
+  const resp = await fetch(`${c.env.BACKEND_URL}/openapi.json`);
+  return c.json(await resp.json());
+});
+
 app.get('/docs', async (c) => {
   return c.redirect(`${c.env.BACKEND_URL}/docs`);
 });
