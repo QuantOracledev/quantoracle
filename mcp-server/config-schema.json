@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": [],
+  "properties": {
+    "daily_limit": {
+      "type": "integer",
+      "default": 1000,
+      "title": "Daily Call Limit",
+      "description": "Free tier daily call limit per IP address. Default is 1,000 calls/day. No signup or API key required."
+    },
+    "backend_url": {
+      "type": "string",
+      "default": "https://api.quantoracle.dev",
+      "title": "Backend URL",
+      "description": "QuantOracle REST API base URL. Override only if running a self-hosted instance."
+    }
+  },
+  "additionalProperties": false,
+  "description": "QuantOracle requires no configuration for the free tier (1,000 calls/day). All options below are optional."
+}

@@ -7,15 +7,18 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/quantoracle-mcp"><img src="https://img.shields.io/npm/v/quantoracle-mcp?label=npm&color=cb3837" alt="npm"></a>
   <a href="https://smithery.ai/server/QuantOracle/quantoracle"><img src="https://smithery.ai/badge/QuantOracle/quantoracle" alt="Smithery"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-quantoracle-blueviolet" alt="ClawHub"></a>
+  <a href="https://x402.org/ecosystem"><img src="https://img.shields.io/badge/x402-USDC%20on%20Base-0052FF" alt="x402"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
 </p>
 
 <p align="center">
   <a href="https://quantoracle.dev">quantoracle.dev</a> &nbsp;|&nbsp;
   <a href="#mcp-server">MCP Server</a> &nbsp;|&nbsp;
+  <a href="#x402-payments">x402 Payments</a> &nbsp;|&nbsp;
   <a href="#free-tier">Free Tier</a> &nbsp;|&nbsp;
   <a href="#full-endpoint-reference">All 63 Endpoints</a> &nbsp;|&nbsp;
-  <a href="#agent-integration">Agent Integration</a>
+  <a href="#integrations">Integrations</a>
 </p>
 
 ---
@@ -125,7 +128,12 @@ Check usage anytime:
 curl https://api.quantoracle.dev/usage
 ```
 
-After 1,000 calls, attach an x402 micropayment (USDC on Base) to continue:
+After 1,000 calls, the API returns `402 Payment Required` with an x402 payment header. Any x402-compatible agent automatically pays and continues:
+
+```
+HTTP/1.1 402 Payment Required
+PAYMENT-REQUIRED: <base64-encoded payment instructions>
+```
 
 | Tier | Price | Endpoints |
 |------|-------|-----------|
@@ -133,6 +141,23 @@ After 1,000 calls, attach an x402 micropayment (USDC on Base) to continue:
 | **Medium** | $0.005 | Black-Scholes, implied vol, Kelly, position sizing, drawdown, regime, crossover, bond amortization, carry trade, IRP, PPP, funding rate, slippage, vesting, rebalance, IRR, realized vol, PSR, transaction cost |
 | **Complex** | $0.008 | Portfolio risk, binomial tree, barrier/Asian/lookback options, credit spread, VaR, stress test, regression, cointegration, Hurst, distribution fit, risk parity |
 | **Heavy** | $0.015 | Monte Carlo, GARCH, portfolio optimization, option chain analysis, vol surface, yield curve, correlation matrix |
+
+---
+
+## x402 Payments
+
+QuantOracle uses the [x402 protocol](https://x402.org) for pay-per-call micropayments. When an agent exhausts its free tier, the API returns a standard `402` response with payment instructions. x402-compatible agents (Coinbase AgentKit, OpenClaw, etc.) handle this automatically:
+
+1. Agent calls endpoint, gets `402` with `PAYMENT-REQUIRED` header
+2. Agent signs a gasless USDC transfer authorization (EIP-3009)
+3. Agent resends request with `PAYMENT-SIGNATURE` header
+4. Server verifies via CDP facilitator, serves the response, settles on-chain
+
+**No API keys. No subscriptions. No accounts. Just math and micropayments.**
+
+- **Currency**: USDC on Base (chain ID 8453)
+- **Settlement**: Via Coinbase Developer Platform facilitator
+- **Wallet**: `0xC94f5F33ae446a50Ce31157db81253BfddFE2af6`
 
 ---
 
@@ -146,16 +171,28 @@ QuantOracle is available as a native MCP server with 63 tools. Works with Claude
 npx quantoracle-mcp
 ```
 
-### Claude Desktop
+### Claude Desktop / Claude Code
 
-Add to your `claude_desktop_config.json`:
+Add as a connector in Settings, or add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "quantoracle": {
+      "url": "https://mcp.quantoracle.dev/mcp"
+    }
+  }
+}
+```
+
+Or run locally via npx:
 
 ```json
 {
   "mcpServers": {
     "quantoracle": {
       "command": "npx",
-      "args": ["quantoracle-mcp"]
+      "args": ["-y", "quantoracle-mcp"]
     }
   }
 }
@@ -175,16 +212,29 @@ https://mcp.quantoracle.dev/mcp
 npx @smithery/cli mcp add https://server.smithery.ai/QuantOracle/quantoracle
 ```
 
+### OpenClaw / ClawHub
+
+```bash
+clawhub install quantoracle
+```
+
 ---
 
-## Agent Integration
+## Integrations
 
-### OpenAPI
+QuantOracle is available across multiple agent ecosystems:
 
-Full OpenAPI 3.1 spec available at:
-- **Runtime**: `https://api.quantoracle.dev/openapi.json`
-- **Swagger UI**: `https://api.quantoracle.dev/docs`
-- **Static**: [`openapi.json`](openapi.json) in this repo
+| Platform | How to connect |
+|----------|---------------|
+| **Claude Desktop / Claude Code** | Connector URL: `https://mcp.quantoracle.dev/mcp` |
+| **Cursor / Windsurf** | MCP config: `npx quantoracle-mcp` |
+| **Smithery** | `npx @smithery/cli mcp add QuantOracle/quantoracle` |
+| **OpenClaw / ClawHub** | `clawhub install quantoracle` |
+| **npm** | `npx quantoracle-mcp` |
+| **x402 ecosystem** | [x402.org/ecosystem](https://x402.org/ecosystem) |
+| **REST API** | `https://api.quantoracle.dev/v1/...` |
+| **OpenAPI spec** | `https://api.quantoracle.dev/openapi.json` |
+| **Swagger UI** | `https://api.quantoracle.dev/docs` |
 
 ### Tool Discovery
 
@@ -194,18 +244,12 @@ curl https://api.quantoracle.dev/tools
 
 # Health check
 curl https://api.quantoracle.dev/health
-```
 
-### MCP Manifest
+# Usage check
+curl https://api.quantoracle.dev/usage
 
-MCP manifest at [`mcp/mcp.json`](mcp/mcp.json) for agent frameworks:
-
-```json
-{
-  "name": "quantoracle",
-  "transport": { "type": "streamable-http", "url": "https://mcp.quantoracle.dev/mcp" },
-  "free_tier": { "calls_per_day": 1000, "auth_required": false }
-}
+# MCP server card
+curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 ```
 
 ---
@@ -387,16 +431,17 @@ python tests/accuracy_benchmarks.py https://api.quantoracle.dev
 
 ```
 quantoracle/
-  api/quantoracle.py      -- FastAPI app, 63 endpoints, pure Python math
-  worker/src/index.ts      -- Cloudflare Worker: rate limiting + x402 payments
-  mcp/mcp.json             -- MCP manifest for agent discovery
-  openapi.json             -- OpenAPI 3.0 spec
+  api/quantoracle.py        -- FastAPI app, 63 endpoints, pure Python math
+  worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments
+  mcp-server/src/index.ts    -- MCP server: 63 tools over Streamable HTTP
+  mcp-server/SKILL.md        -- ClawHub skill definition
+  openapi.json               -- OpenAPI 3.0 spec
   tests/
-    test_all.py            -- 65 integration tests
-    accuracy_benchmarks.py -- 120 citation-backed accuracy tests
+    test_all.py              -- 65 integration tests
+    accuracy_benchmarks.py   -- 120 citation-backed accuracy tests
 ```
 
-**Stack**: FastAPI + Pydantic | Cloudflare Workers + KV | x402 on Base (USDC)
+**Stack**: FastAPI + Pydantic | Cloudflare Workers + KV | MCP (Streamable HTTP) | x402 + CDP Facilitator | USDC on Base
 
 ---
 

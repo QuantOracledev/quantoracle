@@ -98,6 +98,15 @@ function resolveRef(schema: any, components: Record<string, any>): any {
     result.items = resolveRef(result.items, components);
   }
   if (result.anyOf) {
+    // Flatten Optional[T] patterns: anyOf: [{type: T}, {type: "null"}] → just {type: T}
+    const nonNull = result.anyOf.filter((s: any) => s.type !== "null");
+    if (nonNull.length === 1 && result.anyOf.some((s: any) => s.type === "null")) {
+      const flat = resolveRef(nonNull[0], components);
+      // Preserve description/title from parent
+      if (result.description) flat.description = result.description;
+      if (result.title) flat.title = result.title;
+      return flat;
+    }
     result.anyOf = result.anyOf.map((s: any) => resolveRef(s, components));
   }
   if (result.oneOf) {
@@ -109,11 +118,11 @@ function resolveRef(schema: any, components: Record<string, any>): any {
   return result;
 }
 
-// ── Path → tool name (dot notation for navigable tree) ─────────────────
-// /v1/options/price → options.price
-// /v1/crypto/apy-apr-convert → crypto.apy-apr-convert
+// ── Path → tool name (underscore-separated for compatibility) ──────────
+// /v1/options/price → options_price
+// /v1/crypto/apy-apr-convert → crypto_apy-apr-convert
 function pathToToolName(path: string): string {
-  return path.replace("/v1/", "").replace(/\//g, ".");
+  return path.replace("/v1/", "").replace(/\//g, "_");
 }
 
 // ── Pricing table (mirrors worker/src/index.ts) ────────────────────────
@@ -305,14 +314,6 @@ async function main() {
 
         // Success — count this call
         incrementCount(ip);
-        const updated = getRateLimit(ip);
-
-        // Include usage info in response
-        data._usage = {
-          calls_today: updated.count,
-          daily_limit: DAILY_LIMIT,
-          remaining: updated.remaining,
-        };
 
         return {
           content: [{
