@@ -6,7 +6,7 @@
   "repository": "https://github.com/QuantOracledev/quantoracle",
   "documentation_url": "https://api.quantoracle.dev/docs",
   "openapi_url": "https://api.quantoracle.dev/openapi.json",
-  "transport": { "type": "streamable-http", "url": "https://mcp.quantoracle.dev:8002/mcp" },
+  "transport": { "type": "streamable-http", "url": "https://mcp.quantoracle.dev/mcp" },
   "free_tier": { "calls_per_day": 1000, "auth_required": false, "ip_based": true, "window": "24h" },
   "payment": { "protocol": "x402", "network": "base", "currency": "USDC" },
   "tags": ["finance", "quantitative", "options", "derivatives", "risk", "portfolio", "statistics", "crypto", "defi", "macro", "fx", "backtesting", "agent-ready", "deterministic", "mcp", "calculator"],
