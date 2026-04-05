@@ -304,8 +304,13 @@ def _rank(a):
 # TOOL 1: BLACK-SCHOLES + 10 GREEKS — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T1In(BaseModel):
-    S: float = Field(..., gt=0); K: float = Field(..., gt=0); T: float = Field(..., gt=0)
-    r: float = 0.05; sigma: float = Field(..., gt=0); q: float = 0; type: Literal["call", "put"] = "call"
+    S: float = Field(..., gt=0, description="Spot price of the underlying asset")
+    K: float = Field(..., gt=0, description="Strike price")
+    T: float = Field(..., gt=0, description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    sigma: float = Field(..., gt=0, description="Volatility (annualized, e.g. 0.2 = 20%)")
+    q: float = Field(0, description="Continuous dividend yield")
+    type: Literal["call", "put"] = Field("call", description="Option type")
 
 @app.post("/v1/options/price", tags=["Options"], dependencies=auth)
 async def t1(req: T1In):
@@ -342,8 +347,13 @@ async def t1(req: T1In):
 # TOOL 2: IMPLIED VOL SOLVER — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T2In(BaseModel):
-    S: float = Field(..., gt=0); K: float = Field(..., gt=0); T: float = Field(..., gt=0)
-    r: float = 0.05; q: float = 0; market_price: float = Field(..., gt=0); type: Literal["call", "put"] = "call"
+    S: float = Field(..., gt=0, description="Spot price of the underlying asset")
+    K: float = Field(..., gt=0, description="Strike price")
+    T: float = Field(..., gt=0, description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    q: float = Field(0, description="Continuous dividend yield")
+    market_price: float = Field(..., gt=0, description="Observed market price of the option")
+    type: Literal["call", "put"] = Field("call", description="Option type")
 
 @app.post("/v1/options/implied-vol", tags=["Options"], dependencies=auth)
 async def t2(req: T2In):
@@ -368,10 +378,15 @@ async def t2(req: T2In):
 # TOOL 3: MULTI-LEG STRATEGY — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class Leg(BaseModel):
-    type: Literal["call", "put"]; K: float; premium: float; quantity: int = 1
+    type: Literal["call", "put"] = Field(..., description="Option type")
+    K: float = Field(..., description="Strike price")
+    premium: float = Field(..., description="Premium paid (positive) or received (negative)")
+    quantity: int = Field(1, description="Number of contracts (positive=long, negative=short)")
 
 class T3In(BaseModel):
-    legs: list[Leg]; S_range: Optional[list[float]] = None; points: int = Field(50, ge=1)
+    legs: list[Leg] = Field(..., description="List of option legs in the strategy")
+    S_range: Optional[list[float]] = Field(None, description="Custom price range [min, max] for P&L analysis")
+    points: int = Field(50, ge=1, description="Number of points to evaluate in P&L curve")
 
 @app.post("/v1/options/strategy", tags=["Options"], dependencies=auth)
 async def t3(req: T3In):
@@ -396,8 +411,9 @@ async def t3(req: T3In):
 # TOOL 4: PORTFOLIO RISK — 22 METRICS — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T4In(BaseModel):
-    returns: list[float] = Field(..., min_length=5, max_length=10000)
-    benchmark_returns: Optional[list[float]] = None; risk_free_rate: float = 0.05
+    returns: list[float] = Field(..., min_length=5, max_length=10000, description="Array of periodic portfolio returns (e.g. daily)")
+    benchmark_returns: Optional[list[float]] = Field(None, description="Optional benchmark return series for relative metrics")
+    risk_free_rate: float = Field(0.05, description="Annual risk-free rate for Sharpe/Sortino calculation")
 
 @app.post("/v1/risk/portfolio", tags=["Risk"], dependencies=auth)
 async def t4(req: T4In):
@@ -441,9 +457,11 @@ async def t4(req: T4In):
 # TOOL 5: KELLY CRITERION — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T5In(BaseModel):
-    mode: Literal["discrete", "continuous"] = "discrete"
-    win_rate: Optional[float] = None; avg_win: Optional[float] = None; avg_loss: Optional[float] = None
-    returns: Optional[list[float]] = None
+    mode: Literal["discrete", "continuous"] = Field("discrete", description="Calculation mode: discrete (win/loss) or continuous (return series)")
+    win_rate: Optional[float] = Field(None, description="Probability of winning (0-1), required for discrete mode")
+    avg_win: Optional[float] = Field(None, description="Average win amount, required for discrete mode")
+    avg_loss: Optional[float] = Field(None, description="Average loss amount (positive number), required for discrete mode")
+    returns: Optional[list[float]] = Field(None, description="Array of historical returns, required for continuous mode")
 
 @app.post("/v1/risk/kelly", tags=["Risk"], dependencies=auth)
 async def t5(req: T5In):
@@ -472,9 +490,13 @@ async def t5(req: T5In):
 # TOOL 6: MONTE CARLO — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class T6In(BaseModel):
-    initial_value: float = 100000; annual_return: float = 0.1; annual_vol: float = 0.2
-    years: float = Field(5, gt=0, le=100); simulations: int = Field(1000, ge=1, le=5000)
-    contributions: float = 0; withdrawal_rate: float = 0
+    initial_value: float = Field(100000, description="Starting portfolio value")
+    annual_return: float = Field(0.1, description="Expected annual return (e.g. 0.10 = 10%)")
+    annual_vol: float = Field(0.2, description="Annual volatility (e.g. 0.20 = 20%)")
+    years: float = Field(5, gt=0, le=100, description="Simulation horizon in years")
+    simulations: int = Field(1000, ge=1, le=5000, description="Number of Monte Carlo paths")
+    contributions: float = Field(0, description="Periodic contribution amount (per year)")
+    withdrawal_rate: float = Field(0, description="Annual withdrawal rate as fraction of portfolio")
 
 @app.post("/v1/simulate/montecarlo", tags=["Simulation"], dependencies=auth)
 async def t6(req: T6In):
@@ -510,8 +532,9 @@ async def t6(req: T6In):
 # TOOL 7: TECHNICAL INDICATORS (13) — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T7In(BaseModel):
-    prices: list[float] = Field(..., min_length=5)
-    volumes: Optional[list[float]] = None; period: int = Field(14, ge=2)
+    prices: list[float] = Field(..., min_length=5, description="Array of price data (e.g. closing prices)")
+    volumes: Optional[list[float]] = Field(None, description="Optional array of volume data (same length as prices)")
+    period: int = Field(14, ge=2, description="Lookback period for indicator calculations")
 
 @app.post("/v1/indicators/technical", tags=["Indicators"], dependencies=auth)
 async def t7(req: T7In):
@@ -547,7 +570,7 @@ async def t7(req: T7In):
 # TOOL 8: CORRELATION MATRIX — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T8In(BaseModel):
-    series: dict[str, list[float]]
+    series: dict[str, list[float]] = Field(..., description='Named return series, e.g. {"AAPL": [0.01, -0.02, ...], "MSFT": [...]}')
 
 @app.post("/v1/risk/correlation", tags=["Risk"], dependencies=auth)
 async def t8(req: T8In):
@@ -566,7 +589,10 @@ async def t8(req: T8In):
 # TOOL 9: POSITION SIZING — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T9In(BaseModel):
-    account_size: float; risk_per_trade: float = 0.02; entry_price: float; stop_loss: float
+    account_size: float = Field(..., description="Total account value")
+    risk_per_trade: float = Field(0.02, description="Maximum risk per trade as fraction (e.g. 0.02 = 2%)")
+    entry_price: float = Field(..., description="Planned entry price")
+    stop_loss: float = Field(..., description="Stop loss price")
 
 @app.post("/v1/risk/position-size", tags=["Risk"], dependencies=auth)
 async def t9(req: T9In):
@@ -588,7 +614,7 @@ async def t9(req: T9In):
 # TOOL 10: DRAWDOWN — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T10In(BaseModel):
-    equity_curve: list[float] = Field(..., min_length=3)
+    equity_curve: list[float] = Field(..., min_length=3, description="Array of portfolio equity values over time")
 
 @app.post("/v1/risk/drawdown", tags=["Risk"], dependencies=auth)
 async def t10(req: T10In):
@@ -607,7 +633,9 @@ async def t10(req: T10In):
 # TOOL 11: REGIME DETECTION — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T11In(BaseModel):
-    prices: list[float] = Field(..., min_length=30); sma_period: int = 50; vol_window: int = 21
+    prices: list[float] = Field(..., min_length=30, description="Array of price data")
+    sma_period: int = Field(50, description="SMA period for trend detection")
+    vol_window: int = Field(21, description="Window for rolling volatility calculation")
 
 @app.post("/v1/indicators/regime", tags=["Indicators"], dependencies=auth)
 async def t11(req: T11In):
@@ -628,7 +656,9 @@ async def t11(req: T11In):
 # TOOL 12: MA CROSSOVER — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T12In(BaseModel):
-    prices: list[float] = Field(..., min_length=30); fast_period: int = 10; slow_period: int = 50
+    prices: list[float] = Field(..., min_length=30, description="Array of price data")
+    fast_period: int = Field(10, description="Fast moving average period")
+    slow_period: int = Field(50, description="Slow moving average period")
 
 @app.post("/v1/indicators/crossover", tags=["Indicators"], dependencies=auth)
 async def t12(req: T12In):
@@ -659,7 +689,11 @@ async def t12(req: T12In):
 # TOOL 13: BOND PRICING — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T13In(BaseModel):
-    face: float = 1000; coupon_rate: float; ytm: float; years: int = Field(..., ge=1, le=100); frequency: int = Field(2, ge=1, le=12)
+    face: float = Field(1000, description="Face/par value of the bond")
+    coupon_rate: float = Field(..., description="Annual coupon rate (e.g. 0.05 = 5%)")
+    ytm: float = Field(..., description="Yield to maturity (annualized)")
+    years: int = Field(..., ge=1, le=100, description="Years to maturity")
+    frequency: int = Field(2, ge=1, le=12, description="Coupon payments per year")
 
 @app.post("/v1/fixed-income/bond", tags=["Fixed Income"], dependencies=auth)
 async def t13(req: T13In):
@@ -682,7 +716,10 @@ async def t13(req: T13In):
 # TOOL 14: AMORTIZATION — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T14In(BaseModel):
-    principal: float = Field(..., gt=0); annual_rate: float = Field(..., ge=0); years: int = Field(..., ge=1, le=50); extra_payment: float = 0
+    principal: float = Field(..., gt=0, description="Loan principal amount")
+    annual_rate: float = Field(..., ge=0, description="Annual interest rate")
+    years: int = Field(..., ge=1, le=50, description="Loan term in years")
+    extra_payment: float = Field(0, description="Extra payment per period")
 
 @app.post("/v1/fixed-income/amortization", tags=["Fixed Income"], dependencies=auth)
 async def t14(req: T14In):
@@ -706,8 +743,9 @@ async def t14(req: T14In):
 # TOOL 15: PORTFOLIO OPTIMIZATION — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class T15In(BaseModel):
-    returns: dict[str, list[float]]; risk_free_rate: float = 0.05
-    mode: Literal["max_sharpe", "min_vol", "risk_parity"] = "max_sharpe"
+    returns: dict[str, list[float]] = Field(..., description='Named return series per asset, e.g. {"AAPL": [...], "MSFT": [...]}')
+    risk_free_rate: float = Field(0.05, description="Annual risk-free rate")
+    mode: Literal["max_sharpe", "min_vol", "risk_parity"] = Field("max_sharpe", description="Optimization objective")
 
 @app.post("/v1/portfolio/optimize", tags=["Portfolio"], dependencies=auth)
 async def t15(req: T15In):
@@ -741,10 +779,15 @@ async def t15(req: T15In):
 # TOOL 16: BINOMIAL TREE — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T16In(BaseModel):
-    S: float = Field(..., gt=0); K: float = Field(..., gt=0); T: float = Field(..., gt=0, le=30)
-    r: float = 0.05; sigma: float = Field(..., gt=0); q: float = 0
-    type: Literal["call", "put"] = "call"; exercise: Literal["american", "european"] = "european"
-    steps: int = Field(100, ge=1, le=500)
+    S: float = Field(..., gt=0, description="Spot price of the underlying asset")
+    K: float = Field(..., gt=0, description="Strike price")
+    T: float = Field(..., gt=0, le=30, description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    sigma: float = Field(..., gt=0, description="Volatility (annualized)")
+    q: float = Field(0, description="Continuous dividend yield")
+    type: Literal["call", "put"] = Field("call", description="Option type")
+    exercise: Literal["american", "european"] = Field("european", description="Exercise style")
+    steps: int = Field(100, ge=1, le=500, description="Number of tree steps (higher = more accurate)")
 
 @app.post("/v1/derivatives/binomial-tree", tags=["Derivatives"], dependencies=auth)
 async def t16(req: T16In):
@@ -791,11 +834,17 @@ async def t16(req: T16In):
 # TOOL 17: BARRIER OPTION — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T17In(BaseModel):
-    S: float = Field(..., gt=0); K: float = Field(..., gt=0); H: float = Field(..., gt=0)
-    T: float = Field(..., gt=0, le=30); r: float = 0.05; sigma: float = Field(..., gt=0); q: float = 0
-    type: Literal["call", "put"] = "call"
-    barrier_type: Literal["up-in", "up-out", "down-in", "down-out"] = "down-out"
-    rebate: float = 0
+    S: float = Field(..., gt=0, description="Spot price of the underlying asset")
+    K: float = Field(..., gt=0, description="Strike price")
+    H: float = Field(..., gt=0, description="Barrier level")
+    T: float = Field(..., gt=0, le=30, description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    sigma: float = Field(..., gt=0, description="Volatility (annualized)")
+    q: float = Field(0, description="Continuous dividend yield")
+    type: Literal["call", "put"] = Field("call", description="Option type")
+    barrier_type: Literal["up-in", "up-out", "down-in", "down-out"] = Field(
+        "down-out", description="Barrier type: up/down + in/out")
+    rebate: float = Field(0, description="Rebate paid if barrier is hit (for out) or not hit (for in)")
 
 @app.post("/v1/derivatives/barrier-option", tags=["Derivatives"], dependencies=auth)
 async def t17(req: T17In):
@@ -882,11 +931,16 @@ async def t17(req: T17In):
 # TOOL 18: ASIAN OPTION — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T18In(BaseModel):
-    S: float = Field(..., gt=0); K: float = Field(..., gt=0); T: float = Field(..., gt=0, le=30)
-    r: float = 0.05; sigma: float = Field(..., gt=0); q: float = 0
-    type: Literal["call", "put"] = "call"
-    averaging: Literal["geometric", "arithmetic"] = "geometric"
-    observations: int = Field(12, ge=2)
+    S: float = Field(..., gt=0, description="Spot price of the underlying asset")
+    K: float = Field(..., gt=0, description="Strike price")
+    T: float = Field(..., gt=0, le=30, description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    sigma: float = Field(..., gt=0, description="Volatility (annualized)")
+    q: float = Field(0, description="Continuous dividend yield")
+    type: Literal["call", "put"] = Field("call", description="Option type")
+    averaging: Literal["geometric", "arithmetic"] = Field(
+        "geometric", description="Averaging method for the Asian option")
+    observations: int = Field(12, ge=2, description="Number of averaging observations")
 
 @app.post("/v1/derivatives/asian-option", tags=["Derivatives"], dependencies=auth)
 async def t18(req: T18In):
@@ -932,12 +986,17 @@ async def t18(req: T18In):
 # TOOL 19: LOOKBACK OPTION — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T19In(BaseModel):
-    S: float = Field(..., gt=0); T: float = Field(..., gt=0, le=30)
-    r: float = 0.05; sigma: float = Field(..., gt=0); q: float = 0
-    type: Literal["call", "put"] = "call"
-    lookback_type: Literal["floating", "fixed"] = "floating"
-    K: Optional[float] = None
-    S_min: Optional[float] = None; S_max: Optional[float] = None
+    S: float = Field(..., gt=0, description="Current spot price")
+    T: float = Field(..., gt=0, le=30, description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    sigma: float = Field(..., gt=0, description="Volatility (annualized)")
+    q: float = Field(0, description="Continuous dividend yield")
+    type: Literal["call", "put"] = Field("call", description="Option type")
+    lookback_type: Literal["floating", "fixed"] = Field(
+        "floating", description="Floating strike or fixed strike lookback")
+    K: Optional[float] = Field(None, description="Fixed strike price (required for fixed lookback)")
+    S_min: Optional[float] = Field(None, description="Minimum price observed so far (for floating call)")
+    S_max: Optional[float] = Field(None, description="Maximum price observed so far (for floating put)")
 
 @app.post("/v1/derivatives/lookback-option", tags=["Derivatives"], dependencies=auth)
 async def t19(req: T19In):
@@ -1002,11 +1061,21 @@ async def t19(req: T19In):
 # TOOL 20: OPTION CHAIN ANALYSIS — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class ChainEntry(BaseModel):
-    strike: float; call_bid: float = 0; call_ask: float = 0; put_bid: float = 0; put_ask: float = 0
-    call_oi: int = 0; put_oi: int = 0; call_volume: int = 0; put_volume: int = 0
+    strike: float = Field(..., description="Strike price")
+    call_bid: float = Field(0, description="Call bid price")
+    call_ask: float = Field(0, description="Call ask price")
+    put_bid: float = Field(0, description="Put bid price")
+    put_ask: float = Field(0, description="Put ask price")
+    call_oi: int = Field(0, description="Call open interest")
+    put_oi: int = Field(0, description="Put open interest")
+    call_volume: int = Field(0, description="Call volume")
+    put_volume: int = Field(0, description="Put volume")
 
 class T20In(BaseModel):
-    chain: list[ChainEntry]; spot: float; r: float = 0.05; T: float = 0.0833
+    chain: list[ChainEntry] = Field(..., description="Array of option chain entries")
+    spot: float = Field(..., description="Current spot price of the underlying")
+    r: float = Field(0.05, description="Risk-free interest rate")
+    T: float = Field(0.0833, description="Time to expiration in years")
 
 @app.post("/v1/derivatives/option-chain-analysis", tags=["Derivatives"], dependencies=auth)
 async def t20(req: T20In):
@@ -1060,7 +1129,13 @@ async def t20(req: T20In):
 # TOOL 21: PUT-CALL PARITY — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T21In(BaseModel):
-    call_price: float; put_price: float; S: float; K: float; T: float; r: float = 0.05; q: float = 0
+    call_price: float = Field(..., description="Observed call option price")
+    put_price: float = Field(..., description="Observed put option price")
+    S: float = Field(..., description="Spot price of the underlying")
+    K: float = Field(..., description="Strike price")
+    T: float = Field(..., description="Time to expiration in years")
+    r: float = Field(0.05, description="Risk-free interest rate (annualized)")
+    q: float = Field(0, description="Continuous dividend yield")
 
 @app.post("/v1/derivatives/put-call-parity", tags=["Derivatives"], dependencies=auth)
 async def t21(req: T21In):
@@ -1091,10 +1166,15 @@ async def t21(req: T21In):
 # TOOL 22: VOLATILITY SURFACE — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class VolPoint(BaseModel):
-    strike: float; expiry_days: float; implied_vol: float
+    strike: float = Field(..., description="Strike price")
+    expiry_days: float = Field(..., description="Days to expiration")
+    implied_vol: float = Field(..., description="Implied volatility at this strike and expiry")
 
 class T22In(BaseModel):
-    market_data: list[VolPoint]; spot: float; interpolation: Literal["linear", "cubic"] = "linear"
+    market_data: list[VolPoint] = Field(..., description="Array of implied vol data points")
+    spot: float = Field(..., description="Current spot price")
+    interpolation: Literal["linear", "cubic"] = Field(
+        "linear", description="Surface interpolation method")
 
 @app.post("/v1/derivatives/volatility-surface", tags=["Derivatives"], dependencies=auth)
 async def t22(req: T22In):
@@ -1149,7 +1229,10 @@ async def t22(req: T22In):
 # TOOL 23: LINEAR REGRESSION — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T23In(BaseModel):
-    x: list[list[float]] | list[float]; y: list[float]; confidence_level: float = 0.95
+    x: list[list[float]] | list[float] = Field(
+        ..., description="Independent variable(s): 1D array for simple, 2D for multiple regression")
+    y: list[float] = Field(..., description="Dependent variable array")
+    confidence_level: float = Field(0.95, description="Confidence level for intervals (e.g. 0.95 = 95%)")
 
 @app.post("/v1/stats/linear-regression", tags=["Statistics"], dependencies=auth)
 async def t23(req: T23In):
@@ -1201,7 +1284,9 @@ async def t23(req: T23In):
 # TOOL 24: POLYNOMIAL REGRESSION — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T24In(BaseModel):
-    x: list[float]; y: list[float]; degree: int = Field(2, ge=1, le=10)
+    x: list[float] = Field(..., description="Independent variable array")
+    y: list[float] = Field(..., description="Dependent variable array")
+    degree: int = Field(2, ge=1, le=10, description="Polynomial degree (1=linear, 2=quadratic, etc.)")
 
 @app.post("/v1/stats/polynomial-regression", tags=["Statistics"], dependencies=auth)
 async def t24(req: T24In):
@@ -1242,7 +1327,10 @@ async def t24(req: T24In):
 # TOOL 25: COINTEGRATION TEST — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T25In(BaseModel):
-    series_x: list[float]; series_y: list[float]; significance: Literal["0.01", "0.05", "0.10"] = "0.05"
+    series_x: list[float] = Field(..., description="First time series")
+    series_y: list[float] = Field(..., description="Second time series")
+    significance: Literal["0.01", "0.05", "0.10"] = Field(
+        "0.05", description="Significance level for the test")
 
 @app.post("/v1/stats/cointegration", tags=["Statistics"], dependencies=auth)
 async def t25(req: T25In):
@@ -1289,7 +1377,9 @@ async def t25(req: T25In):
 # TOOL 26: HURST EXPONENT — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T26In(BaseModel):
-    series: list[float] = Field(..., min_length=20, max_length=10000); min_window: int = Field(10, ge=2); max_window: Optional[int] = None
+    series: list[float] = Field(..., min_length=20, max_length=10000, description="Time series data")
+    min_window: int = Field(10, ge=2, description="Minimum R/S window size")
+    max_window: Optional[int] = Field(None, description="Maximum R/S window size (defaults to len/2)")
 
 @app.post("/v1/stats/hurst-exponent", tags=["Statistics"], dependencies=auth)
 async def t26(req: T26In):
@@ -1339,8 +1429,9 @@ async def t26(req: T26In):
 # TOOL 27: GARCH(1,1) FORECAST — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class T27In(BaseModel):
-    returns: list[float] = Field(..., min_length=30); forecast_periods: int = 5
-    mean_model: Literal["zero", "constant"] = "zero"
+    returns: list[float] = Field(..., min_length=30, description="Array of return data")
+    forecast_periods: int = Field(5, description="Number of periods to forecast ahead")
+    mean_model: Literal["zero", "constant"] = Field("zero", description="Mean model specification")
 
 @app.post("/v1/stats/garch-forecast", tags=["Statistics"], dependencies=auth)
 async def t27(req: T27In):
@@ -1395,7 +1486,9 @@ async def t27(req: T27In):
 # TOOL 28: Z-SCORE — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T28In(BaseModel):
-    series: list[float] = Field(..., min_length=3); window: Optional[int] = None; threshold: float = 2.0
+    series: list[float] = Field(..., min_length=3, description="Numeric data series")
+    window: Optional[int] = Field(None, description="Rolling window size (null for static z-scores)")
+    threshold: float = Field(2.0, description="Z-score threshold for extreme value detection")
 
 @app.post("/v1/stats/zscore", tags=["Statistics"], dependencies=auth)
 async def t28(req: T28In):
@@ -1423,7 +1516,7 @@ async def t28(req: T28In):
 # TOOL 29: DISTRIBUTION FIT — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T29In(BaseModel):
-    data: list[float] = Field(..., min_length=10)
+    data: list[float] = Field(..., min_length=10, description="Array of data to fit distributions to")
 
 @app.post("/v1/stats/distribution-fit", tags=["Statistics"], dependencies=auth)
 async def t29(req: T29In):
@@ -1468,8 +1561,11 @@ async def t29(req: T29In):
 # TOOL 30: CORRELATION MATRIX (advanced) — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class T30In(BaseModel):
-    series: dict[str, list[float]]; method: Literal["pearson", "spearman"] = "pearson"
-    include_eigenvalues: bool = False
+    series: dict[str, list[float]] = Field(
+        ..., description='Named data series, e.g. {"A": [...], "B": [...]}')
+    method: Literal["pearson", "spearman"] = Field("pearson", description="Correlation method")
+    include_eigenvalues: bool = Field(
+        False, description="Whether to compute eigenvalue decomposition")
 
 @app.post("/v1/stats/correlation-matrix", tags=["Statistics"], dependencies=auth)
 async def t30(req: T30In):
@@ -1515,10 +1611,18 @@ async def t30(req: T30In):
 # TOOL 31: IMPERMANENT LOSS — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T31In(BaseModel):
-    initial_price_ratio: float = Field(1.0, gt=0); current_price_ratio: float = Field(..., gt=0)
-    amm_type: Literal["v2", "v3"] = "v2"
-    lower_tick: Optional[float] = None; upper_tick: Optional[float] = None
-    initial_investment: float = 1000
+    initial_price_ratio: float = Field(
+        1.0, gt=0, description="Initial price ratio of token A to token B")
+    current_price_ratio: float = Field(
+        ..., gt=0, description="Current price ratio of token A to token B")
+    amm_type: Literal["v2", "v3"] = Field(
+        "v2", description="AMM type: v2 (full range) or v3 (concentrated)")
+    lower_tick: Optional[float] = Field(
+        None, description="Lower price bound (v3 only)")
+    upper_tick: Optional[float] = Field(
+        None, description="Upper price bound (v3 only)")
+    initial_investment: float = Field(
+        1000, description="Initial investment value in USD")
 
 @app.post("/v1/crypto/impermanent-loss", tags=["Crypto"], dependencies=auth)
 async def t31(req: T31In):
@@ -1560,8 +1664,11 @@ async def t31(req: T31In):
 # TOOL 32: APY/APR CONVERTER — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T32In(BaseModel):
-    rate: float; from_type: Literal["apy", "apr"] = "apr"
-    compounding: Literal["daily", "weekly", "monthly", "quarterly", "continuous"] = "daily"
+    rate: float = Field(..., description="The rate to convert (as decimal, e.g. 0.12 = 12%)")
+    from_type: Literal["apy", "apr"] = Field(
+        "apr", description="Input rate type to convert from")
+    compounding: Literal["daily", "weekly", "monthly", "quarterly", "continuous"] = Field(
+        "daily", description="Compounding frequency")
 
 @app.post("/v1/crypto/apy-apr-convert", tags=["Crypto"], dependencies=auth)
 async def t32(req: T32In):
@@ -1593,9 +1700,16 @@ async def t32(req: T32In):
 # TOOL 33: LIQUIDATION PRICE — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T33In(BaseModel):
-    entry_price: float; collateral: float; position_size: float
-    leverage: float; direction: Literal["long", "short"]
-    maintenance_margin_rate: float = 0.005; funding_accumulated: float = 0
+    entry_price: float = Field(..., description="Position entry price")
+    collateral: float = Field(..., description="Collateral amount in USD")
+    position_size: float = Field(..., description="Total position size in USD")
+    leverage: float = Field(..., description="Leverage multiplier")
+    direction: Literal["long", "short"] = Field(
+        ..., description="Position direction")
+    maintenance_margin_rate: float = Field(
+        0.005, description="Maintenance margin rate (e.g. 0.005 = 0.5%)")
+    funding_accumulated: float = Field(
+        0, description="Accumulated funding payments (negative = paid)")
 
 @app.post("/v1/crypto/liquidation-price", tags=["Crypto"], dependencies=auth)
 async def t33(req: T33In):
@@ -1625,11 +1739,16 @@ async def t33(req: T33In):
 # TOOL 34: FUNDING RATE ANALYSIS — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class FundingEntry(BaseModel):
-    rate: float; timestamp: Optional[str] = None
+    rate: float = Field(..., description="Funding rate for the period (e.g. 0.0001 = 0.01%)")
+    timestamp: Optional[str] = Field(None, description="Optional ISO timestamp")
 
 class T34In(BaseModel):
-    funding_rates: list[FundingEntry] = Field(..., min_length=3)
-    payment_interval_hours: int = 8; position_size: Optional[float] = None
+    funding_rates: list[FundingEntry] = Field(
+        ..., min_length=3, description="Array of funding rate entries")
+    payment_interval_hours: int = Field(
+        8, description="Hours between funding payments")
+    position_size: Optional[float] = Field(
+        None, description="Optional position size for P&L calculation")
 
 @app.post("/v1/crypto/funding-rate", tags=["Crypto"], dependencies=auth)
 async def t34(req: T34In):
@@ -1668,9 +1787,16 @@ async def t34(req: T34In):
 # TOOL 35: DEX SLIPPAGE — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T35In(BaseModel):
-    reserve_a: float = Field(..., gt=0); reserve_b: float = Field(..., gt=0); trade_amount: float = Field(..., gt=0)
-    trade_direction: Literal["a_to_b", "b_to_a"] = "a_to_b"
-    fee_bps: int = 30
+    reserve_a: float = Field(
+        ..., gt=0, description="Pool reserve of token A")
+    reserve_b: float = Field(
+        ..., gt=0, description="Pool reserve of token B")
+    trade_amount: float = Field(
+        ..., gt=0, description="Amount of input token to swap")
+    trade_direction: Literal["a_to_b", "b_to_a"] = Field(
+        "a_to_b", description="Swap direction")
+    fee_bps: int = Field(
+        30, description="DEX fee in basis points (e.g. 30 = 0.3%)")
 
 @app.post("/v1/crypto/dex-slippage", tags=["Crypto"], dependencies=auth)
 async def t35(req: T35In):
@@ -1702,9 +1828,16 @@ async def t35(req: T35In):
 # TOOL 36: VESTING SCHEDULE — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T36In(BaseModel):
-    total_tokens: float; tge_pct: float = 0; cliff_months: int = 0
-    vesting_months: int = 24; vesting_type: Literal["linear", "monthly_cliff", "quarterly"] = "linear"
-    start_date: str = "2025-01-01"
+    total_tokens: float = Field(..., description="Total tokens in the vesting grant")
+    tge_pct: float = Field(
+        0, description="Percentage unlocked at Token Generation Event (0-100)")
+    cliff_months: int = Field(0, description="Cliff period in months")
+    vesting_months: int = Field(
+        24, description="Total vesting duration in months")
+    vesting_type: Literal["linear", "monthly_cliff", "quarterly"] = Field(
+        "linear", description="Vesting schedule type")
+    start_date: str = Field(
+        "2025-01-01", description="Vesting start date (YYYY-MM-DD)")
 
 @app.post("/v1/crypto/vesting-schedule", tags=["Crypto"], dependencies=auth)
 async def t36(req: T36In):
@@ -1752,10 +1885,17 @@ async def t36(req: T36In):
 # TOOL 37: REBALANCE THRESHOLD — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class Holding(BaseModel):
-    asset: str; current_value: float; target_weight: float
+    asset: str = Field(..., description="Asset name or ticker")
+    current_value: float = Field(..., description="Current value in USD")
+    target_weight: float = Field(..., description="Target portfolio weight (0-1)")
 
 class T37In(BaseModel):
-    holdings: list[Holding]; threshold_pct: float = 5; min_trade_usd: float = 10
+    holdings: list[Holding] = Field(
+        ..., description="Array of current portfolio holdings")
+    threshold_pct: float = Field(
+        5, description="Rebalance trigger threshold as percentage")
+    min_trade_usd: float = Field(
+        10, description="Minimum trade size in USD")
 
 @app.post("/v1/crypto/rebalance-threshold", tags=["Crypto"], dependencies=auth)
 async def t37(req: T37In):
@@ -1787,8 +1927,16 @@ async def t37(req: T37In):
 # TOOL 38: INTEREST RATE PARITY — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T38In(BaseModel):
-    spot_rate: float; domestic_rate: float; foreign_rate: float; time_years: float = 1
-    parity_type: Literal["covered", "uncovered"] = "covered"; actual_forward: Optional[float] = None
+    spot_rate: float = Field(..., description="Current spot exchange rate")
+    domestic_rate: float = Field(
+        ..., description="Domestic interest rate (annualized)")
+    foreign_rate: float = Field(
+        ..., description="Foreign interest rate (annualized)")
+    time_years: float = Field(1, description="Time horizon in years")
+    parity_type: Literal["covered", "uncovered"] = Field(
+        "covered", description="Parity type: covered or uncovered")
+    actual_forward: Optional[float] = Field(
+        None, description="Actual forward rate for arbitrage detection")
 
 @app.post("/v1/fx/interest-rate-parity", tags=["FX"], dependencies=auth)
 async def t38(req: T38In):
@@ -1815,7 +1963,10 @@ async def t38(req: T38In):
 # TOOL 39: PURCHASING POWER PARITY — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T39In(BaseModel):
-    base_spot_rate: float; domestic_inflation: float; foreign_inflation: float; time_years: float = 1
+    base_spot_rate: float = Field(..., description="Current spot exchange rate")
+    domestic_inflation: float = Field(..., description="Domestic inflation rate")
+    foreign_inflation: float = Field(..., description="Foreign inflation rate")
+    time_years: float = Field(1, description="Time horizon in years")
 
 @app.post("/v1/fx/purchasing-power-parity", tags=["FX"], dependencies=auth)
 async def t39(req: T39In):
@@ -1835,12 +1986,18 @@ async def t39(req: T39In):
 # TOOL 40: FORWARD RATE FROM YIELD CURVE — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class YieldPoint(BaseModel):
-    tenor_years: float; spot_rate: float
+    tenor_years: float = Field(..., description="Maturity in years")
+    spot_rate: float = Field(..., description="Spot rate at this tenor")
 
 class T40In(BaseModel):
-    yield_curve: list[YieldPoint] = Field(..., min_length=2)
-    forward_start: float; forward_end: float
-    compounding: Literal["continuous", "annual", "semi"] = "continuous"
+    yield_curve: list[YieldPoint] = Field(
+        ..., min_length=2, description="Array of yield curve points")
+    forward_start: float = Field(
+        ..., description="Forward period start (years)")
+    forward_end: float = Field(
+        ..., description="Forward period end (years)")
+    compounding: Literal["continuous", "annual", "semi"] = Field(
+        "continuous", description="Compounding convention")
 
 @app.post("/v1/fx/forward-rate", tags=["FX"], dependencies=auth)
 async def t40(req: T40In):
@@ -1889,9 +2046,16 @@ async def t40(req: T40In):
 # TOOL 41: CARRY TRADE — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T41In(BaseModel):
-    borrow_currency_rate: float; invest_currency_rate: float
-    spot_entry: float; spot_exit: float; holding_period_days: int
-    leverage: float = 1; notional: float = 100000
+    borrow_currency_rate: float = Field(
+        ..., description="Interest rate of the funding (borrow) currency")
+    invest_currency_rate: float = Field(
+        ..., description="Interest rate of the investment currency")
+    spot_entry: float = Field(..., description="Spot rate at entry")
+    spot_exit: float = Field(..., description="Spot rate at exit")
+    holding_period_days: int = Field(
+        ..., description="Holding period in days")
+    leverage: float = Field(1, description="Leverage multiplier")
+    notional: float = Field(100000, description="Notional trade amount")
 
 @app.post("/v1/fx/carry-trade", tags=["FX"], dependencies=auth)
 async def t41(req: T41In):
@@ -1918,8 +2082,14 @@ async def t41(req: T41In):
 # TOOL 42: INFLATION-ADJUSTED RETURNS — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T42In(BaseModel):
-    nominal_return_pct: float; inflation_rate_pct: float
-    periods: Optional[int] = None; initial_value: Optional[float] = None
+    nominal_return_pct: float = Field(
+        ..., description="Nominal return as percentage")
+    inflation_rate_pct: float = Field(
+        ..., description="Inflation rate as percentage")
+    periods: Optional[int] = Field(
+        None, description="Optional number of periods for cumulative calculation")
+    initial_value: Optional[float] = Field(
+        None, description="Optional initial value for cumulative calculation")
 
 @app.post("/v1/macro/inflation-adjusted", tags=["Macro"], dependencies=auth)
 async def t42(req: T42In):
@@ -1952,9 +2122,19 @@ async def t42(req: T42In):
 # TOOL 43: TAYLOR RULE — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T43In(BaseModel):
-    current_inflation: float; target_inflation: float = 2.0; output_gap_pct: float = 0
-    neutral_real_rate: float = 2.0; inflation_weight: float = 0.5; output_weight: float = 0.5
-    current_policy_rate: Optional[float] = None
+    current_inflation: float = Field(
+        ..., description="Current inflation rate (percentage)")
+    target_inflation: float = Field(
+        2.0, description="Target inflation rate (percentage)")
+    output_gap_pct: float = Field(
+        0, description="Output gap as percentage of potential GDP")
+    neutral_real_rate: float = Field(
+        2.0, description="Neutral real interest rate (percentage)")
+    inflation_weight: float = Field(
+        0.5, description="Weight on inflation gap")
+    output_weight: float = Field(0.5, description="Weight on output gap")
+    current_policy_rate: Optional[float] = Field(
+        None, description="Current policy rate for gap analysis")
 
 @app.post("/v1/macro/taylor-rule", tags=["Macro"], dependencies=auth)
 async def t43(req: T43In):
@@ -1981,8 +2161,14 @@ async def t43(req: T43In):
 # TOOL 44: REAL YIELD & BREAKEVEN INFLATION — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T44In(BaseModel):
-    nominal_yield: float; inflation_expectation: Optional[float] = None; tips_yield: Optional[float] = None
-    tenor_years: float = 10
+    nominal_yield: float = Field(
+        ..., description="Nominal bond yield (percentage)")
+    inflation_expectation: Optional[float] = Field(
+        None, description="Expected inflation rate (percentage)")
+    tips_yield: Optional[float] = Field(
+        None,
+        description="TIPS real yield (percentage, alternative to inflation_expectation)")
+    tenor_years: float = Field(10, description="Bond tenor in years")
 
 @app.post("/v1/macro/real-yield", tags=["Macro"], dependencies=auth)
 async def t44(req: T44In):
@@ -2008,9 +2194,14 @@ async def t44(req: T44In):
 # TOOL 45: PARAMETRIC VAR — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T45In(BaseModel):
-    returns: list[float] = Field(..., min_length=10)
-    confidence_levels: list[float] = [0.95, 0.99]; holding_period_days: int = 1
-    portfolio_value: Optional[float] = None
+    returns: list[float] = Field(
+        ..., min_length=10, description="Array of historical returns")
+    confidence_levels: list[float] = Field(
+        [0.95, 0.99], description="Confidence levels for VaR calculation")
+    holding_period_days: int = Field(
+        1, description="VaR holding period in days")
+    portfolio_value: Optional[float] = Field(
+        None, description="Optional portfolio value for dollar VaR")
 
 @app.post("/v1/risk/var-parametric", tags=["Risk"], dependencies=auth)
 async def t45(req: T45In):
@@ -2061,13 +2252,26 @@ def _norm_inv(p):
 # TOOL 46: STRESS TEST — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class Position(BaseModel):
-    asset: str; value: float; beta: float = 1.0; duration: float = 0
+    asset: str = Field(..., description="Asset name")
+    value: float = Field(..., description="Current position value in USD")
+    beta: float = Field(1.0, description="Market beta of the position")
+    duration: float = Field(
+        0, description="Bond duration (for fixed income)")
 
 class Scenario(BaseModel):
-    name: str; market_shock_pct: float = 0; rate_shock_bps: float = 0; vol_shock_pct: float = 0
+    name: str = Field(..., description="Scenario name")
+    market_shock_pct: float = Field(
+        0, description="Equity market shock as percentage")
+    rate_shock_bps: float = Field(
+        0, description="Interest rate shock in basis points")
+    vol_shock_pct: float = Field(
+        0, description="Volatility shock as percentage")
 
 class T46In(BaseModel):
-    positions: list[Position]; scenarios: list[Scenario]
+    positions: list[Position] = Field(
+        ..., description="Array of portfolio positions")
+    scenarios: list[Scenario] = Field(
+        ..., description="Array of stress scenarios to evaluate")
 
 @app.post("/v1/risk/stress-test", tags=["Risk"], dependencies=auth)
 async def t46(req: T46In):
@@ -2101,11 +2305,21 @@ async def t46(req: T46In):
 # TOOL 47: PAYOFF DIAGRAM — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class PayoffLeg(BaseModel):
-    type: Literal["call", "put"]; strike: float; premium: float; quantity: int = 1
-    direction: Literal["long", "short"] = "long"
+    type: Literal["call", "put"] = Field(..., description="Option type")
+    strike: float = Field(..., description="Strike price")
+    premium: float = Field(..., description="Premium per contract")
+    quantity: int = Field(1, description="Number of contracts")
+    direction: Literal["long", "short"] = Field(
+        "long", description="Long or short the option")
 
 class T47In(BaseModel):
-    legs: list[PayoffLeg]; spot: float; price_range_pct: float = 30; points: int = Field(100, ge=1)
+    legs: list[PayoffLeg] = Field(..., description="Array of option legs")
+    spot: float = Field(..., description="Current spot price")
+    price_range_pct: float = Field(
+        30,
+        description="Price range around spot for payoff calculation (percentage)")
+    points: int = Field(
+        100, ge=1, description="Number of evaluation points")
 
 @app.post("/v1/options/payoff-diagram", tags=["Options"], dependencies=auth)
 async def t47(req: T47In):
@@ -2135,8 +2349,14 @@ async def t47(req: T47In):
 # TOOL 48: YIELD CURVE INTERPOLATION — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class T48In(BaseModel):
-    tenors: list[float]; rates: list[float]; target_tenors: list[float]
-    method: Literal["linear", "cubic", "nelson_siegel"] = "linear"
+    tenors: list[float] = Field(
+        ..., description="Array of known tenor points (years)")
+    rates: list[float] = Field(
+        ..., description="Array of known rates at each tenor")
+    target_tenors: list[float] = Field(
+        ..., description="Array of tenors to interpolate")
+    method: Literal["linear", "cubic", "nelson_siegel"] = Field(
+        "linear", description="Interpolation method")
 
 @app.post("/v1/fi/yield-curve-interpolate", tags=["Fixed Income"], dependencies=auth)
 async def t48(req: T48In):
@@ -2210,11 +2430,18 @@ async def t48(req: T48In):
 # TOOL 49: CREDIT SPREAD — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class CurvePoint(BaseModel):
-    tenor: float; rate: float
+    tenor: float = Field(..., description="Maturity in years")
+    rate: float = Field(..., description="Interest rate at this tenor")
 
 class T49In(BaseModel):
-    bond_price: float; coupon_rate: float; maturity_years: int; face_value: float = 1000
-    payment_frequency: int = 2; risk_free_curve: list[CurvePoint]
+    bond_price: float = Field(..., description="Observed bond price")
+    coupon_rate: float = Field(..., description="Annual coupon rate")
+    maturity_years: int = Field(..., description="Years to maturity")
+    face_value: float = Field(1000, description="Face value of the bond")
+    payment_frequency: int = Field(
+        2, description="Coupon payments per year")
+    risk_free_curve: list[CurvePoint] = Field(
+        ..., description="Risk-free yield curve points")
 
 @app.post("/v1/fi/credit-spread", tags=["Fixed Income"], dependencies=auth)
 async def t49(req: T49In):
@@ -2280,7 +2507,11 @@ async def t49(req: T49In):
 # TOOL 50: BOLLINGER BANDS — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T50In(BaseModel):
-    prices: list[float] = Field(..., min_length=5); window: int = 20; num_std: float = 2
+    prices: list[float] = Field(
+        ..., min_length=5, description="Array of price data")
+    window: int = Field(20, description="Moving average window")
+    num_std: float = Field(
+        2, description="Number of standard deviations for bands")
 
 @app.post("/v1/indicators/bollinger-bands", tags=["Indicators"], dependencies=auth)
 async def t50(req: T50In):
@@ -2310,7 +2541,10 @@ async def t50(req: T50In):
 # TOOL 51: FIBONACCI RETRACEMENT — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T51In(BaseModel):
-    swing_high: float; swing_low: float; direction: Literal["up", "down"] = "up"
+    swing_high: float = Field(..., description="Swing high price")
+    swing_low: float = Field(..., description="Swing low price")
+    direction: Literal["up", "down"] = Field(
+        "up", description="Trend direction for level calculation")
 
 @app.post("/v1/indicators/fibonacci-retracement", tags=["Indicators"], dependencies=auth)
 async def t51(req: T51In):
@@ -2335,7 +2569,10 @@ async def t51(req: T51In):
 # TOOL 52: ATR — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T52In(BaseModel):
-    high: list[float]; low: list[float]; close: list[float]; period: int = 14
+    high: list[float] = Field(..., description="Array of high prices")
+    low: list[float] = Field(..., description="Array of low prices")
+    close: list[float] = Field(..., description="Array of closing prices")
+    period: int = Field(14, description="ATR lookback period")
 
 @app.post("/v1/indicators/atr", tags=["Indicators"], dependencies=auth)
 async def t52(req: T52In):
@@ -2376,9 +2613,14 @@ async def t52(req: T52In):
 # TOOL 53: RISK PARITY WEIGHTS — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T53In(BaseModel):
-    volatilities: list[float]; correlation_matrix: list[list[float]]
-    risk_budget: Optional[list[float]] = None
-    asset_names: Optional[list[str]] = None
+    volatilities: list[float] = Field(
+        ..., description="Array of annualized volatilities per asset")
+    correlation_matrix: list[list[float]] = Field(
+        ..., description="N x N correlation matrix")
+    risk_budget: Optional[list[float]] = Field(
+        None, description="Optional risk budget weights (default: equal)")
+    asset_names: Optional[list[str]] = Field(
+        None, description="Optional asset name labels")
 
 @app.post("/v1/portfolio/risk-parity-weights", tags=["Portfolio"], dependencies=auth)
 async def t53(req: T53In):
@@ -2430,15 +2672,23 @@ async def t53(req: T53In):
 # TOOL 54: TRANSACTION COST — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T54In(BaseModel):
-    trade_value: float = Field(..., gt=0)
-    commission_per_share: float = 0
-    commission_flat: float = 0
-    commission_pct: float = 0
-    shares: int = Field(1, ge=1)
-    spread_bps: float = 5
-    market_impact_bps: float = 0
-    adv: Optional[float] = None  # average daily volume in dollars
-    participation_rate: float = 0.1
+    trade_value: float = Field(
+        ..., gt=0, description="Total trade value in USD")
+    commission_per_share: float = Field(
+        0, description="Commission per share")
+    commission_flat: float = Field(
+        0, description="Flat commission per trade")
+    commission_pct: float = Field(
+        0, description="Commission as percentage of trade value")
+    shares: int = Field(1, ge=1, description="Number of shares")
+    spread_bps: float = Field(
+        5, description="Bid-ask spread in basis points")
+    market_impact_bps: float = Field(
+        0, description="Estimated market impact in basis points")
+    adv: Optional[float] = Field(
+        None, description="Average daily volume in USD (for Almgren model)")
+    participation_rate: float = Field(
+        0.1, description="Fraction of ADV consumed by trade")
 
 @app.post("/v1/risk/transaction-cost", tags=["Risk"], dependencies=auth)
 async def t54(req: T54In):
@@ -2481,10 +2731,14 @@ async def t54(req: T54In):
 # TOOL 55: PROBABILISTIC SHARPE RATIO — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T55In(BaseModel):
-    returns: list[float] = Field(..., min_length=10)
-    benchmark_sharpe: float = 0
-    risk_free_rate: float = 0.05
-    annualization_factor: int = 252
+    returns: list[float] = Field(
+        ..., min_length=10, description="Array of portfolio returns")
+    benchmark_sharpe: float = Field(
+        0, description="Benchmark Sharpe ratio to test against")
+    risk_free_rate: float = Field(
+        0.05, description="Annual risk-free rate")
+    annualization_factor: int = Field(
+        252, description="Trading days per year for annualization")
 
 @app.post("/v1/stats/probabilistic-sharpe", tags=["Statistics"], dependencies=auth)
 async def t55(req: T55In):
@@ -2559,9 +2813,16 @@ async def t55(req: T55In):
 # TOOL 56: PRESENT VALUE — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T56In(BaseModel):
-    future_value: float = 0; payment: float = 0; rate: float = Field(..., gt=-1)
-    periods: int = Field(..., ge=1, le=1000)
-    payment_timing: Literal["end", "begin"] = "end"
+    future_value: float = Field(
+        0, description="Future lump sum to discount")
+    payment: float = Field(
+        0, description="Periodic payment amount (annuity)")
+    rate: float = Field(
+        ..., gt=-1, description="Discount rate per period")
+    periods: int = Field(
+        ..., ge=1, le=1000, description="Number of periods")
+    payment_timing: Literal["end", "begin"] = Field(
+        "end", description="Payment at end or beginning of period")
 
 @app.post("/v1/tvm/present-value", tags=["TVM"], dependencies=auth)
 async def t56(req: T56In):
@@ -2589,9 +2850,16 @@ async def t56(req: T56In):
 # TOOL 57: FUTURE VALUE — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T57In(BaseModel):
-    present_value: float = 0; payment: float = 0; rate: float = Field(..., gt=-1)
-    periods: int = Field(..., ge=1, le=1000)
-    payment_timing: Literal["end", "begin"] = "end"
+    present_value: float = Field(
+        0, description="Present lump sum to grow")
+    payment: float = Field(
+        0, description="Periodic payment amount (annuity)")
+    rate: float = Field(
+        ..., gt=-1, description="Interest rate per period")
+    periods: int = Field(
+        ..., ge=1, le=1000, description="Number of periods")
+    payment_timing: Literal["end", "begin"] = Field(
+        "end", description="Payment at end or beginning of period")
 
 @app.post("/v1/tvm/future-value", tags=["TVM"], dependencies=auth)
 async def t57(req: T57In):
@@ -2620,7 +2888,9 @@ async def t57(req: T57In):
 # TOOL 58: IRR — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T58In(BaseModel):
-    cash_flows: list[float] = Field(..., min_length=2)
+    cash_flows: list[float] = Field(
+        ..., min_length=2,
+        description="Array of cash flows (first is typically negative = initial investment)")
 
 @app.post("/v1/tvm/irr", tags=["TVM"], dependencies=auth)
 async def t58(req: T58In):
@@ -2655,8 +2925,11 @@ async def t58(req: T58In):
 # TOOL 59: NPV — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T59In(BaseModel):
-    cash_flows: list[float] = Field(..., min_length=1)
-    discount_rate: float = Field(..., gt=-1)
+    cash_flows: list[float] = Field(
+        ..., min_length=1,
+        description="Array of future cash flows (period 1 onward)")
+    discount_rate: float = Field(
+        ..., gt=-1, description="Discount rate per period")
 
 @app.post("/v1/tvm/npv", tags=["TVM"], dependencies=auth)
 async def t59(req: T59In):
@@ -2687,10 +2960,16 @@ async def t59(req: T59In):
 # TOOL 60: REALIZED VOLATILITY — $0.005
 # ══════════════════════════════════════════════════════════════════════════
 class T60In(BaseModel):
-    close: list[float] = Field(..., min_length=5)
-    high: Optional[list[float]] = None; low: Optional[list[float]] = None
-    open: Optional[list[float]] = None
-    annualization_factor: int = 252
+    close: list[float] = Field(
+        ..., min_length=5, description="Array of closing prices")
+    high: Optional[list[float]] = Field(
+        None, description="Optional array of high prices (for Parkinson/GK/YZ)")
+    low: Optional[list[float]] = Field(
+        None, description="Optional array of low prices (for Parkinson/GK/YZ)")
+    open: Optional[list[float]] = Field(
+        None, description="Optional array of opening prices (for GK/YZ)")
+    annualization_factor: int = Field(
+        252, description="Trading days per year")
 
 @app.post("/v1/stats/realized-volatility", tags=["Statistics"], dependencies=auth)
 async def t60(req: T60In):
@@ -2741,9 +3020,15 @@ async def t60(req: T60In):
 # TOOL 61: NORMAL DISTRIBUTION — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T61In(BaseModel):
-    x: Optional[float] = None; p: Optional[float] = None
-    mean: float = 0; std: float = Field(1, gt=0)
-    confidence_level: Optional[float] = None
+    x: Optional[float] = Field(
+        None, description="Value to compute CDF/PDF for")
+    p: Optional[float] = Field(
+        None, description="Probability for inverse CDF (quantile)")
+    mean: float = Field(0, description="Distribution mean")
+    std: float = Field(
+        1, gt=0, description="Distribution standard deviation")
+    confidence_level: Optional[float] = Field(
+        None, description="Confidence level for interval (e.g. 0.95)")
 
 @app.post("/v1/stats/normal-distribution", tags=["Statistics"], dependencies=auth)
 async def t61(req: T61In):
@@ -2781,8 +3066,12 @@ async def t61(req: T61In):
 # TOOL 62: SHARPE RATIO (standalone) — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T62In(BaseModel):
-    returns: list[float] = Field(..., min_length=5)
-    risk_free_rate: float = 0.05; annualization_factor: int = 252
+    returns: list[float] = Field(
+        ..., min_length=5, description="Array of periodic returns")
+    risk_free_rate: float = Field(
+        0.05, description="Annual risk-free rate")
+    annualization_factor: int = Field(
+        252, description="Trading days per year")
 
 @app.post("/v1/stats/sharpe-ratio", tags=["Statistics"], dependencies=auth)
 async def t62(req: T62In):
@@ -2808,9 +3097,14 @@ async def t62(req: T62In):
 # TOOL 63: CAGR — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T63In(BaseModel):
-    start_value: float = Field(..., gt=0); end_value: float = Field(..., gt=0)
-    years: float = Field(..., gt=0)
-    include_projections: bool = False
+    start_value: float = Field(
+        ..., gt=0, description="Starting value")
+    end_value: float = Field(
+        ..., gt=0, description="Ending value")
+    years: float = Field(
+        ..., gt=0, description="Time period in years")
+    include_projections: bool = Field(
+        False, description="Whether to include forward projections")
 
 @app.post("/v1/tvm/cagr", tags=["TVM"], dependencies=auth)
 async def t63(req: T63In):

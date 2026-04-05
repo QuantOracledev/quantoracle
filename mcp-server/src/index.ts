@@ -177,7 +177,7 @@ async function main() {
 
     toolDefs.push({
       name: pathToToolName(path),
-      description: postOp.summary || postOp.description || `Compute ${pathToToolName(path)}`,
+      description: postOp.description || postOp.summary || `Compute ${pathToToolName(path)}`,
       inputSchema: { type: "object", ...inputSchema },
       path,
     });
@@ -410,6 +410,29 @@ async function main() {
       daily_limit: DAILY_LIMIT,
       active_sessions: transports.size,
       backend: BACKEND_URL,
+    });
+  });
+
+  // Server card for Smithery discovery
+  app.get("/.well-known/mcp/server-card.json", (_req, res) => {
+    res.json({
+      serverInfo: { name: "quantoracle", version: "2.0.0" },
+      description: "63 deterministic quant computation tools for AI agents. Options pricing, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. 1,000 free calls/day — no signup required.",
+      homepage: "https://quantoracle.dev",
+      repository: "https://github.com/QuantOracledev/quantoracle",
+      documentation: "https://api.quantoracle.dev/docs",
+      license: "MIT",
+      keywords: ["finance", "quantitative", "options", "derivatives", "risk", "portfolio", "statistics", "crypto", "defi", "macro", "fx", "backtesting", "deterministic", "calculator"],
+      tools: toolDefs.map((t) => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema,
+      })),
+      prompts: [{
+        name: "quantoracle_usage",
+        description: "How to use QuantOracle tools effectively",
+      }],
+      resources: [],
     });
   });
 
