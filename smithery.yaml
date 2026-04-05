@@ -2,6 +2,16 @@ startCommand:
   type: http
   configSchema:
     type: object
-    properties: {}
-    description: "No configuration required. 1,000 free calls/day with no API key."
+    required: []
+    properties:
+      daily_limit:
+        type: integer
+        default: 1000
+        description: "Free tier daily call limit per IP. Default is 1000 calls/day. No signup required."
+      backend_url:
+        type: string
+        default: "https://api.quantoracle.dev"
+        description: "QuantOracle REST API base URL. Override to use a self-hosted instance."
+    additionalProperties: false
+    description: "QuantOracle requires no configuration for the free tier. All options are optional."
   url: "https://mcp.quantoracle.dev/mcp"

@@ -108,9 +108,11 @@ function resolveRef(schema: any, components: Record<string, any>): any {
   return result;
 }
 
-// ── Path → tool name ───────────────────────────────────────────────────
+// ── Path → tool name (dot notation for navigable tree) ─────────────────
+// /v1/options/price → options.price
+// /v1/crypto/apy-apr-convert → crypto.apy-apr-convert
 function pathToToolName(path: string): string {
-  return path.replace("/v1/", "").replace(/\//g, "_").replace(/-/g, "_");
+  return path.replace("/v1/", "").replace(/\//g, ".");
 }
 
 // ── Pricing table (mirrors worker/src/index.ts) ────────────────────────
@@ -229,6 +231,13 @@ async function main() {
         name: t.name,
         description: t.description,
         inputSchema: t.inputSchema,
+        annotations: {
+          title: t.description.split(".")[0],
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       })),
     }));
 
