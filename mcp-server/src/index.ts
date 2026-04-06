@@ -11,7 +11,7 @@ import {
 import express from "express";
 
 // ── Config ─────────────────────────────────────────────────────────────
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8001";
+const BACKEND_URL = process.env.BACKEND_URL || "https://api.quantoracle.dev";
 const PORT = parseInt(process.env.PORT || "8002");
 const DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT || "1000");
 const WALLET = process.env.WALLET_ADDRESS || "0xC94f5F33ae446a50Ce31157db81253BfddFE2af6";
