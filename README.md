@@ -50,12 +50,14 @@ curl -X POST https://api.quantoracle.dev/v1/options/price \
 
 ```json
 {
-  "call_price": 3.6862,
-  "delta": 0.4467,
-  "gamma": 0.0281,
-  "theta": -0.0113,
-  "vega": 0.2653,
-  "rho": 0.1989,
+  "price": 3.6862,
+  "greeks": {
+    "delta": 0.4467,
+    "gamma": 0.0281,
+    "theta": -0.0113,
+    "vega": 0.2653,
+    "rho": 0.1989
+  },
   "d1": -0.1331,
   "d2": -0.2745,
   "ms": 0.04
@@ -71,7 +73,7 @@ import requests
 r = requests.post("https://api.quantoracle.dev/v1/options/price", json={
     "S": 100, "K": 105, "T": 0.5, "r": 0.05, "sigma": 0.2, "type": "call"
 })
-print(r.json()["call_price"])  # 3.6862
+print(r.json()["price"])  # 3.6862
 
 # Portfolio risk metrics (22 metrics from a returns series)
 r = requests.post("https://api.quantoracle.dev/v1/risk/portfolio", json={
@@ -87,9 +89,9 @@ print(r.json()["kelly_fraction"])  # Optimal bet size
 
 # Monte Carlo simulation
 r = requests.post("https://api.quantoracle.dev/v1/simulate/montecarlo", json={
-    "S0": 10000, "mu": 0.08, "sigma": 0.15, "T": 10, "simulations": 1000
+    "initial_value": 100000, "annual_return": 0.08, "annual_vol": 0.15, "years": 10, "simulations": 1000
 })
-print(r.json()["median_terminal"])  # Median portfolio value at year 10
+print(r.json()["terminal"]["median"])  # Median portfolio value at year 10
 ```
 
 ### TypeScript
@@ -100,7 +102,8 @@ const res = await fetch("https://api.quantoracle.dev/v1/options/price", {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ S: 100, K: 105, T: 0.5, r: 0.05, sigma: 0.2, type: "call" })
 });
-const { call_price, delta, gamma, vega } = await res.json();
+const { price, greeks } = await res.json();
+const { delta, gamma, vega } = greeks;
 ```
 
 ---
