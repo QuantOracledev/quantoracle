@@ -1,0 +1,42 @@
+{
+  "name": "quantoracle-cli",
+  "version": "1.0.0",
+  "description": "63 quant computation tools in your terminal. Options, risk, indicators, Monte Carlo, portfolio optimization.",
+  "type": "module",
+  "bin": {
+    "quantoracle": "bin/quantoracle.js",
+    "qo": "bin/quantoracle.js"
+  },
+  "keywords": [
+    "quantitative-finance",
+    "options-pricing",
+    "black-scholes",
+    "greeks",
+    "kelly-criterion",
+    "monte-carlo",
+    "risk-metrics",
+    "sharpe-ratio",
+    "technical-indicators",
+    "portfolio-optimization",
+    "cli",
+    "terminal",
+    "trading",
+    "algorithmic-trading",
+    "x402"
+  ],
+  "author": "QuantOracle",
+  "license": "MIT",
+  "homepage": "https://quantoracle.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QuantOracledev/quantoracle.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ]
+}

@@ -1,0 +1,95 @@
+import { formatGeneric } from "../format.js";
+
+export default [
+  {
+    name: "derivatives binomial",
+    description: "Binomial tree option pricing",
+    endpoint: "/v1/derivatives/binomial-tree",
+    flags: {
+      spot:   { api: "S",        type: "number", required: true,  desc: "Spot price" },
+      strike: { api: "K",        type: "number", required: true,  desc: "Strike price" },
+      expiry: { api: "T",        type: "number", required: true,  desc: "Time to expiry (years)" },
+      vol:    { api: "sigma",    type: "number", required: true,  desc: "Volatility" },
+      steps:  { api: "steps",    type: "number", required: false, desc: "Tree steps (default 100)" },
+      type:   { api: "type",     type: "string", required: false, desc: "call or put" },
+      style:  { api: "exercise", type: "string", required: false, desc: "european or american" },
+      rate:   { api: "r",        type: "number", required: false, desc: "Risk-free rate" },
+    },
+    format: (d) => formatGeneric("Binomial Tree", d),
+  },
+  {
+    name: "derivatives barrier",
+    description: "Barrier option pricing",
+    endpoint: "/v1/derivatives/barrier-option",
+    flags: {
+      spot:         { api: "S",            type: "number", required: true,  desc: "Spot price" },
+      strike:       { api: "K",            type: "number", required: true,  desc: "Strike" },
+      barrier:      { api: "H",            type: "number", required: true,  desc: "Barrier level" },
+      expiry:       { api: "T",            type: "number", required: true,  desc: "Time to expiry" },
+      vol:          { api: "sigma",        type: "number", required: true,  desc: "Volatility" },
+      "barrier-type": { api: "barrier_type", type: "string", required: false, desc: "up-in/up-out/down-in/down-out" },
+      type:         { api: "type",         type: "string", required: false, desc: "call or put" },
+    },
+    format: (d) => formatGeneric("Barrier Option", d),
+  },
+  {
+    name: "derivatives asian",
+    description: "Asian option pricing",
+    endpoint: "/v1/derivatives/asian-option",
+    flags: {
+      spot:   { api: "S",            type: "number", required: true,  desc: "Spot price" },
+      strike: { api: "K",            type: "number", required: true,  desc: "Strike" },
+      expiry: { api: "T",            type: "number", required: true,  desc: "Time to expiry" },
+      vol:    { api: "sigma",        type: "number", required: true,  desc: "Volatility" },
+      obs:    { api: "observations", type: "number", required: false, desc: "Averaging observations" },
+      type:   { api: "type",         type: "string", required: false, desc: "call or put" },
+    },
+    format: (d) => formatGeneric("Asian Option", d),
+  },
+  {
+    name: "derivatives lookback",
+    description: "Lookback option pricing",
+    endpoint: "/v1/derivatives/lookback-option",
+    flags: {
+      spot:   { api: "S",             type: "number", required: true,  desc: "Spot price" },
+      expiry: { api: "T",             type: "number", required: true,  desc: "Time to expiry" },
+      vol:    { api: "sigma",         type: "number", required: true,  desc: "Volatility" },
+      ltype:  { api: "lookback_type", type: "string", required: false, desc: "floating or fixed" },
+      type:   { api: "type",          type: "string", required: false, desc: "call or put" },
+    },
+    format: (d) => formatGeneric("Lookback Option", d),
+  },
+  {
+    name: "derivatives parity",
+    description: "Put-call parity check",
+    endpoint: "/v1/derivatives/put-call-parity",
+    flags: {
+      "call-price": { api: "call_price", type: "number", required: true, desc: "Call price" },
+      "put-price":  { api: "put_price",  type: "number", required: true, desc: "Put price" },
+      spot:         { api: "S",          type: "number", required: true, desc: "Spot" },
+      strike:       { api: "K",          type: "number", required: true, desc: "Strike" },
+      expiry:       { api: "T",          type: "number", required: true, desc: "Time to expiry" },
+    },
+    format: (d) => formatGeneric("Put-Call Parity", d),
+  },
+  {
+    name: "derivatives chain",
+    description: "Option chain analysis (max pain, skew, P/C ratio)",
+    endpoint: "/v1/derivatives/option-chain-analysis",
+    flags: {
+      chain: { api: "chain", type: "json",   required: true, desc: "Chain data JSON" },
+      spot:  { api: "spot",  type: "number", required: true, desc: "Current spot" },
+    },
+    format: (d) => formatGeneric("Option Chain Analysis", d),
+  },
+  {
+    name: "derivatives volsurf",
+    description: "Volatility surface construction",
+    endpoint: "/v1/derivatives/volatility-surface",
+    flags: {
+      data: { api: "market_data", type: "json",   required: true, desc: "Market data JSON [{strike,expiry_days,implied_vol}]" },
+      spot: { api: "spot",        type: "number", required: true, desc: "Spot price" },
+    },
+    format: (d) => formatGeneric("Volatility Surface", d),
+  },
+];
