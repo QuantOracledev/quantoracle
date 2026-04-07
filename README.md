@@ -8,12 +8,15 @@
   <a href="https://www.npmjs.com/package/quantoracle-mcp"><img src="https://img.shields.io/npm/v/quantoracle-mcp?label=npm&color=cb3837" alt="npm"></a>
   <a href="https://smithery.ai/server/QuantOracle/quantoracle"><img src="https://smithery.ai/badge/QuantOracle/quantoracle" alt="Smithery"></a>
   <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-quantoracle-blueviolet" alt="ClawHub"></a>
+  <a href="https://glama.ai/mcp/servers"><img src="https://glama.ai/mcp/servers/badge" alt="Glama"></a>
+  <a href="https://www.npmjs.com/package/quantoracle-cli"><img src="https://img.shields.io/npm/v/quantoracle-cli?label=cli&color=green" alt="CLI"></a>
   <a href="https://x402.org/ecosystem"><img src="https://img.shields.io/badge/x402-USDC%20on%20Base-0052FF" alt="x402"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
 </p>
 
 <p align="center">
   <a href="https://quantoracle.dev">quantoracle.dev</a> &nbsp;|&nbsp;
+  <a href="#cli">CLI</a> &nbsp;|&nbsp;
   <a href="#mcp-server">MCP Server</a> &nbsp;|&nbsp;
   <a href="#x402-payments">x402 Payments</a> &nbsp;|&nbsp;
   <a href="#free-tier">Free Tier</a> &nbsp;|&nbsp;
@@ -79,13 +82,13 @@ print(r.json()["price"])  # 3.6862
 r = requests.post("https://api.quantoracle.dev/v1/risk/portfolio", json={
     "returns": [0.01, -0.005, 0.008, -0.003, 0.012, -0.001, 0.006, -0.009, 0.004, 0.002]
 })
-print(r.json()["sharpe_ratio"])  # Annualized Sharpe
+print(r.json()["risk"]["sharpe"])  # Annualized Sharpe
 
 # Kelly Criterion
 r = requests.post("https://api.quantoracle.dev/v1/risk/kelly", json={
-    "win_prob": 0.55, "win_loss_ratio": 1.5
+    "mode": "discrete", "win_rate": 0.55, "avg_win": 1.5, "avg_loss": 1.0
 })
-print(r.json()["kelly_fraction"])  # Optimal bet size
+print(r.json()["half_kelly"])  # Recommended bet fraction
 
 # Monte Carlo simulation
 r = requests.post("https://api.quantoracle.dev/v1/simulate/montecarlo", json={
@@ -104,6 +107,58 @@ const res = await fetch("https://api.quantoracle.dev/v1/options/price", {
 });
 const { price, greeks } = await res.json();
 const { delta, gamma, vega } = greeks;
+```
+
+---
+
+## CLI
+
+All 63 endpoints in your terminal. Zero dependencies.
+
+```bash
+npm install -g quantoracle-cli
+```
+
+Or run without installing:
+
+```bash
+npx quantoracle-cli bs --spot 185 --strike 190 --expiry 0.25 --vol 0.25
+```
+
+```
+  QuantOracle · Black-Scholes (call)
+  ────────────────────────────────────
+  Price           $8.02
+  Intrinsic       $0.00
+  Time Value      $8.02
+  Breakeven      $198.02
+  Prob ITM        43.0%
+
+  Greeks
+  ────────────────────────────────────
+  Delta            0.4797
+  Gamma            0.0172
+  Theta           -0.0615/day
+  Vega             0.3685
+  ────────────────────────────────────
+  ⏱ 0.05ms · api.quantoracle.dev
+```
+
+```bash
+# Kelly criterion
+qo kelly --win-rate 0.55 --avg-win 120 --avg-loss 100
+
+# Monte Carlo
+qo mc --value 80000 --return 0.10 --vol 0.18 --years 2
+
+# JSON output for scripting
+qo bs --spot 185 --strike 190 --expiry 0.25 --vol 0.25 --json | jq '.greeks.delta'
+
+# Data from file
+qo risk portfolio --returns @returns.txt
+
+# All commands
+qo help
 ```
 
 ---
@@ -233,7 +288,9 @@ QuantOracle is available across multiple agent ecosystems:
 | **Cursor / Windsurf** | MCP config: `npx quantoracle-mcp` |
 | **Smithery** | `npx @smithery/cli mcp add QuantOracle/quantoracle` |
 | **OpenClaw / ClawHub** | `clawhub install quantoracle` |
-| **npm** | `npx quantoracle-mcp` |
+| **CLI** | `npm install -g quantoracle-cli` or `npx quantoracle-cli` |
+| **Glama** | [glama.ai/mcp/servers](https://glama.ai/mcp/servers) |
+| **npm (MCP)** | `npx quantoracle-mcp` |
 | **x402 ecosystem** | [x402.org/ecosystem](https://x402.org/ecosystem) |
 | **REST API** | `https://api.quantoracle.dev/v1/...` |
 | **OpenAPI spec** | `https://api.quantoracle.dev/openapi.json` |
@@ -437,10 +494,9 @@ quantoracle/
   api/quantoracle.py        -- FastAPI app, 63 endpoints, pure Python math
   worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments
   mcp-server/src/index.ts    -- MCP server: 63 tools over Streamable HTTP
-  mcp-server/SKILL.md        -- ClawHub skill definition
-  openapi.json               -- OpenAPI 3.0 spec
+  cli/                       -- quantoracle-cli: 63 tools in the terminal (npm)
   tests/
-    test_all.py              -- 65 integration tests
+    test_integration.py      -- 65 integration tests (all endpoints, live API)
     accuracy_benchmarks.py   -- 120 citation-backed accuracy tests
 ```
 
