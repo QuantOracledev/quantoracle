@@ -1,7 +1,7 @@
 ---
 name: quantoracle
 description: 63 deterministic quantitative finance calculations via MCP. Options pricing, Greeks, implied volatility, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo simulation, statistics, crypto/DeFi, macro/FX, time value of money.
-version: 2.1.0
+version: 2.1.1
 metadata:
   openclaw:
     requires:

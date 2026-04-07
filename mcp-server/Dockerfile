@@ -13,4 +13,4 @@ ENV BACKEND_URL=https://api.quantoracle.dev
 
 EXPOSE 8002
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/index.js", "--stdio"]
