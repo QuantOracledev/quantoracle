@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { paymentMiddleware, x402ResourceServer, x402HTTPResourceServer } from '@x402/hono';
+import { paymentMiddleware, x402ResourceServer } from '@x402/hono';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 import { createFacilitatorConfig } from '@coinbase/x402';
@@ -129,7 +129,17 @@ app.get('/tools', async (c) => {
 
 app.get('/metrics', async (c) => {
   const resp = await fetch(`${c.env.BACKEND_URL}/metrics`);
-  return c.json(await resp.json());
+  const data = await resp.json() as any;
+
+  // Clarify that backend "revenue" is hypothetical (all calls priced, not settled)
+  if (data.revenue !== undefined) {
+    data.hypothetical_revenue = data.revenue;
+    data.settled_revenue = 0; // No on-chain settlement tracking yet
+    data.note = 'hypothetical_revenue = total calls * price. settled_revenue = actual x402 USDC payments received.';
+    delete data.revenue;
+  }
+
+  return c.json(data);
 });
 
 app.get('/openapi.json', async (c) => {
