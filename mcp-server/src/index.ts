@@ -165,11 +165,14 @@ const PRICES: Record<string, string> = {
   "/v1/stats/correlation-matrix": "0.015",
 };
 
+// Use stderr for logs in stdio mode so stdout stays clean for JSON-RPC
+const log = USE_STDIO ? (...args: any[]) => process.stderr.write(args.join(" ") + "\n") : console.log;
+
 // ── Main ───────────────────────────────────────────────────────────────
 async function main() {
-  console.log("QuantOracle MCP Server starting...");
-  console.log(`Backend: ${BACKEND_URL}`);
-  console.log(`Free tier: ${DAILY_LIMIT} calls/IP/day`);
+  log("QuantOracle MCP Server starting...");
+  log(`Backend: ${BACKEND_URL}`);
+  log(`Free tier: ${DAILY_LIMIT} calls/IP/day`);
 
   // Fetch OpenAPI spec
   const specResp = await fetch(`${BACKEND_URL}/openapi.json`);
@@ -198,7 +201,7 @@ async function main() {
     });
   }
 
-  console.log(`Loaded ${toolDefs.length} tool definitions`);
+  log(`Loaded ${toolDefs.length} tool definitions`);
 
   const toolByName = new Map<string, ToolDef>();
   for (const t of toolDefs) toolByName.set(t.name, t);
