@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
@@ -9,6 +10,8 @@ import {
   ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
+
+const USE_STDIO = process.argv.includes("--stdio");
 
 // ── Config ─────────────────────────────────────────────────────────────
 const BACKEND_URL = process.env.BACKEND_URL || "https://api.quantoracle.dev";
@@ -333,6 +336,14 @@ async function main() {
     });
 
     return server;
+  }
+
+  // ── Stdio mode (for mcp-proxy, Glama, Claude Desktop --stdio) ────────
+  if (USE_STDIO) {
+    const server = createServer("stdio", "stdio-session");
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    return; // blocks on stdio, never reaches Express
   }
 
   // ── Express app ──────────────────────────────────────────────────────
