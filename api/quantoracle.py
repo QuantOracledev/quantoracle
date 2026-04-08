@@ -9,8 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
-import math, time, os, random
-from datetime import datetime, timezone
+import math, time, os, random, sqlite3
+from contextvars import ContextVar
+from datetime import datetime, timezone, timedelta
 
 app = FastAPI(
     title="QuantOracle",
@@ -20,6 +21,18 @@ app = FastAPI(
     redoc_url=None,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# ── Per-request IP tracking via context variable ──────────────────────────
+_request_ip: ContextVar[str] = ContextVar("request_ip", default="unknown")
+
+@app.middleware("http")
+async def capture_client_ip(request: Request, call_next):
+    ip = (request.headers.get("cf-connecting-ip")
+          or request.headers.get("x-real-ip")
+          or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    _request_ip.set(ip)
+    return await call_next(request)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -34,9 +47,36 @@ async def check_auth(x_api_key: Optional[str] = Header(None)):
 
 auth = [Depends(check_auth)] if VALID_KEYS else []
 
-# ── Metrics ───────────────────────────────────────────────────────────────
+# ── Persistent Metrics (SQLite — survives restarts, multi-worker safe) ────
 _boot = datetime.now(timezone.utc)
-_m = {"calls": 0, "by_endpoint": {}, "revenue": 0.0}
+_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "metrics.db")
+_RETAIN_DAYS = 90
+
+def _get_db() -> sqlite3.Connection:
+    """Get a thread-local SQLite connection with WAL mode for concurrent writes."""
+    conn = sqlite3.connect(_DB_PATH, timeout=5)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    return conn
+
+def _init_db():
+    conn = _get_db()
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS calls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts TEXT NOT NULL,
+            date TEXT NOT NULL,
+            endpoint TEXT NOT NULL,
+            ip TEXT NOT NULL DEFAULT 'unknown',
+            price REAL NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_calls_date ON calls(date);
+        CREATE INDEX IF NOT EXISTS idx_calls_endpoint ON calls(endpoint);
+        CREATE INDEX IF NOT EXISTS idx_calls_ip ON calls(ip);
+    """)
+    conn.close()
+
+_init_db()
 
 PRICES = {
     # $0.002 — Simple formulas
@@ -84,9 +124,24 @@ PRICES = {
 }
 
 def hit(ep):
-    _m["calls"] += 1
-    _m["by_endpoint"][ep] = _m["by_endpoint"].get(ep, 0) + 1
-    _m["revenue"] += PRICES.get(ep, 0)
+    """Record an API call — persisted to SQLite immediately."""
+    ip = _request_ip.get("unknown")
+    now = datetime.now(timezone.utc)
+    price = PRICES.get(ep, 0)
+    try:
+        conn = _get_db()
+        conn.execute(
+            "INSERT INTO calls (ts, date, endpoint, ip, price) VALUES (?, ?, ?, ?, ?)",
+            (now.isoformat(), now.strftime("%Y-%m-%d"), ep, ip, price)
+        )
+        conn.commit()
+        # Prune old data once per day (cheap check)
+        cutoff = (now - timedelta(days=_RETAIN_DAYS)).strftime("%Y-%m-%d")
+        conn.execute("DELETE FROM calls WHERE date < ?", (cutoff,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass  # never crash the API over metrics
 
 # ══════════════════════════════════════════════════════════════════════════
 # SHARED MATH PRIMITIVES — pure Python, no numpy/scipy
@@ -3141,7 +3196,46 @@ async def health():
 
 @app.get("/metrics")
 async def metrics():
-    return _m
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    try:
+        conn = _get_db()
+        # All-time totals
+        total = conn.execute("SELECT COUNT(*), COALESCE(SUM(price),0) FROM calls").fetchone()
+        first = conn.execute("SELECT MIN(ts) FROM calls").fetchone()
+        # By endpoint (all-time)
+        by_ep = dict(conn.execute(
+            "SELECT endpoint, COUNT(*) FROM calls GROUP BY endpoint ORDER BY COUNT(*) DESC"
+        ).fetchall())
+        # Today stats
+        t_total = conn.execute("SELECT COUNT(*) FROM calls WHERE date=?", (today,)).fetchone()[0]
+        t_ips = conn.execute("SELECT COUNT(DISTINCT ip) FROM calls WHERE date=?", (today,)).fetchone()[0]
+        t_top_ep = dict(conn.execute(
+            "SELECT endpoint, COUNT(*) FROM calls WHERE date=? GROUP BY endpoint ORDER BY COUNT(*) DESC LIMIT 10", (today,)
+        ).fetchall())
+        t_top_ip = dict(conn.execute(
+            "SELECT ip, COUNT(*) FROM calls WHERE date=? GROUP BY ip ORDER BY COUNT(*) DESC LIMIT 20", (today,)
+        ).fetchall())
+        # All-time IP stats
+        all_ips = conn.execute("SELECT COUNT(DISTINCT ip) FROM calls").fetchone()[0]
+        all_days = conn.execute("SELECT COUNT(DISTINCT date) FROM calls").fetchone()[0]
+        # Daily history (last 30 days)
+        daily = dict(conn.execute(
+            "SELECT date, COUNT(*) FROM calls WHERE date >= ? GROUP BY date ORDER BY date",
+            ((datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d"),)
+        ).fetchall())
+        conn.close()
+        return {
+            "calls": total[0], "by_endpoint": by_ep, "revenue": round(total[1], 4),
+            "first_call": first[0], "uptime": str(datetime.now(timezone.utc) - _boot),
+            "today": {
+                "date": today, "calls": t_total, "unique_ips": t_ips,
+                "top_endpoints": t_top_ep, "top_callers": t_top_ip,
+            },
+            "all_time": {"unique_ips": all_ips, "days_tracked": all_days},
+            "daily_history": daily,
+        }
+    except Exception as e:
+        return {"error": "metrics_unavailable", "detail": str(e)}
 
 @app.get("/tools")
 async def tools():

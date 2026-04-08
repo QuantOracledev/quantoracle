@@ -12,6 +12,7 @@ interface Env {
   WALLET_ADDRESS: string;
   CDP_API_KEY_ID: string;
   CDP_API_KEY_SECRET: string;
+  ADMIN_KEY: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -166,6 +167,147 @@ app.get('/usage', async (c) => {
   });
 });
 
+// ── Admin endpoints (protected by ADMIN_KEY) ───────────────────────────
+
+function requireAdmin(c: any): Response | null {
+  const key = c.req.header('X-Admin-Key') || new URL(c.req.url).searchParams.get('key');
+  if (!c.env.ADMIN_KEY || key !== c.env.ADMIN_KEY) {
+    return c.json({ error: 'unauthorized' }, 401);
+  }
+  return null;
+}
+
+// List all callers today with call counts, sorted by usage
+app.get('/admin/callers', async (c) => {
+  const denied = requireAdmin(c);
+  if (denied) return denied;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const limit = parseInt(c.env.FREE_DAILY_LIMIT ?? '1000');
+  const prefix = `calls:`;
+
+  // Paginate through all KV keys
+  const callers: { ip: string; calls: number; remaining: number; at_limit: boolean }[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const list: KVNamespaceListResult<unknown, string> = await c.env.RATE_LIMITS.list({
+      prefix,
+      cursor,
+    });
+
+    for (const key of list.keys) {
+      // Only include today's keys: calls:IP:2026-04-07
+      if (!key.name.endsWith(`:${today}`)) continue;
+
+      const ip = key.name.replace(prefix, '').replace(`:${today}`, '');
+      const count = parseInt((await c.env.RATE_LIMITS.get(key.name)) || '0');
+      if (count === 0) continue;
+
+      callers.push({
+        ip,
+        calls: count,
+        remaining: Math.max(0, limit - count),
+        at_limit: count >= limit,
+      });
+    }
+
+    cursor = list.list_complete ? undefined : list.cursor;
+  } while (cursor);
+
+  // Sort by calls descending
+  callers.sort((a, b) => b.calls - a.calls);
+
+  const totalCalls = callers.reduce((sum, c) => sum + c.calls, 0);
+  const atLimit = callers.filter(c => c.at_limit);
+  const heavyUsers = callers.filter(c => c.calls >= limit * 0.5);
+
+  return c.json({
+    date: today,
+    daily_limit: limit,
+    summary: {
+      unique_ips: callers.length,
+      total_calls: totalCalls,
+      at_limit: atLimit.length,
+      heavy_users: heavyUsers.length,
+      avg_calls_per_ip: callers.length > 0 ? Math.round(totalCalls / callers.length) : 0,
+    },
+    callers,
+  });
+});
+
+// Dashboard summary: backend metrics + caller stats combined
+app.get('/admin/dashboard', async (c) => {
+  const denied = requireAdmin(c);
+  if (denied) return denied;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const limit = parseInt(c.env.FREE_DAILY_LIMIT ?? '1000');
+
+  // Fetch backend metrics
+  let backendMetrics: any = {};
+  try {
+    const resp = await fetch(`${c.env.BACKEND_URL}/metrics`);
+    backendMetrics = await resp.json();
+  } catch {}
+
+  // Fetch backend health
+  let health: any = {};
+  try {
+    const resp = await fetch(`${c.env.BACKEND_URL}/health`);
+    health = await resp.json();
+  } catch {}
+
+  // Count today's callers from KV
+  const prefix = `calls:`;
+  let uniqueIPs = 0;
+  let totalCallsToday = 0;
+  let atLimit = 0;
+  let topCaller = { ip: '', calls: 0 };
+  let cursor: string | undefined;
+
+  do {
+    const list: KVNamespaceListResult<unknown, string> = await c.env.RATE_LIMITS.list({
+      prefix,
+      cursor,
+    });
+
+    for (const key of list.keys) {
+      if (!key.name.endsWith(`:${today}`)) continue;
+      const ip = key.name.replace(prefix, '').replace(`:${today}`, '');
+      const count = parseInt((await c.env.RATE_LIMITS.get(key.name)) || '0');
+      if (count === 0) continue;
+
+      uniqueIPs++;
+      totalCallsToday += count;
+      if (count >= limit) atLimit++;
+      if (count > topCaller.calls) topCaller = { ip, calls: count };
+    }
+
+    cursor = list.list_complete ? undefined : list.cursor;
+  } while (cursor);
+
+  return c.json({
+    timestamp: new Date().toISOString(),
+    date: today,
+    backend: {
+      status: health.status || 'unknown',
+      uptime: health.uptime || 'unknown',
+      version: health.version || 'unknown',
+      total_calls_since_boot: backendMetrics.calls || 0,
+      by_endpoint: backendMetrics.by_endpoint || {},
+      hypothetical_revenue: backendMetrics.revenue || 0,
+    },
+    today: {
+      unique_ips: uniqueIPs,
+      total_calls: totalCallsToday,
+      at_limit: atLimit,
+      top_caller: topCaller.calls > 0 ? topCaller : null,
+      daily_limit: limit,
+    },
+  });
+});
+
 // ── x402 payment middleware for /v1/* routes ────────────────────────────
 
 app.all('/v1/*', async (c, next) => {
@@ -239,10 +381,13 @@ app.all('/v1/*', async (c, next) => {
     await c.env.RATE_LIMITS.put(key, (count + 1).toString(), { expirationTtl: 86400 });
   }
 
-  // Proxy to Python backend
+  // Proxy to Python backend (forward real client IP)
   const backendUrl = `${c.env.BACKEND_URL}${path}`;
   const headers: Record<string, string> = {
     'Content-Type': c.req.header('Content-Type') || 'application/json',
+    'X-Forwarded-For': ip,
+    'X-Real-IP': ip,
+    'CF-Connecting-IP': ip,
   };
 
   const resp = await fetch(backendUrl, {
