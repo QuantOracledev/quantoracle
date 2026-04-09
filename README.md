@@ -8,7 +8,7 @@
   <a href="https://www.npmjs.com/package/quantoracle-mcp"><img src="https://img.shields.io/npm/v/quantoracle-mcp?label=npm&color=cb3837" alt="npm"></a>
   <a href="https://smithery.ai/server/QuantOracle/quantoracle"><img src="https://smithery.ai/badge/QuantOracle/quantoracle" alt="Smithery"></a>
   <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-quantoracle-blueviolet" alt="ClawHub"></a>
-  <a href="https://glama.ai/mcp/servers"><img src="https://glama.ai/mcp/servers/badge" alt="Glama"></a>
+  <a href="https://glama.ai/mcp/servers/QuantOracledev/quantoracle"><img src="https://glama.ai/mcp/servers/QuantOracledev/quantoracle/badge" alt="Glama"></a>
   <a href="https://www.npmjs.com/package/quantoracle-cli"><img src="https://img.shields.io/npm/v/quantoracle-cli?label=cli&color=green" alt="CLI"></a>
   <a href="https://x402.org/ecosystem"><img src="https://img.shields.io/badge/x402-USDC%20on%20Base-0052FF" alt="x402"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
@@ -35,7 +35,7 @@
 - **Deterministic** -- same inputs always produce the same outputs, so agents can cache, verify, and chain calls
 - **Citation-verified** -- every formula tested against published textbook values (Hull, Wilmott, Bailey & Lopez de Prado)
 - **120 accuracy benchmarks** passing with analytical solutions
-- **Sub-millisecond** response times on most endpoints
+- **Fast** -- sub-millisecond to 70ms compute time per call
 - **Free tier** -- 1,000 calls/IP/day, no API key, no signup, zero friction
 
 QuantOracle is designed to be called repeatedly. An agent running a backtest might call 10+ endpoints per iteration. That's the model -- be the calculator agents reach for every time they need quant math.
@@ -53,17 +53,25 @@ curl -X POST https://api.quantoracle.dev/v1/options/price \
 
 ```json
 {
-  "price": 3.6862,
+  "price": 4.5817,
+  "intrinsic": 0,
+  "time_value": 4.5817,
+  "breakeven": 109.5817,
+  "prob_itm": 0.4056,
   "greeks": {
-    "delta": 0.4467,
+    "delta": 0.4612,
     "gamma": 0.0281,
-    "theta": -0.0113,
-    "vega": 0.2653,
-    "rho": 0.1989
+    "theta": -0.0211,
+    "vega": 0.2808,
+    "rho": 0.2077,
+    "vanna": 0.0047,
+    "charm": -0.0006,
+    "volga": 0.0327,
+    "speed": -0.0001
   },
-  "d1": -0.1331,
-  "d2": -0.2745,
-  "ms": 0.04
+  "d1": -0.0975,
+  "d2": -0.2389,
+  "ms": 12.4
 }
 ```
 
@@ -76,7 +84,7 @@ import requests
 r = requests.post("https://api.quantoracle.dev/v1/options/price", json={
     "S": 100, "K": 105, "T": 0.5, "r": 0.05, "sigma": 0.2, "type": "call"
 })
-print(r.json()["price"])  # 3.6862
+print(r.json()["price"])  # 4.5817
 
 # Portfolio risk metrics (22 metrics from a returns series)
 r = requests.post("https://api.quantoracle.dev/v1/risk/portfolio", json={
@@ -289,7 +297,7 @@ QuantOracle is available across multiple agent ecosystems:
 | **Smithery** | `npx @smithery/cli mcp add QuantOracle/quantoracle` |
 | **OpenClaw / ClawHub** | `clawhub install quantoracle` |
 | **CLI** | `npm install -g quantoracle-cli` or `npx quantoracle-cli` |
-| **Glama** | [glama.ai/mcp/servers](https://glama.ai/mcp/servers) |
+| **Glama** | [glama.ai/mcp/servers/QuantOracledev/quantoracle](https://glama.ai/mcp/servers/QuantOracledev/quantoracle) |
 | **npm (MCP)** | `npx quantoracle-mcp` |
 | **x402 ecosystem** | [x402.org/ecosystem](https://x402.org/ecosystem) |
 | **REST API** | `https://api.quantoracle.dev/v1/...` |
@@ -361,7 +369,7 @@ curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 | `POST /v1/indicators/fibonacci-retracement` | Fibonacci retracement and extension levels | $0.002 |
 | `POST /v1/indicators/atr` | Average True Range with normalized ATR and volatility regime | $0.002 |
 
-### Statistics (10 endpoints)
+### Statistics (12 endpoints)
 
 | Endpoint | Description | Price |
 |----------|-------------|-------|
@@ -451,6 +459,24 @@ A typical agent backtest chains multiple QuantOracle calls per iteration:
 ```
 
 Each call is a pure calculator -- no state, no side effects, no API keys.
+
+### Strategy Optimizer (1,200+ calls)
+
+[`examples/strategy_optimizer.py`](examples/strategy_optimizer.py) is a full walk-forward parameter optimizer that demonstrates heavy API usage:
+
+| Phase | What it does | API calls |
+|-------|-------------|-----------|
+| **Parameter Sweep** | Test 180 lookback/rebalance/RSI combinations across 8 assets | ~1,080 |
+| **Deep Analysis** | 22 risk metrics + VaR + Kelly + Monte Carlo on top 3 configs | ~60-80 |
+| **Options Overlay** | Price covered calls across 6 assets x 4 expiries x 5 strikes | ~100-150 |
+| **Pairs Analysis** | Cointegration scan + Hurst exponent on 45 asset pairs | ~50-70 |
+
+```bash
+pip install requests
+python examples/strategy_optimizer.py
+```
+
+A single run makes ~1,200-1,500 API calls. At paid rates that's ~$6-8 USDC. The same calculations done by an LLM in-context would cost $12-60 in tokens (Sonnet to Opus), take 4x longer, and get 15-30% of the complex math wrong.
 
 ---
 
