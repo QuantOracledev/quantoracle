@@ -9,8 +9,9 @@ This is the realistic heavy-usage pattern:
   - 1,200-1,500+ API calls per run
   - A single optimization session costs ~$6-8 at paid rates
   - Exceeds free tier (1,000/day) in ~15 minutes
-  - The alternative: LLM computing this in-context would cost $50-500
-    in tokens and get the math wrong
+  - The alternative: an LLM computing this in-context would cost
+    $12-60 in tokens (Sonnet to Opus), take 4x longer, and get
+    ~15-30% of the complex math wrong
 
 Usage:
     pip install requests
@@ -520,14 +521,18 @@ def main():
     print()
 
     if calls > 1000:
+        llm_low = calls * 0.01   # Sonnet/GPT-4o: ~$0.01/call
+        llm_high = calls * 0.05  # Opus: ~$0.05/call
+        llm_time = calls * 3     # ~3s per LLM call (sequential)
         print(f"  This session made {calls:,} API calls.")
         print(f"  Free tier (1,000/day) would have been exhausted at call #1,000.")
         print(f"  With x402 payment, total cost: ${cost:.2f} USDC.")
         print(f"  With an LLM computing this in-context:")
-        print(f"    Est. token cost:  ${calls * 0.05:.2f} - ${calls * 0.20:.2f}")
-        print(f"    Est. error rate:  ~30% of calculations incorrect")
-        print(f"    Est. time:        {calls * 3:.0f}s ({calls * 3 / 60:.0f} min)")
-        print(f"  QuantOracle: {calls}x faster, 100% accurate, {calls * 0.05 / cost:.0f}x cheaper.")
+        print(f"    Est. token cost:  ${llm_low:.2f} - ${llm_high:.2f} (Sonnet to Opus)")
+        print(f"    Est. error rate:  ~15-30% of calculations incorrect")
+        print(f"    Est. time:        {llm_time:.0f}s ({llm_time/60:.0f} min) sequential")
+        print(f"  QuantOracle: {llm_time/elapsed:.0f}x faster, 100% accurate, "
+              f"{llm_low/cost:.0f}-{llm_high/cost:.0f}x cheaper.")
     print()
 
 
