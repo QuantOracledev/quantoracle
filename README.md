@@ -208,6 +208,45 @@ PAYMENT-REQUIRED: <base64-encoded payment instructions>
 | **Complex** | $0.008 | Portfolio risk, binomial tree, barrier/Asian/lookback options, credit spread, VaR, stress test, regression, cointegration, Hurst, distribution fit, risk parity |
 | **Heavy** | $0.015 | Monte Carlo, GARCH, portfolio optimization, option chain analysis, vol surface, yield curve, correlation matrix |
 
+### Batch Endpoint
+
+Run up to 100 computations in a single HTTP request. One round trip instead of 100.
+
+```bash
+curl -X POST https://api.quantoracle.dev/v1/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requests": [
+      {"endpoint": "options/price", "params": {"S": 100, "K": 105, "T": 0.25, "r": 0.05, "sigma": 0.2}},
+      {"endpoint": "stats/zscore", "params": {"series": [10, 12, 14, 11, 13, 15]}},
+      {"endpoint": "tvm/cagr", "params": {"start_value": 100, "end_value": 150, "years": 3}}
+    ]
+  }'
+```
+
+Returns all results in one response with the total price:
+
+```json
+{
+  "batch_size": 3,
+  "total_price_usdc": 0.009,
+  "results": [
+    {"endpoint": "options/price", "status": 200, "data": {"price": 2.4779, "greeks": {"delta": 0.377, "..."}}},
+    {"endpoint": "stats/zscore", "status": 200, "data": {"mean": 12.5, "std_dev": 1.87, "..."}},
+    {"endpoint": "tvm/cagr", "status": 200, "data": {"cagr": 0.1447, "doubling_time_years": 5.13, "..."}}
+  ],
+  "ms": 42.13
+}
+```
+
+| | Free | Paid |
+|---|---|---|
+| **Batch calls** | 1 trial (ever) | Unlimited |
+| **Max per batch** | 100 | 100 |
+| **Price** | Free | Sum of individual endpoint prices |
+
+Batch pricing is the sum of the individual endpoint prices — no markup. You pay for the computations, the speed is free.
+
 ---
 
 ## x402 Payments
@@ -441,6 +480,19 @@ curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 | Endpoint | Description | Price |
 |----------|-------------|-------|
 | `POST /v1/simulate/montecarlo` | GBM Monte Carlo with contributions/withdrawals, up to 5000 paths | $0.015 |
+
+### Composite Endpoints (paid-only)
+
+Higher-level endpoints that combine multiple calculations into a single call. Same math as the individual endpoints -- just packaged for common agent workflows. No free tier.
+
+| Endpoint | Description | Replaces | Price |
+|----------|-------------|----------|-------|
+| `POST /v1/options/spread-scan` | Scan and rank vertical spreads by risk/reward | 8-16 options/price calls | $0.05 |
+| `POST /v1/indicators/regime-classify` | Trend, vol regime, RSI, direction, strategy suggestion | technical + regime + realized-vol | $0.015 |
+| `POST /v1/risk/full-analysis` | Complete risk tearsheet: Sharpe, Sortino, VaR, Kelly, drawdown, Hurst, CAGR | 7 individual calls | $0.04 |
+| `POST /v1/trade/evaluate` | Trade evaluation: sizing, risk/reward, Kelly, costs, regime, signals, verdict | 5 individual calls | $0.025 |
+| `POST /v1/portfolio/health` | Portfolio health check: risk, correlation, rebalance, stress test | 6 individual calls | $0.04 |
+| `POST /v1/pairs/signal` | Pairs trading signal: cointegration, Hurst, z-score, half-life, hedge ratio | 4 individual calls | $0.025 |
 
 ---
 

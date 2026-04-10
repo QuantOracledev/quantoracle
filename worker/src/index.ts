@@ -13,6 +13,7 @@ interface Env {
   CDP_API_KEY_ID: string;
   CDP_API_KEY_SECRET: string;
   ADMIN_KEY: string;
+  OWNER_KEY: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -92,6 +93,13 @@ const PRICES: Record<string, string> = {
   '/v1/derivatives/option-chain-analysis': '$0.015',
   '/v1/fi/yield-curve-interpolate': '$0.015',
   '/v1/stats/correlation-matrix': '$0.015',
+  // Composites
+  '/v1/options/spread-scan': '$0.05',
+  '/v1/indicators/regime-classify': '$0.015',
+  '/v1/risk/full-analysis': '$0.04',
+  '/v1/trade/evaluate': '$0.025',
+  '/v1/portfolio/health': '$0.04',
+  '/v1/pairs/signal': '$0.025',
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -308,6 +316,120 @@ app.get('/admin/dashboard', async (c) => {
   });
 });
 
+// ── Batch endpoint — paid only (1 free per day) ───────────────────────
+
+app.post('/v1/batch', async (c, next) => {
+  const ip = getClientIP(c);
+  const wallet = c.env.WALLET_ADDRESS;
+
+  // Owner key — unlimited
+  const apiKey = c.req.header('X-Api-Key');
+  if (apiKey && c.env.OWNER_KEY && apiKey === c.env.OWNER_KEY) {
+    const resp = await fetch(`${c.env.BACKEND_URL}/v1/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
+      },
+      body: await c.req.text(),
+    });
+    return c.json(await resp.json() as any, resp.status as any);
+  }
+
+  // Parse body to compute dynamic price
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_json' }, 400);
+  }
+
+  const requests = body.requests;
+  if (!Array.isArray(requests) || requests.length === 0 || requests.length > 100) {
+    return c.json({ error: 'batch must contain 1-100 requests' }, 400);
+  }
+
+  // Sum individual endpoint prices
+  let totalPrice = 0;
+  for (const r of requests) {
+    const ep = `/v1/${(r.endpoint || '').replace(/^\/+/, '')}`;
+    const p = PRICES[ep];
+    if (!p) return c.json({ error: `unknown endpoint: ${r.endpoint}` }, 400);
+    totalPrice += parseFloat(p.replace('$', ''));
+  }
+
+  const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment');
+
+  if (hasPayment) {
+    // Verify payment for the dynamic total
+    const facilitatorConfig = createFacilitatorConfig(
+      c.env.CDP_API_KEY_ID,
+      c.env.CDP_API_KEY_SECRET,
+    );
+    const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
+    const resourceServer = new x402ResourceServer(facilitatorClient)
+      .register('eip155:8453', new ExactEvmScheme());
+
+    const routes = {
+      'POST /v1/batch': {
+        accepts: [{
+          scheme: 'exact',
+          network: 'eip155:8453' as const,
+          payTo: wallet,
+          price: `$${totalPrice.toFixed(4)}`,
+        }],
+        description: 'QuantOracle: batch computation',
+        mimeType: 'application/json',
+      },
+    };
+
+    const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
+    return middleware(c, next);
+  }
+
+  // Free tier: 1 free batch ever per IP (trial)
+  const batchKey = `batch-trial:${ip}`;
+  const batchCount = parseInt((await c.env.RATE_LIMITS.get(batchKey)) || '0');
+
+  if (batchCount >= 1) {
+    // Return 402 with dynamic price
+    const paymentRequired = {
+      x402Version: 2,
+      error: 'Payment required',
+      resource: {
+        url: 'https://api.quantoracle.dev/v1/batch',
+        description: 'QuantOracle: batch computation',
+        mimeType: 'application/json',
+      },
+      accepts: [{
+        scheme: 'exact',
+        network: 'eip155:8453',
+        amount: String(Math.round(totalPrice * 1_000_000)),
+        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        payTo: wallet,
+        maxTimeoutSeconds: 30,
+      }],
+    };
+    return c.json(paymentRequired, 402, {
+      'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+    });
+  }
+
+  // Free batch trial — mark as used (no expiry)
+  await c.env.RATE_LIMITS.put(batchKey, '1');
+
+  const resp = await fetch(`${c.env.BACKEND_URL}/v1/batch`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
+    },
+    body: JSON.stringify(body),
+  });
+
+  return c.json(await resp.json() as any, resp.status as any);
+});
+
 // ── x402 payment middleware for /v1/* routes ────────────────────────────
 
 app.all('/v1/*', async (c, next) => {
@@ -316,6 +438,35 @@ app.all('/v1/*', async (c, next) => {
   const ip = getClientIP(c);
   const limit = parseInt(c.env.FREE_DAILY_LIMIT ?? '1000');
   const wallet = c.env.WALLET_ADDRESS;
+
+  // Owner API key — unlimited access, skip rate limiting and payment
+  const apiKey = c.req.header('X-Api-Key');
+  if (apiKey && c.env.OWNER_KEY && apiKey === c.env.OWNER_KEY) {
+    const backendUrl = `${c.env.BACKEND_URL}${path}`;
+    const headers: Record<string, string> = {
+      'Content-Type': c.req.header('Content-Type') || 'application/json',
+      'X-Forwarded-For': ip,
+      'X-Real-IP': ip,
+      'CF-Connecting-IP': ip,
+    };
+    const resp = await fetch(backendUrl, {
+      method: c.req.method,
+      headers,
+      body: c.req.method !== 'GET' ? await c.req.text() : undefined,
+    });
+    const data = await resp.json();
+    return c.json(data as any, resp.status as any);
+  }
+
+  // Composite endpoints are paid-only — no free tier
+  const PAID_ONLY = new Set([
+    '/v1/options/spread-scan',
+    '/v1/indicators/regime-classify',
+    '/v1/risk/full-analysis',
+    '/v1/trade/evaluate',
+    '/v1/portfolio/health',
+    '/v1/pairs/signal',
+  ]);
 
   // Check if this request has an x402 payment signature
   const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment');
@@ -345,6 +496,30 @@ app.all('/v1/*', async (c, next) => {
 
     const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
     return middleware(c, next);
+  }
+
+  // Paid-only endpoints — always require payment, no free tier
+  if (PAID_ONLY.has(path) && price && !hasPayment) {
+    const paymentRequired = {
+      x402Version: 2,
+      error: 'Payment required - composite endpoints are paid-only',
+      resource: {
+        url: `https://api.quantoracle.dev${path}`,
+        description: `QuantOracle: ${path}`,
+        mimeType: 'application/json',
+      },
+      accepts: [{
+        scheme: 'exact',
+        network: 'eip155:8453',
+        amount: String(parseFloat(price.replace('$', '')) * 1_000_000),
+        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        payTo: wallet,
+        maxTimeoutSeconds: 30,
+      }],
+    };
+    return c.json(paymentRequired, 402, {
+      'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+    });
   }
 
   // No payment — check free tier

@@ -1,4 +1,4 @@
-"""Test all 63 QuantOracle endpoints. Usage: python tests/test_all.py [base_url]"""
+"""Test all 63 QuantOracle endpoints + batch. Usage: python tests/test_all.py [base_url]"""
 import requests, sys, json
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
@@ -79,6 +79,23 @@ tests = [
     ("POST", "/v1/stats/normal-distribution", {"x": 1.96, "mean": 0, "std": 1, "confidence_level": 0.95}),
     ("POST", "/v1/stats/sharpe-ratio", {"returns": [0.01, -0.005, 0.008, -0.012, 0.015, 0.003, -0.007, 0.011, -0.002, 0.006]}),
     ("POST", "/v1/tvm/cagr", {"start_value": 10000, "end_value": 25000, "years": 5, "include_projections": True}),
+    # Batch
+    ("POST", "/v1/batch", {"requests": [
+        {"endpoint": "stats/zscore", "params": {"series": [10, 12, 14, 11, 13, 15]}},
+        {"endpoint": "options/price", "params": {"S": 100, "K": 105, "T": 0.25, "r": 0.05, "sigma": 0.2}},
+        {"endpoint": "tvm/cagr", "params": {"start_value": 100, "end_value": 150, "years": 3}},
+    ]}),
+    # Composites
+    ("POST", "/v1/options/spread-scan", {"spot": 580, "vol": 0.18, "dte_years": 0.096, "strategy": "bull_call_spread", "num_candidates": 8}),
+    ("POST", "/v1/indicators/regime-classify", {"closes": [float(180 + i * 0.3 + ((-1)**i) * 0.5) for i in range(50)]}),
+    ("POST", "/v1/risk/full-analysis", {"returns": [0.01, -0.005, 0.008, -0.012, 0.015, 0.003, -0.007, 0.011, -0.002, 0.006, -0.009, 0.013, -0.004, 0.007, 0.002, -0.008, 0.01, -0.003, 0.009, -0.006]}),
+    ("POST", "/v1/trade/evaluate", {"entry_price": 185, "stop_loss": 178, "take_profit": 200, "account_size": 80000, "prices": [float(180 + i * 0.3) for i in range(30)]}),
+    ("POST", "/v1/portfolio/health", {"holdings": [
+        {"asset": "SPY", "value": 60000, "target_weight": 50, "returns": [0.01, -0.005, 0.008, -0.012, 0.015, 0.003, -0.007, 0.011, -0.002, 0.006], "beta": 1.0},
+        {"asset": "TLT", "value": 30000, "target_weight": 30, "returns": [-0.002, 0.004, -0.001, 0.006, -0.003, 0.001, 0.005, -0.002, 0.003, -0.001], "beta": 0.1, "duration": 7},
+        {"asset": "GLD", "value": 10000, "target_weight": 20, "returns": [0.003, -0.002, 0.005, -0.008, 0.004, -0.001, 0.002, 0.006, -0.003, 0.001], "beta": 0.2},
+    ]}),
+    ("POST", "/v1/pairs/signal", {"series_a": [float(100 + i * 0.5 + ((-1)**i) * 0.3) for i in range(50)], "series_b": [float(200 + i * 1.0 + ((-1)**i) * 0.5) for i in range(50)], "name_a": "AAPL", "name_b": "MSFT"}),
 ]
 
 print(f"\nTesting {BASE}\n{'=' * 60}")

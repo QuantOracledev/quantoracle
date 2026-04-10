@@ -121,6 +121,13 @@ PRICES = {
     "stats/normal-distribution": 0.002,
     "stats/sharpe-ratio": 0.002,
     "tvm/cagr": 0.002,
+    # Composites
+    "options/spread-scan": 0.05,
+    "indicators/regime-classify": 0.015,
+    "risk/full-analysis": 0.04,
+    "trade/evaluate": 0.025,
+    "portfolio/health": 0.04,
+    "pairs/signal": 0.025,
 }
 
 def hit(ep):
@@ -3246,6 +3253,550 @@ async def tools():
         "payment": {"protocol": "x402", "network": "base", "currency": "USDC"},
         "tools": [{"name": k, "path": f"/v1/{k}", "price_usdc": v} for k, v in PRICES.items()]
     }
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE HELPERS — reusable math for composite endpoints
+# ══════════════════════════════════════════════════════════════════════════
+def _bs(S, K, T, r, sigma, q=0, cp="call"):
+    """Black-Scholes price + greeks. Matches t1 exactly."""
+    if T <= 0 or sigma <= 0:
+        return {"price": 0, "delta": 0, "gamma": 0, "theta": 0, "vega": 0}
+    sT = math.sqrt(T)
+    d1 = (math.log(S / K) + (r - q + sigma**2 / 2) * T) / (sigma * sT)
+    d2 = d1 - sigma * sT
+    eqT, erT = math.exp(-q * T), math.exp(-r * T)
+    n1 = npdf(d1); N1 = ncdf(d1); N2 = ncdf(d2)
+    if cp == "call":
+        pr = S * eqT * N1 - K * erT * N2
+        dl = eqT * N1
+        th = (-S * eqT * n1 * sigma / (2 * sT) - r * K * erT * N2 + q * S * eqT * N1) / 365
+    else:
+        pr = K * erT * ncdf(-d2) - S * eqT * ncdf(-d1)
+        dl = -eqT * ncdf(-d1)
+        th = (-S * eqT * n1 * sigma / (2 * sT) + r * K * erT * ncdf(-d2) - q * S * eqT * ncdf(-d1)) / 365
+    gm = eqT * n1 / (S * sigma * sT)
+    vg = S * eqT * n1 * sT / 100
+    return {"price": r4(pr), "delta": r6(dl), "gamma": r6(gm), "theta": r6(th), "vega": r6(vg)}
+
+def _rsi(prices, period=14):
+    """RSI from price series."""
+    ch = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+    g = [max(0, c) for c in ch[-period:]]
+    l = [max(0, -c) for c in ch[-period:]]
+    ag, al = mu(g), mu(l)
+    rs = ag / al if al > 0 else 100
+    return round(100 - 100 / (1 + rs), 2)
+
+def _sma(prices, period):
+    return mu(prices[-min(period, len(prices)):])
+
+def _realized_vol(prices, window=None):
+    """Annualized close-to-close vol using population variance (matches t60)."""
+    p = prices if window is None else prices[-window:]
+    lr = [math.log(p[i] / p[i-1]) for i in range(1, len(p)) if p[i-1] > 0 and p[i] > 0]
+    if not lr: return 0
+    m = mu(lr)
+    pop_var = sum((x - m)**2 for x in lr) / len(lr)
+    return math.sqrt(pop_var * 252)
+
+def _regime_vol(prices, window=None):
+    """Annualized vol using arithmetic returns (matches t11 regime detection)."""
+    p = prices if window is None else prices[-window:]
+    rt = [p[i] / p[i-1] - 1 for i in range(1, len(p))]
+    return sd(rt) * math.sqrt(252) if rt else 0
+
+def _max_dd(equity):
+    """Max drawdown from equity curve. Returns (max_dd, current_dd)."""
+    pk = equity[0]; mdd = 0; cur = 0
+    for v in equity:
+        if v > pk: pk = v
+        dd = (v - pk) / pk if pk > 0 else 0
+        mdd = min(mdd, dd); cur = dd
+    return mdd, cur
+
+def _hurst_calc(series):
+    """Hurst exponent via R/S. Returns (hurst, interpretation)."""
+    n = len(series)
+    if n < 20:
+        return 0.5, "INSUFFICIENT_DATA"
+    log_n = []; log_rs = []; w = 10
+    max_w = n // 2
+    while w <= max_w:
+        rs_vals = []
+        for start in range(0, n - w + 1, w):
+            chunk = series[start:start + w]
+            m = mu(chunk); s_val = sd(chunk)
+            if s_val < 1e-14: continue
+            running = 0; cumdev = []
+            for v in chunk:
+                running += v - m; cumdev.append(running)
+            R = max(cumdev) - min(cumdev)
+            rs_vals.append(R / s_val)
+        if rs_vals:
+            log_n.append(math.log(w)); log_rs.append(math.log(mu(rs_vals)))
+        w = int(w * 1.5) if w < 50 else w + max(10, w // 4)
+    if len(log_n) < 2:
+        return 0.5, "INSUFFICIENT_DATA"
+    mn = mu(log_n); mr = mu(log_rs)
+    h = sum((log_n[i] - mn) * (log_rs[i] - mr) for i in range(len(log_n))) / sum((log_n[i] - mn)**2 for i in range(len(log_n)))
+    interp = "MEAN_REVERTING" if h < 0.4 else "TRENDING" if h > 0.6 else "RANDOM_WALK"
+    return round(h, 4), interp
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 1: SPREAD SCAN — $0.05
+# ══════════════════════════════════════════════════════════════════════════
+class SpreadScanIn(BaseModel):
+    spot: float = Field(..., gt=0, description="Current spot price")
+    vol: float = Field(..., gt=0, description="Implied volatility (annualized)")
+    dte_years: float = Field(..., gt=0, description="Days to expiration in years")
+    r: float = Field(0.05, description="Risk-free rate")
+    q: float = Field(0, description="Dividend yield")
+    strategy: Literal["bull_call_spread", "bear_put_spread", "bull_put_spread", "bear_call_spread"] = Field("bull_call_spread")
+    num_candidates: int = Field(8, ge=2, le=20, description="Number of spread candidates to evaluate")
+    strike_range_pct: float = Field(0.10, gt=0, le=0.50, description="Strike range as fraction of spot")
+
+@app.post("/v1/options/spread-scan", tags=["Composite"], dependencies=auth)
+async def spread_scan(req: SpreadScanIn):
+    """Scan and rank vertical spreads by risk/reward. Replaces 8-16 individual options/price calls."""
+    t0 = time.perf_counter(); hit("options/spread-scan")
+    S, vol, T, r, q = req.spot, req.vol, req.dte_years, req.r, req.q
+    lo = S * (1 - req.strike_range_pct)
+    hi = S * (1 + req.strike_range_pct)
+    step = (hi - lo) / (req.num_candidates + 1)
+    strikes = [round(lo + step * (i + 1), 2) for i in range(req.num_candidates)]
+
+    candidates = []
+    for i in range(len(strikes) - 1):
+        K1, K2 = strikes[i], strikes[i + 1]
+        width = K2 - K1
+        if req.strategy == "bull_call_spread":
+            buy = _bs(S, K1, T, r, vol, q, "call"); sell = _bs(S, K2, T, r, vol, q, "call")
+            debit = buy["price"] - sell["price"]
+            max_profit = width - debit; max_loss = debit
+        elif req.strategy == "bear_put_spread":
+            buy = _bs(S, K2, T, r, vol, q, "put"); sell = _bs(S, K1, T, r, vol, q, "put")
+            debit = buy["price"] - sell["price"]
+            max_profit = width - debit; max_loss = debit
+        elif req.strategy == "bull_put_spread":
+            sell_leg = _bs(S, K2, T, r, vol, q, "put"); buy_leg = _bs(S, K1, T, r, vol, q, "put")
+            credit = sell_leg["price"] - buy_leg["price"]
+            max_profit = credit; max_loss = width - credit; debit = -credit
+        elif req.strategy == "bear_call_spread":
+            sell_leg = _bs(S, K1, T, r, vol, q, "call"); buy_leg = _bs(S, K2, T, r, vol, q, "call")
+            credit = sell_leg["price"] - buy_leg["price"]
+            max_profit = credit; max_loss = width - credit; debit = -credit
+
+        rr = max_profit / max_loss if max_loss > 0 else float('inf')
+        if req.strategy in ("bull_call_spread", "bear_put_spread"):
+            be = K1 + debit if "call" in req.strategy else K2 - debit
+        else:
+            be = K2 - max_profit if "put" in req.strategy else K1 + max_profit
+
+        candidates.append({
+            "strikes": [K1, K2], "width": r2(width),
+            "net_debit_credit": r4(debit),
+            "max_profit": r4(max_profit), "max_loss": r4(max_loss),
+            "risk_reward": r4(rr), "breakeven": r2(be),
+            "buy_leg": buy if req.strategy in ("bull_call_spread", "bear_put_spread") else buy_leg,
+            "sell_leg": sell if req.strategy in ("bull_call_spread", "bear_put_spread") else sell_leg,
+        })
+
+    candidates.sort(key=lambda c: c["risk_reward"], reverse=True)
+    return {
+        "strategy": req.strategy, "spot": S, "vol": vol, "dte_years": T,
+        "candidates": candidates,
+        "best": candidates[0] if candidates else None,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 2: REGIME CLASSIFY — $0.015
+# ══════════════════════════════════════════════════════════════════════════
+class RegimeClassifyIn(BaseModel):
+    closes: list[float] = Field(..., min_length=30, description="Closing prices")
+    opens: Optional[list[float]] = Field(None, description="Opening prices (optional, improves vol estimate)")
+    highs: Optional[list[float]] = Field(None, description="High prices (optional, improves vol estimate)")
+    lows: Optional[list[float]] = Field(None, description="Low prices (optional, improves vol estimate)")
+    sma_period: int = Field(50, description="SMA period for trend")
+    vol_window: int = Field(21, description="Rolling vol window")
+    rsi_period: int = Field(14, description="RSI period")
+
+@app.post("/v1/indicators/regime-classify", tags=["Composite"], dependencies=auth)
+async def regime_classify(req: RegimeClassifyIn):
+    """Combined regime classification: trend, vol, RSI, direction, strategy suggestion. Replaces technical + regime + realized-vol."""
+    t0 = time.perf_counter(); hit("indicators/regime-classify")
+    p = req.closes; n = len(p)
+    # SMA + trend
+    sma = _sma(p, req.sma_period)
+    price_vs_sma = p[-1] / sma - 1
+    trend = "UPTREND" if p[-1] > sma else "DOWNTREND"
+    # RSI
+    rsi = _rsi(p, req.rsi_period)
+    # Regime vol uses arithmetic returns (matches t11)
+    rv = _regime_vol(p, req.vol_window)
+    lv = _regime_vol(p)
+    ratio = rv / lv if lv > 0 else 1
+    vol_regime = "CRISIS" if ratio > 2 else "HIGH_VOL" if ratio > 1.3 else "LOW_VOL" if ratio < 0.7 else "NORMAL"
+    # Enhanced vol if OHLC provided (log returns for Parkinson, matches t60)
+    vol_methods = {"close_to_close": r4(rv)}
+    if req.highs and req.lows and len(req.highs) >= n and len(req.lows) >= n:
+        h, l = req.highs[:n], req.lows[:n]
+        park_var = sum(math.log(h[i]/l[i])**2 for i in range(n) if l[i] > 0 and h[i] > 0) / (4 * n * math.log(2))
+        vol_methods["parkinson"] = r4(math.sqrt(park_var * 252))
+    # Direction + strength
+    slope_5 = (p[-1] / p[-min(5, n)] - 1) * 100
+    slope_20 = (p[-1] / p[-min(20, n)] - 1) * 100
+    direction = "STRONG_UP" if slope_5 > 2 and slope_20 > 5 else "UP" if slope_5 > 0 and slope_20 > 0 else "STRONG_DOWN" if slope_5 < -2 and slope_20 < -5 else "DOWN" if slope_5 < 0 and slope_20 < 0 else "CHOPPY"
+    # Composite
+    composite = "RISK_ON" if trend == "UPTREND" and vol_regime in ("NORMAL", "LOW_VOL") else "DEFENSIVE" if vol_regime == "CRISIS" else "NEUTRAL"
+    # Strategy suggestion
+    if composite == "RISK_ON" and rsi < 70:
+        strategy = "TREND_FOLLOW"
+    elif composite == "DEFENSIVE":
+        strategy = "REDUCE_EXPOSURE"
+    elif rsi > 70:
+        strategy = "TAKE_PROFITS"
+    elif rsi < 30:
+        strategy = "MEAN_REVERSION_LONG"
+    else:
+        strategy = "WAIT"
+    return {
+        "trend": trend, "sma": r2(sma), "price_vs_sma_pct": r4(price_vs_sma * 100),
+        "rsi": rsi,
+        "vol_regime": vol_regime, "realized_vol": vol_methods, "vol_ratio": r4(ratio),
+        "direction": direction, "slope_5d_pct": r2(slope_5), "slope_20d_pct": r2(slope_20),
+        "composite": composite, "suggested_strategy": strategy,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 3: FULL ANALYSIS — $0.04
+# ══════════════════════════════════════════════════════════════════════════
+class FullAnalysisIn(BaseModel):
+    returns: list[float] = Field(..., min_length=10, description="Daily returns series")
+    equity_curve: Optional[list[float]] = Field(None, description="Equity curve (optional, derived from returns if omitted)")
+    portfolio_value: float = Field(100000, gt=0, description="Current portfolio value")
+    risk_free_rate: float = Field(0.045, description="Annual risk-free rate")
+
+@app.post("/v1/risk/full-analysis", tags=["Composite"], dependencies=auth)
+async def full_analysis(req: FullAnalysisIn):
+    """Complete risk tearsheet: Sharpe, Sortino, VaR, Kelly, drawdown, Hurst, CAGR. Replaces 7 individual calls."""
+    t0 = time.perf_counter(); hit("risk/full-analysis")
+    R = req.returns; n = len(R); m = mu(R); s = sd(R); rf_d = req.risk_free_rate / 252
+    ar = m * 252; av = s * math.sqrt(252)
+    # Sharpe + Sortino
+    sh = (ar - req.risk_free_rate) / av if av > 0 else 0
+    dn = [r_val - rf_d for r_val in R if r_val < rf_d]
+    dd_dev = math.sqrt(sum(d**2 for d in dn) / n) if dn else 0
+    so = (ar - req.risk_free_rate) / (dd_dev * math.sqrt(252)) if dd_dev > 0 else 0
+    # VaR + CVaR
+    sr = sorted(R); v5i = max(0, int(n * 0.05) - 1)
+    var95 = sr[v5i]; cvar95 = mu(sr[:v5i + 1]) if v5i > 0 else var95
+    # Equity curve + drawdown
+    eq = req.equity_curve
+    if not eq:
+        eq = [req.portfolio_value]
+        for r_val in R:
+            eq.append(eq[-1] * (1 + r_val))
+    mdd, cur_dd = _max_dd(eq)
+    # CAGR
+    years = n / 252
+    cagr = (eq[-1] / eq[0]) ** (1 / years) - 1 if years > 0 and eq[0] > 0 else 0
+    # Kelly
+    v = va(R); kelly = m / v if v > 0 else 0
+    # Hurst
+    hurst, hurst_interp = _hurst_calc([math.log(eq[i] / eq[i-1]) for i in range(1, len(eq)) if eq[i-1] > 0 and eq[i] > 0] if len(eq) > 20 else R)
+    # Calmar
+    calmar = ar / abs(mdd) if mdd != 0 else 0
+    # Win rate
+    wins = sum(1 for r_val in R if r_val > 0)
+    return {
+        "returns": {"annualized": r4(ar), "vol": r4(av), "total_pct": r4((eq[-1] / eq[0] - 1) * 100), "cagr": r4(cagr)},
+        "risk": {"sharpe": r4(sh), "sortino": r4(so), "calmar": r4(calmar),
+                 "var_95": r4(var95), "cvar_95": r4(cvar95),
+                 "max_drawdown": r4(mdd), "current_drawdown": r4(cur_dd)},
+        "kelly": {"full_kelly_leverage": r4(kelly), "half_kelly": r4(kelly / 2)},
+        "hurst": {"exponent": hurst, "interpretation": hurst_interp},
+        "portfolio": {"start_value": r2(eq[0]), "end_value": r2(eq[-1]), "win_rate": r4(wins / n)},
+        "n": n, "trading_days": n, "years": r2(years),
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 4: TRADE EVALUATE — $0.025
+# ══════════════════════════════════════════════════════════════════════════
+class TradeEvaluateIn(BaseModel):
+    entry_price: float = Field(..., gt=0, description="Planned entry price")
+    stop_loss: float = Field(..., gt=0, description="Stop loss price")
+    take_profit: float = Field(..., gt=0, description="Take profit price")
+    account_size: float = Field(..., gt=0, description="Total account value")
+    risk_per_trade: float = Field(0.02, description="Max risk per trade as fraction")
+    prices: list[float] = Field(..., min_length=14, description="Recent price history for signals")
+    returns: Optional[list[float]] = Field(None, description="Historical returns for Kelly (optional)")
+    commission_per_share: float = Field(0.005, description="Commission per share")
+    spread_bps: float = Field(5, description="Bid-ask spread in basis points")
+    adv: float = Field(5000000, description="Average daily volume in USD")
+
+@app.post("/v1/trade/evaluate", tags=["Composite"], dependencies=auth)
+async def trade_evaluate(req: TradeEvaluateIn):
+    """Complete trade evaluation: sizing, risk/reward, Kelly, costs, regime, signals. Replaces 5 individual calls."""
+    t0 = time.perf_counter(); hit("trade/evaluate")
+    entry, stop, tp = req.entry_price, req.stop_loss, req.take_profit
+    # Risk/reward
+    risk_per_share = abs(entry - stop)
+    reward_per_share = abs(tp - entry)
+    rr_ratio = reward_per_share / risk_per_share if risk_per_share > 0 else 0
+    direction = "LONG" if tp > entry else "SHORT"
+    # Position sizing
+    dollar_risk = req.account_size * req.risk_per_trade
+    shares = int(dollar_risk / risk_per_share) if risk_per_share > 0 else 0
+    position_value = shares * entry
+    pct_account = position_value / req.account_size if req.account_size > 0 else 0
+    # Transaction cost estimate (matches t54 exactly)
+    spread_cost = position_value * req.spread_bps / 10000 / 2  # half-spread
+    commission = shares * req.commission_per_share
+    participation = position_value / req.adv if req.adv > 0 else 0
+    impact_bps = 10 * math.sqrt(min(participation, 1))
+    impact = position_value * impact_bps / 10000
+    one_way_cost = spread_cost + commission + impact
+    total_cost = one_way_cost * 2  # round trip
+    cost_pct = total_cost / position_value * 100 if position_value > 0 else 0
+    # Signals from prices
+    rsi = _rsi(req.prices)
+    sma = _sma(req.prices, 14)
+    trend = "BULLISH" if req.prices[-1] > sma and rsi > 50 else "BEARISH"
+    # Regime (short window vs long window, matches t11)
+    rv = _regime_vol(req.prices, min(21, len(req.prices) - 1))
+    lv = _regime_vol(req.prices)
+    ratio = rv / lv if lv > 0 else 1
+    vol_regime = "CRISIS" if ratio > 2 else "HIGH_VOL" if ratio > 1.3 else "LOW_VOL" if ratio < 0.7 else "NORMAL"
+    # Kelly from returns if provided
+    kelly = None
+    if req.returns and len(req.returns) >= 10:
+        m_r = mu(req.returns); v_r = va(req.returns)
+        kelly = {"full_kelly": r4(m_r / v_r if v_r > 0 else 0), "half_kelly": r4(m_r / v_r / 2 if v_r > 0 else 0)}
+    # Signals alignment
+    signals = []
+    if rsi > 70: signals.append("RSI_OVERBOUGHT")
+    elif rsi < 30: signals.append("RSI_OVERSOLD")
+    signals.append("ABOVE_SMA" if req.prices[-1] > sma else "BELOW_SMA")
+    aligned = (direction == "LONG" and trend == "BULLISH") or (direction == "SHORT" and trend == "BEARISH")
+    return {
+        "direction": direction, "risk_reward": r4(rr_ratio),
+        "position": {"shares": shares, "value": r2(position_value), "pct_account": r4(pct_account),
+                      "risk_per_share": r4(risk_per_share), "max_loss": r2(shares * risk_per_share),
+                      "max_profit": r2(shares * reward_per_share)},
+        "costs": {"round_trip": r2(total_cost), "pct_of_position": r4(cost_pct),
+                  "spread": r2(spread_cost), "commission": r2(commission), "impact": r2(impact)},
+        "signals": {"rsi": rsi, "sma": r2(sma), "trend": trend, "signals": signals, "aligned_with_trade": aligned},
+        "regime": {"realized_vol": r4(rv), "vol_regime": vol_regime},
+        "kelly": kelly,
+        "verdict": "FAVORABLE" if aligned and rr_ratio >= 2 and vol_regime != "HIGH" else "CAUTION" if rr_ratio >= 1.5 else "UNFAVORABLE",
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 5: PORTFOLIO HEALTH — $0.04
+# ══════════════════════════════════════════════════════════════════════════
+class PortfolioHoldingItem(BaseModel):
+    asset: str = Field(..., description="Asset name")
+    value: float = Field(..., description="Current market value")
+    target_weight: float = Field(..., description="Target allocation weight (%)")
+    returns: list[float] = Field(..., min_length=5, description="Daily returns for this asset")
+    beta: float = Field(1.0, description="Market beta (for stress test)")
+    duration: float = Field(0, description="Bond duration (for rate stress)")
+
+class PortfolioHealthIn(BaseModel):
+    holdings: list[PortfolioHoldingItem] = Field(..., min_length=2, description="Portfolio holdings")
+    risk_free_rate: float = Field(0.045, description="Annual risk-free rate")
+    rebalance_threshold_pct: float = Field(5, description="Drift threshold to trigger rebalance (%)")
+    min_trade_usd: float = Field(100, description="Minimum trade size in USD")
+
+@app.post("/v1/portfolio/health", tags=["Composite"], dependencies=auth)
+async def portfolio_health(req: PortfolioHealthIn):
+    """Full portfolio health check: risk metrics, correlation, drawdown, rebalance, stress test. Replaces 6 individual calls."""
+    t0 = time.perf_counter(); hit("portfolio/health")
+    holdings = req.holdings
+    if len(holdings) < 2:
+        raise HTTPException(400, "Need at least 2 holdings")
+    nh = len(holdings)
+    total = sum(h.value for h in holdings)
+    names = [h.asset for h in holdings]
+    min_len = min(len(h.returns) for h in holdings)
+    returns_data = [h.returns[:min_len] for h in holdings]
+    # Portfolio returns (weighted)
+    weights = [h.value / total for h in holdings]
+    port_ret = [sum(weights[j] * returns_data[j][i] for j in range(nh)) for i in range(min_len)]
+    # Portfolio risk metrics
+    m = mu(port_ret); s = sd(port_ret); ar = m * 252; av = s * math.sqrt(252)
+    sh = (ar - req.risk_free_rate) / av if av > 0 else 0
+    sr = sorted(port_ret); v5i = max(0, int(min_len * 0.05) - 1)
+    var95 = sr[v5i]
+    # Drawdown
+    eq = [total];
+    for r_val in port_ret:
+        eq.append(eq[-1] * (1 + r_val))
+    mdd, cur_dd = _max_dd(eq)
+    # Correlation matrix
+    vols = [sd(d) for d in returns_data]
+    corr = [[r4(cv(returns_data[i], returns_data[j]) / (vols[i] * vols[j])) if vols[i] > 0 and vols[j] > 0 else (1.0 if i == j else 0.0)
+             for j in range(nh)] for i in range(nh)]
+    # Rebalance check (matches t37)
+    drifts = []; trades = []; max_drift = 0
+    for h in holdings:
+        cur_w = h.value / total * 100; drift = cur_w - h.target_weight
+        max_drift = max(max_drift, abs(drift))
+        drifts.append({"asset": h.asset, "current_weight": r2(cur_w), "target_weight": r2(h.target_weight), "drift_pct": r2(drift)})
+        target_val = total * h.target_weight / 100
+        trade_val = target_val - h.value
+        if abs(trade_val) >= req.min_trade_usd:
+            trades.append({"asset": h.asset, "action": "BUY" if trade_val > 0 else "SELL", "amount": r2(abs(trade_val))})
+    # Stress test (matches t46)
+    scenarios = [
+        {"name": "2008 Crisis", "market_shock_pct": -40, "rate_shock_bps": -200},
+        {"name": "Rate Hike +200bps", "market_shock_pct": -10, "rate_shock_bps": 200},
+        {"name": "Flash Crash -15%", "market_shock_pct": -15, "rate_shock_bps": 0},
+    ]
+    stress = []
+    for sc in scenarios:
+        pnl = sum(h.value * h.beta * sc["market_shock_pct"] / 100 - h.value * h.duration * sc["rate_shock_bps"] / 10000 for h in holdings)
+        stress.append({"scenario": sc["name"], "pnl": r2(pnl), "pnl_pct": r4(pnl / total * 100)})
+    return {
+        "portfolio_value": r2(total),
+        "risk": {"sharpe": r4(sh), "annualized_return": r4(ar), "annualized_vol": r4(av),
+                 "var_95": r4(var95), "max_drawdown": r4(mdd), "current_drawdown": r4(cur_dd)},
+        "correlation": {"assets": names, "matrix": corr, "volatilities": {names[i]: r4(vols[i] * math.sqrt(252)) for i in range(nh)}},
+        "rebalance": {"needs_rebalance": max_drift > req.rebalance_threshold_pct, "max_drift_pct": r2(max_drift), "drifts": drifts, "trades": trades},
+        "stress_test": stress,
+        "n_periods": min_len,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 6: PAIRS SIGNAL — $0.025
+# ══════════════════════════════════════════════════════════════════════════
+class PairsSignalIn(BaseModel):
+    series_a: list[float] = Field(..., min_length=20, description="Price series for asset A")
+    series_b: list[float] = Field(..., min_length=20, description="Price series for asset B")
+    name_a: str = Field("A", description="Name of asset A")
+    name_b: str = Field("B", description="Name of asset B")
+    significance: Literal["0.01", "0.05", "0.10"] = Field("0.05")
+
+@app.post("/v1/pairs/signal", tags=["Composite"], dependencies=auth)
+async def pairs_signal(req: PairsSignalIn):
+    """Complete pairs trading signal: cointegration, Hurst, z-score, half-life, hedge ratio. Replaces 4 individual calls."""
+    t0 = time.perf_counter(); hit("pairs/signal")
+    a, b = req.series_a, req.series_b
+    n = min(len(a), len(b)); a = a[:n]; b = b[:n]
+    # OLS: b = alpha + beta * a
+    ma, mb = mu(a), mu(b)
+    beta = sum((a[i] - ma) * (b[i] - mb) for i in range(n)) / sum((a[i] - ma)**2 for i in range(n))
+    alpha = mb - beta * ma
+    spread = [b[i] - alpha - beta * a[i] for i in range(n)]
+    # ADF on spread
+    ds = [spread[i] - spread[i-1] for i in range(1, len(spread))]
+    lag = spread[:-1]; ns = len(ds)
+    sl = mu(lag); sd_l = mu(ds)
+    ss_lag = sum((lag[i] - sl)**2 for i in range(ns))
+    gamma = sum((lag[i] - sl) * (ds[i] - sd_l) for i in range(ns)) / ss_lag if ss_lag > 0 else 0
+    intercept_adf = sd_l - gamma * sl
+    residuals = [ds[i] - intercept_adf - gamma * lag[i] for i in range(ns)]
+    se = math.sqrt(sum(r_val**2 for r_val in residuals) / (ns - 2) / ss_lag) if ss_lag > 0 and ns > 2 else 1
+    adf_stat = gamma / se if se > 0 else 0
+    crit = {"0.01": -3.90, "0.05": -3.34, "0.10": -3.04}
+    cointegrated = adf_stat < crit[req.significance]
+    # Half-life
+    half_life = -math.log(2) / gamma if gamma < 0 else float('inf')
+    # Spread stats
+    sp_mean = mu(spread); sp_std = sd(spread)
+    current_z = (spread[-1] - sp_mean) / sp_std if sp_std > 0 else 0
+    # Hurst on spread
+    hurst, hurst_interp = _hurst_calc(spread)
+    # Correlation
+    sa, sb = sd(a), sd(b)
+    corr = cv(a, b) / (sa * sb) if sa > 0 and sb > 0 else 0
+    # Signal
+    if not cointegrated:
+        signal = "NO_TRADE"
+        reason = "Not cointegrated"
+    elif current_z > 2:
+        signal = f"SHORT_{req.name_b}_LONG_{req.name_a}"
+        reason = f"Spread z-score {r2(current_z)} > 2 (overextended)"
+    elif current_z < -2:
+        signal = f"LONG_{req.name_b}_SHORT_{req.name_a}"
+        reason = f"Spread z-score {r2(current_z)} < -2 (underextended)"
+    elif abs(current_z) < 0.5:
+        signal = "CLOSE_POSITION"
+        reason = "Spread near mean"
+    else:
+        signal = "WAIT"
+        reason = f"Z-score {r2(current_z)} between thresholds"
+    return {
+        "cointegration": {"cointegrated": cointegrated, "adf_statistic": r4(adf_stat),
+                          "critical_value": crit[req.significance], "significance": req.significance},
+        "hedge_ratio": r6(beta), "intercept": r6(alpha),
+        "spread": {"mean": r4(sp_mean), "std": r4(sp_std), "current": r4(spread[-1]), "current_zscore": r4(current_z)},
+        "half_life": r2(min(half_life, 9999)),
+        "hurst": {"exponent": hurst, "interpretation": hurst_interp},
+        "correlation": r4(corr),
+        "signal": signal, "reason": reason,
+        "pair": [req.name_a, req.name_b],
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# BATCH ENDPOINT — up to 100 computations in one request
+# ══════════════════════════════════════════════════════════════════════════
+BATCH_MAX = 100
+
+class BatchRequest(BaseModel):
+    endpoint: str = Field(..., description="Endpoint path, e.g. 'options/price'")
+    params: dict = Field(..., description="Parameters for the endpoint")
+
+class BatchIn(BaseModel):
+    requests: list[BatchRequest] = Field(..., min_length=1, max_length=BATCH_MAX,
+        description=f"List of computation requests (max {BATCH_MAX})")
+
+@app.post("/v1/batch", tags=["Batch"], dependencies=auth)
+async def batch(req: BatchIn):
+    """Execute multiple computations in a single request. Max 100 per batch."""
+    import httpx
+    t0 = time.perf_counter()
+
+    # Validate all endpoints exist and compute total price
+    total_price = 0.0
+    for r in req.requests:
+        ep = r.endpoint.strip("/")
+        if ep not in PRICES:
+            raise HTTPException(400, f"Unknown endpoint: {ep}")
+        total_price += PRICES[ep]
+
+    results = []
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://internal") as client:
+        for r in req.requests:
+            ep = r.endpoint.strip("/")
+            resp = await client.post(f"/v1/{ep}", json=r.params)
+            results.append({
+                "endpoint": ep,
+                "status": resp.status_code,
+                "data": resp.json() if resp.status_code == 200 else {"error": resp.json()},
+            })
+
+    return {
+        "batch_size": len(req.requests),
+        "total_price_usdc": round(total_price, 4),
+        "results": results,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
