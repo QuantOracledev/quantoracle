@@ -207,6 +207,7 @@ PAYMENT-REQUIRED: <base64-encoded payment instructions>
 | **Medium** | $0.005 | Black-Scholes, implied vol, Kelly, position sizing, drawdown, regime, crossover, bond amortization, carry trade, IRP, PPP, funding rate, slippage, vesting, rebalance, IRR, realized vol, PSR, transaction cost |
 | **Complex** | $0.008 | Portfolio risk, binomial tree, barrier/Asian/lookback options, credit spread, VaR, stress test, regression, cointegration, Hurst, distribution fit, risk parity |
 | **Heavy** | $0.015 | Monte Carlo, GARCH, portfolio optimization, option chain analysis, vol surface, yield curve, correlation matrix |
+| **Composite** | $0.015-0.05 | Spread scan, regime classify, full analysis, trade evaluate, portfolio health, pairs signal *(paid-only, no free tier)* |
 
 ### Batch Endpoint
 
