@@ -8,7 +8,7 @@
   <a href="https://www.npmjs.com/package/quantoracle-mcp"><img src="https://img.shields.io/npm/v/quantoracle-mcp?label=npm&color=cb3837" alt="npm"></a>
   <a href="https://smithery.ai/server/QuantOracle/quantoracle"><img src="https://smithery.ai/badge/QuantOracle/quantoracle" alt="Smithery"></a>
   <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-quantoracle-blueviolet" alt="ClawHub"></a>
-  <a href="https://glama.ai/mcp/servers/QuantOracledev/quantoracle"><img src="https://glama.ai/mcp/servers/QuantOracledev/quantoracle/badge" alt="Glama" height="20"></a>
+  <a href="https://glama.ai/mcp/servers/QuantOracledev/quantoracle"><img src="https://glama.ai/mcp/servers/QuantOracledev/quantoracle/badge?type=score" alt="Glama" height="20"></a>
   <a href="https://www.npmjs.com/package/quantoracle-cli"><img src="https://img.shields.io/npm/v/quantoracle-cli?label=cli&color=green" alt="CLI"></a>
   <a href="https://x402.org/ecosystem"><img src="https://img.shields.io/badge/x402-USDC%20on%20Base-0052FF" alt="x402"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
