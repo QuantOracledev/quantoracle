@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langchain-quantoracle"
+version = "0.1.0"
+description = "63 deterministic quant computation tools for LangChain agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = [
+    "langchain-core>=0.2.0",
+    "requests>=2.28.0",
+    "pydantic>=2.0.0",
+]
+keywords = ["langchain", "quantitative-finance", "options", "risk", "portfolio", "agent", "tools"]
+
+[project.urls]
+Homepage = "https://quantoracle.dev"
+Repository = "https://github.com/QuantOracledev/quantoracle"
+Documentation = "https://api.quantoracle.dev/docs"
+
+[tool.setuptools.packages.find]
+include = ["langchain_quantoracle*"]
