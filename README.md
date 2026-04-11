@@ -386,6 +386,8 @@ QuantOracle is available across multiple agent ecosystems:
 | **Glama** | [glama.ai/mcp/servers/QuantOracledev/quantoracle](https://glama.ai/mcp/servers/QuantOracledev/quantoracle) |
 | **npm (MCP)** | `npx quantoracle-mcp` |
 | **x402 ecosystem** | [x402.org/ecosystem](https://x402.org/ecosystem) |
+| **ChatGPT GPT** | [QuantOracle GPT](https://chatgpt.com/g/g-69d9c28bddb481918e674e2f9d9f3e97-quantoracle) |
+| **LangChain** | `pip install langchain-quantoracle` |
 | **REST API** | `https://api.quantoracle.dev/v1/...` |
 | **OpenAPI spec** | `https://api.quantoracle.dev/openapi.json` |
 | **Swagger UI** | `https://api.quantoracle.dev/docs` |

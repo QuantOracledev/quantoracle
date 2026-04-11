@@ -1,0 +1,1728 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "QuantOracle",
+    "version": "2.2.0",
+    "description": "63 deterministic quant computation tools. 1,000 free calls/day."
+  },
+  "servers": [
+    {
+      "url": "https://api.quantoracle.dev"
+    }
+  ],
+  "paths": {
+    "/v1/options/price": {
+      "post": {
+        "operationId": "options_price",
+        "summary": "T1",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "S": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Spot price of the underlying asset"
+                  },
+                  "K": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Strike price"
+                  },
+                  "T": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Time to expiration in years"
+                  },
+                  "r": {
+                    "type": "number",
+                    "description": "Risk-free interest rate (annualized)",
+                    "default": 0.05
+                  },
+                  "sigma": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Volatility (annualized, e.g. 0.2 = 20%)"
+                  },
+                  "q": {
+                    "type": "number",
+                    "description": "Continuous dividend yield",
+                    "default": 0
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "call",
+                      "put"
+                    ],
+                    "description": "Option type",
+                    "default": "call"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "S",
+                  "K",
+                  "T",
+                  "sigma"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/options/implied-vol": {
+      "post": {
+        "operationId": "options_implied_vol",
+        "summary": "T2",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "S": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Spot price of the underlying asset"
+                  },
+                  "K": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Strike price"
+                  },
+                  "T": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Time to expiration in years"
+                  },
+                  "r": {
+                    "type": "number",
+                    "description": "Risk-free interest rate (annualized)",
+                    "default": 0.05
+                  },
+                  "q": {
+                    "type": "number",
+                    "description": "Continuous dividend yield",
+                    "default": 0
+                  },
+                  "market_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Observed market price of the option"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "call",
+                      "put"
+                    ],
+                    "description": "Option type",
+                    "default": "call"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "S",
+                  "K",
+                  "T",
+                  "market_price"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/options/strategy": {
+      "post": {
+        "operationId": "options_strategy",
+        "summary": "T3",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "legs": {
+                    "items": {
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "call",
+                            "put"
+                          ],
+                          "description": "Option type"
+                        },
+                        "K": {
+                          "type": "number",
+                          "description": "Strike price"
+                        },
+                        "premium": {
+                          "type": "number",
+                          "description": "Premium paid (positive) or received (negative)"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "description": "Number of contracts (positive=long, negative=short)",
+                          "default": 1
+                        }
+                      },
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "K",
+                        "premium"
+                      ]
+                    },
+                    "type": "array",
+                    "description": "List of option legs in the strategy"
+                  },
+                  "S_range": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Custom price range [min, max] for P&L analysis"
+                  },
+                  "points": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of points to evaluate in P&L curve",
+                    "default": 50
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "legs"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/options/payoff-diagram": {
+      "post": {
+        "operationId": "options_payoff_diagram",
+        "summary": "T47",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "legs": {
+                    "items": {
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "call",
+                            "put"
+                          ],
+                          "description": "Option type"
+                        },
+                        "strike": {
+                          "type": "number",
+                          "description": "Strike price"
+                        },
+                        "premium": {
+                          "type": "number",
+                          "description": "Premium per contract"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "description": "Number of contracts",
+                          "default": 1
+                        },
+                        "direction": {
+                          "type": "string",
+                          "enum": [
+                            "long",
+                            "short"
+                          ],
+                          "description": "Long or short the option",
+                          "default": "long"
+                        }
+                      },
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "strike",
+                        "premium"
+                      ]
+                    },
+                    "type": "array",
+                    "description": "Array of option legs"
+                  },
+                  "spot": {
+                    "type": "number",
+                    "description": "Current spot price"
+                  },
+                  "price_range_pct": {
+                    "type": "number",
+                    "description": "Price range around spot for payoff calculation (percentage)",
+                    "default": 30
+                  },
+                  "points": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of evaluation points",
+                    "default": 100
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "legs",
+                  "spot"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/derivatives/binomial-tree": {
+      "post": {
+        "operationId": "derivatives_binomial_tree",
+        "summary": "T16",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "S": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Spot price of the underlying asset"
+                  },
+                  "K": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Strike price"
+                  },
+                  "T": {
+                    "type": "number",
+                    "maximum": 30,
+                    "exclusiveMinimum": 0,
+                    "description": "Time to expiration in years"
+                  },
+                  "r": {
+                    "type": "number",
+                    "description": "Risk-free interest rate (annualized)",
+                    "default": 0.05
+                  },
+                  "sigma": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Volatility (annualized)"
+                  },
+                  "q": {
+                    "type": "number",
+                    "description": "Continuous dividend yield",
+                    "default": 0
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "call",
+                      "put"
+                    ],
+                    "description": "Option type",
+                    "default": "call"
+                  },
+                  "exercise": {
+                    "type": "string",
+                    "enum": [
+                      "american",
+                      "european"
+                    ],
+                    "description": "Exercise style",
+                    "default": "european"
+                  },
+                  "steps": {
+                    "type": "integer",
+                    "maximum": 500,
+                    "minimum": 1,
+                    "description": "Number of tree steps (higher = more accurate)",
+                    "default": 100
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "S",
+                  "K",
+                  "T",
+                  "sigma"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/derivatives/barrier-option": {
+      "post": {
+        "operationId": "derivatives_barrier_option",
+        "summary": "T17",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "S": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Spot price of the underlying asset"
+                  },
+                  "K": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Strike price"
+                  },
+                  "H": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Barrier level"
+                  },
+                  "T": {
+                    "type": "number",
+                    "maximum": 30,
+                    "exclusiveMinimum": 0,
+                    "description": "Time to expiration in years"
+                  },
+                  "r": {
+                    "type": "number",
+                    "description": "Risk-free interest rate (annualized)",
+                    "default": 0.05
+                  },
+                  "sigma": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Volatility (annualized)"
+                  },
+                  "q": {
+                    "type": "number",
+                    "description": "Continuous dividend yield",
+                    "default": 0
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "call",
+                      "put"
+                    ],
+                    "description": "Option type",
+                    "default": "call"
+                  },
+                  "barrier_type": {
+                    "type": "string",
+                    "enum": [
+                      "up-in",
+                      "up-out",
+                      "down-in",
+                      "down-out"
+                    ],
+                    "description": "Barrier type: up/down + in/out",
+                    "default": "down-out"
+                  },
+                  "rebate": {
+                    "type": "number",
+                    "description": "Rebate paid if barrier is hit (for out) or not hit (for in)",
+                    "default": 0
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "S",
+                  "K",
+                  "H",
+                  "T",
+                  "sigma"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/risk/portfolio": {
+      "post": {
+        "operationId": "risk_portfolio",
+        "summary": "T4",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "returns": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "maxItems": 10000,
+                    "minItems": 5,
+                    "description": "Array of periodic portfolio returns (e.g. daily)"
+                  },
+                  "benchmark_returns": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Optional benchmark return series for relative metrics"
+                  },
+                  "risk_free_rate": {
+                    "type": "number",
+                    "description": "Annual risk-free rate for Sharpe/Sortino calculation",
+                    "default": 0.05
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "returns"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/risk/kelly": {
+      "post": {
+        "operationId": "risk_kelly",
+        "summary": "T5",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "discrete",
+                      "continuous"
+                    ],
+                    "description": "Calculation mode: discrete (win/loss) or continuous (return series)",
+                    "default": "discrete"
+                  },
+                  "win_rate": {
+                    "type": "number",
+                    "description": "Probability of winning (0-1), required for discrete mode"
+                  },
+                  "avg_win": {
+                    "type": "number",
+                    "description": "Average win amount, required for discrete mode"
+                  },
+                  "avg_loss": {
+                    "type": "number",
+                    "description": "Average loss amount (positive number), required for discrete mode"
+                  },
+                  "returns": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Array of historical returns, required for continuous mode"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/risk/position-size": {
+      "post": {
+        "operationId": "risk_position_size",
+        "summary": "T9",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "account_size": {
+                    "type": "number",
+                    "description": "Total account value"
+                  },
+                  "risk_per_trade": {
+                    "type": "number",
+                    "description": "Maximum risk per trade as fraction (e.g. 0.02 = 2%)",
+                    "default": 0.02
+                  },
+                  "entry_price": {
+                    "type": "number",
+                    "description": "Planned entry price"
+                  },
+                  "stop_loss": {
+                    "type": "number",
+                    "description": "Stop loss price"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "account_size",
+                  "entry_price",
+                  "stop_loss"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/risk/var-parametric": {
+      "post": {
+        "operationId": "risk_var_parametric",
+        "summary": "T45",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "returns": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 10,
+                    "description": "Array of historical returns"
+                  },
+                  "confidence_levels": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Confidence levels for VaR calculation",
+                    "default": [
+                      0.95,
+                      0.99
+                    ]
+                  },
+                  "holding_period_days": {
+                    "type": "integer",
+                    "description": "VaR holding period in days",
+                    "default": 1
+                  },
+                  "portfolio_value": {
+                    "type": "number",
+                    "description": "Optional portfolio value for dollar VaR"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "returns"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/risk/stress-test": {
+      "post": {
+        "operationId": "risk_stress_test",
+        "summary": "T46",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "positions": {
+                    "items": {
+                      "properties": {
+                        "asset": {
+                          "type": "string",
+                          "description": "Asset name"
+                        },
+                        "value": {
+                          "type": "number",
+                          "description": "Current position value in USD"
+                        },
+                        "beta": {
+                          "type": "number",
+                          "description": "Market beta of the position",
+                          "default": 1
+                        },
+                        "duration": {
+                          "type": "number",
+                          "description": "Bond duration (for fixed income)",
+                          "default": 0
+                        }
+                      },
+                      "type": "object",
+                      "required": [
+                        "asset",
+                        "value"
+                      ]
+                    },
+                    "type": "array",
+                    "description": "Array of portfolio positions"
+                  },
+                  "scenarios": {
+                    "items": {
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Scenario name"
+                        },
+                        "market_shock_pct": {
+                          "type": "number",
+                          "description": "Equity market shock as percentage",
+                          "default": 0
+                        },
+                        "rate_shock_bps": {
+                          "type": "number",
+                          "description": "Interest rate shock in basis points",
+                          "default": 0
+                        },
+                        "vol_shock_pct": {
+                          "type": "number",
+                          "description": "Volatility shock as percentage",
+                          "default": 0
+                        }
+                      },
+                      "type": "object",
+                      "required": [
+                        "name"
+                      ]
+                    },
+                    "type": "array",
+                    "description": "Array of stress scenarios to evaluate"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "positions",
+                  "scenarios"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/risk/correlation": {
+      "post": {
+        "operationId": "risk_correlation",
+        "summary": "T8",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "series": {
+                    "additionalProperties": {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    },
+                    "type": "object",
+                    "description": "Named return series, e.g. {\"AAPL\": [0.01, -0.02, ...], \"MSFT\": [...]}"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "series"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/portfolio/optimize": {
+      "post": {
+        "operationId": "portfolio_optimize",
+        "summary": "T15",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "returns": {
+                    "additionalProperties": {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    },
+                    "type": "object",
+                    "description": "Named return series per asset, e.g. {\"AAPL\": [...], \"MSFT\": [...]}"
+                  },
+                  "risk_free_rate": {
+                    "type": "number",
+                    "description": "Annual risk-free rate",
+                    "default": 0.05
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "max_sharpe",
+                      "min_vol",
+                      "risk_parity"
+                    ],
+                    "description": "Optimization objective",
+                    "default": "max_sharpe"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "returns"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/indicators/technical": {
+      "post": {
+        "operationId": "indicators_technical",
+        "summary": "T7",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "prices": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 5,
+                    "description": "Array of price data (e.g. closing prices)"
+                  },
+                  "volumes": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Optional array of volume data (same length as prices)"
+                  },
+                  "period": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "description": "Lookback period for indicator calculations",
+                    "default": 14
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "prices"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/indicators/bollinger-bands": {
+      "post": {
+        "operationId": "indicators_bollinger_bands",
+        "summary": "T50",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "prices": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 5,
+                    "description": "Array of price data"
+                  },
+                  "window": {
+                    "type": "integer",
+                    "description": "Moving average window",
+                    "default": 20
+                  },
+                  "num_std": {
+                    "type": "number",
+                    "description": "Number of standard deviations for bands",
+                    "default": 2
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "prices"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/indicators/fibonacci-retracement": {
+      "post": {
+        "operationId": "indicators_fibonacci_retracement",
+        "summary": "T51",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "swing_high": {
+                    "type": "number",
+                    "description": "Swing high price"
+                  },
+                  "swing_low": {
+                    "type": "number",
+                    "description": "Swing low price"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down"
+                    ],
+                    "description": "Trend direction for level calculation",
+                    "default": "up"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "swing_high",
+                  "swing_low"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/simulate/montecarlo": {
+      "post": {
+        "operationId": "simulate_montecarlo",
+        "summary": "T6",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "initial_value": {
+                    "type": "number",
+                    "description": "Starting portfolio value",
+                    "default": 100000
+                  },
+                  "annual_return": {
+                    "type": "number",
+                    "description": "Expected annual return (e.g. 0.10 = 10%)",
+                    "default": 0.1
+                  },
+                  "annual_vol": {
+                    "type": "number",
+                    "description": "Annual volatility (e.g. 0.20 = 20%)",
+                    "default": 0.2
+                  },
+                  "years": {
+                    "type": "number",
+                    "maximum": 100,
+                    "exclusiveMinimum": 0,
+                    "description": "Simulation horizon in years",
+                    "default": 5
+                  },
+                  "simulations": {
+                    "type": "integer",
+                    "maximum": 5000,
+                    "minimum": 1,
+                    "description": "Number of Monte Carlo paths",
+                    "default": 1000
+                  },
+                  "contributions": {
+                    "type": "number",
+                    "description": "Periodic contribution amount (per year)",
+                    "default": 0
+                  },
+                  "withdrawal_rate": {
+                    "type": "number",
+                    "description": "Annual withdrawal rate as fraction of portfolio",
+                    "default": 0
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/stats/linear-regression": {
+      "post": {
+        "operationId": "stats_linear_regression",
+        "summary": "T23",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "x": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "items": {
+                            "type": "number"
+                          },
+                          "type": "array"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "items": {
+                          "type": "number"
+                        },
+                        "type": "array"
+                      }
+                    ],
+                    "description": "Independent variable(s): 1D array for simple, 2D for multiple regression"
+                  },
+                  "y": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Dependent variable array"
+                  },
+                  "confidence_level": {
+                    "type": "number",
+                    "description": "Confidence level for intervals (e.g. 0.95 = 95%)",
+                    "default": 0.95
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "x",
+                  "y"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/stats/cointegration": {
+      "post": {
+        "operationId": "stats_cointegration",
+        "summary": "T25",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "series_x": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "First time series"
+                  },
+                  "series_y": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "description": "Second time series"
+                  },
+                  "significance": {
+                    "type": "string",
+                    "enum": [
+                      "0.01",
+                      "0.05",
+                      "0.10"
+                    ],
+                    "description": "Significance level for the test",
+                    "default": "0.05"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "series_x",
+                  "series_y"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/stats/hurst-exponent": {
+      "post": {
+        "operationId": "stats_hurst_exponent",
+        "summary": "T26",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "series": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "maxItems": 10000,
+                    "minItems": 20,
+                    "description": "Time series data"
+                  },
+                  "min_window": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "description": "Minimum R/S window size",
+                    "default": 10
+                  },
+                  "max_window": {
+                    "type": "integer",
+                    "description": "Maximum R/S window size (defaults to len/2)"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "series"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/stats/garch-forecast": {
+      "post": {
+        "operationId": "stats_garch_forecast",
+        "summary": "T27",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "returns": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 30,
+                    "description": "Array of return data"
+                  },
+                  "forecast_periods": {
+                    "type": "integer",
+                    "description": "Number of periods to forecast ahead",
+                    "default": 5
+                  },
+                  "mean_model": {
+                    "type": "string",
+                    "enum": [
+                      "zero",
+                      "constant"
+                    ],
+                    "description": "Mean model specification",
+                    "default": "zero"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "returns"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/stats/zscore": {
+      "post": {
+        "operationId": "stats_zscore",
+        "summary": "T28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "series": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 3,
+                    "description": "Numeric data series"
+                  },
+                  "window": {
+                    "type": "integer",
+                    "description": "Rolling window size (null for static z-scores)"
+                  },
+                  "threshold": {
+                    "type": "number",
+                    "description": "Z-score threshold for extreme value detection",
+                    "default": 2
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "series"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/fixed-income/bond": {
+      "post": {
+        "operationId": "fixed_income_bond",
+        "summary": "T13",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "face": {
+                    "type": "number",
+                    "description": "Face/par value of the bond",
+                    "default": 1000
+                  },
+                  "coupon_rate": {
+                    "type": "number",
+                    "description": "Annual coupon rate (e.g. 0.05 = 5%)"
+                  },
+                  "ytm": {
+                    "type": "number",
+                    "description": "Yield to maturity (annualized)"
+                  },
+                  "years": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "description": "Years to maturity"
+                  },
+                  "frequency": {
+                    "type": "integer",
+                    "maximum": 12,
+                    "minimum": 1,
+                    "description": "Coupon payments per year",
+                    "default": 2
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "coupon_rate",
+                  "ytm",
+                  "years"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/crypto/impermanent-loss": {
+      "post": {
+        "operationId": "crypto_impermanent_loss",
+        "summary": "T31",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "initial_price_ratio": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Initial price ratio of token A to token B",
+                    "default": 1
+                  },
+                  "current_price_ratio": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Current price ratio of token A to token B"
+                  },
+                  "amm_type": {
+                    "type": "string",
+                    "enum": [
+                      "v2",
+                      "v3"
+                    ],
+                    "description": "AMM type: v2 (full range) or v3 (concentrated)",
+                    "default": "v2"
+                  },
+                  "lower_tick": {
+                    "type": "number",
+                    "description": "Lower price bound (v3 only)"
+                  },
+                  "upper_tick": {
+                    "type": "number",
+                    "description": "Upper price bound (v3 only)"
+                  },
+                  "initial_investment": {
+                    "type": "number",
+                    "description": "Initial investment value in USD",
+                    "default": 1000
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "current_price_ratio"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/crypto/liquidation-price": {
+      "post": {
+        "operationId": "crypto_liquidation_price",
+        "summary": "T33",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "entry_price": {
+                    "type": "number",
+                    "description": "Position entry price"
+                  },
+                  "collateral": {
+                    "type": "number",
+                    "description": "Collateral amount in USD"
+                  },
+                  "position_size": {
+                    "type": "number",
+                    "description": "Total position size in USD"
+                  },
+                  "leverage": {
+                    "type": "number",
+                    "description": "Leverage multiplier"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "long",
+                      "short"
+                    ],
+                    "description": "Position direction"
+                  },
+                  "maintenance_margin_rate": {
+                    "type": "number",
+                    "description": "Maintenance margin rate (e.g. 0.005 = 0.5%)",
+                    "default": 0.005
+                  },
+                  "funding_accumulated": {
+                    "type": "number",
+                    "description": "Accumulated funding payments (negative = paid)",
+                    "default": 0
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "entry_price",
+                  "collateral",
+                  "position_size",
+                  "leverage",
+                  "direction"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/crypto/dex-slippage": {
+      "post": {
+        "operationId": "crypto_dex_slippage",
+        "summary": "T35",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "reserve_a": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Pool reserve of token A"
+                  },
+                  "reserve_b": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Pool reserve of token B"
+                  },
+                  "trade_amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Amount of input token to swap"
+                  },
+                  "trade_direction": {
+                    "type": "string",
+                    "enum": [
+                      "a_to_b",
+                      "b_to_a"
+                    ],
+                    "description": "Swap direction",
+                    "default": "a_to_b"
+                  },
+                  "fee_bps": {
+                    "type": "integer",
+                    "description": "DEX fee in basis points (e.g. 30 = 0.3%)",
+                    "default": 30
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "reserve_a",
+                  "reserve_b",
+                  "trade_amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/fx/interest-rate-parity": {
+      "post": {
+        "operationId": "fx_interest_rate_parity",
+        "summary": "T38",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "spot_rate": {
+                    "type": "number",
+                    "description": "Current spot exchange rate"
+                  },
+                  "domestic_rate": {
+                    "type": "number",
+                    "description": "Domestic interest rate (annualized)"
+                  },
+                  "foreign_rate": {
+                    "type": "number",
+                    "description": "Foreign interest rate (annualized)"
+                  },
+                  "time_years": {
+                    "type": "number",
+                    "description": "Time horizon in years",
+                    "default": 1
+                  },
+                  "parity_type": {
+                    "type": "string",
+                    "enum": [
+                      "covered",
+                      "uncovered"
+                    ],
+                    "description": "Parity type: covered or uncovered",
+                    "default": "covered"
+                  },
+                  "actual_forward": {
+                    "type": "number",
+                    "description": "Actual forward rate for arbitrage detection"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "spot_rate",
+                  "domestic_rate",
+                  "foreign_rate"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/macro/taylor-rule": {
+      "post": {
+        "operationId": "macro_taylor_rule",
+        "summary": "T43",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "current_inflation": {
+                    "type": "number",
+                    "description": "Current inflation rate (percentage)"
+                  },
+                  "target_inflation": {
+                    "type": "number",
+                    "description": "Target inflation rate (percentage)",
+                    "default": 2
+                  },
+                  "output_gap_pct": {
+                    "type": "number",
+                    "description": "Output gap as percentage of potential GDP",
+                    "default": 0
+                  },
+                  "neutral_real_rate": {
+                    "type": "number",
+                    "description": "Neutral real interest rate (percentage)",
+                    "default": 2
+                  },
+                  "inflation_weight": {
+                    "type": "number",
+                    "description": "Weight on inflation gap",
+                    "default": 0.5
+                  },
+                  "output_weight": {
+                    "type": "number",
+                    "description": "Weight on output gap",
+                    "default": 0.5
+                  },
+                  "current_policy_rate": {
+                    "type": "number",
+                    "description": "Current policy rate for gap analysis"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "current_inflation"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/tvm/npv": {
+      "post": {
+        "operationId": "tvm_npv",
+        "summary": "T59",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cash_flows": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "Array of future cash flows (period 1 onward)"
+                  },
+                  "discount_rate": {
+                    "type": "number",
+                    "exclusiveMinimum": -1,
+                    "description": "Discount rate per period"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "cash_flows",
+                  "discount_rate"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/tvm/irr": {
+      "post": {
+        "operationId": "tvm_irr",
+        "summary": "T58",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "cash_flows": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array",
+                    "minItems": 2,
+                    "description": "Array of cash flows (first is typically negative = initial investment)"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "cash_flows"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}
