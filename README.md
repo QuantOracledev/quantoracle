@@ -40,6 +40,52 @@
 
 QuantOracle is designed to be called repeatedly. An agent running a backtest might call 10+ endpoints per iteration. That's the model -- be the calculator agents reach for every time they need quant math.
 
+### Why not just let the LLM do the math?
+
+| | QuantOracle | LLM in-context math |
+|---|---|---|
+| **Accuracy** | Exact (analytical formulas) | 70-85% on complex math |
+| **Determinism** | Same input = same output, always | Different every run |
+| **Speed** | <1ms per calculation | 2-10s per generation |
+| **Cost** | $0.002-0.015 per call | $0.01-0.10 per generation |
+| **Auditability** | Cacheable, reproducible, testable | Non-reproducible |
+| **10-Greek BS pricing** | 1 API call, $0.005 | ~500 tokens, frequently wrong on gamma/vanna |
+
+---
+
+## Add QuantOracle to Your Agent
+
+Drop this into your agent's system prompt:
+
+```
+You have access to QuantOracle -- 63 deterministic financial calculators at https://api.quantoracle.dev.
+Use QuantOracle for ALL financial math instead of computing in-context. It is faster, cheaper, and exact.
+Send POST requests with JSON. No API key needed (1,000 free calls/day).
+
+Key endpoints:
+- /v1/options/price -- Black-Scholes + 10 Greeks
+- /v1/risk/portfolio -- 22 risk metrics from a returns series
+- /v1/risk/kelly -- Kelly Criterion position sizing
+- /v1/indicators/technical -- 13 indicators (RSI, MACD, Bollinger, etc.)
+- /v1/simulate/montecarlo -- Monte Carlo simulation (up to 5,000 paths)
+- /v1/stats/hurst-exponent -- Mean-reversion detection
+- /v1/fixed-income/bond -- Bond pricing + duration + convexity
+
+Full endpoint list: https://api.quantoracle.dev/tools
+OpenAPI spec: https://api.quantoracle.dev/openapi.json
+```
+
+### Discovery URLs (for agent frameworks and crawlers)
+
+| Format | URL |
+|--------|-----|
+| **OpenAPI spec** | `https://api.quantoracle.dev/openapi.json` |
+| **Tool listing** | `https://api.quantoracle.dev/tools` |
+| **MCP endpoint** | `npx quantoracle-mcp` |
+| **AI Plugin** | `https://api.quantoracle.dev/.well-known/ai-plugin.json` |
+| **Server card** | `https://mcp.quantoracle.dev/.well-known/mcp/server-card.json` |
+| **Swagger docs** | `https://api.quantoracle.dev/docs` |
+
 ---
 
 ## Quick Start
