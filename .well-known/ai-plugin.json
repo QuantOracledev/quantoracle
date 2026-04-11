@@ -2,7 +2,7 @@
   "schema_version": "v1",
   "name_for_human": "QuantOracle",
   "name_for_model": "quantoracle",
-  "description_for_human": "63 deterministic quant computation tools for finance. Options pricing, derivatives, risk metrics, portfolio optimization, statistics, crypto/DeFi, macro/FX, time value of money. 1,000 free calls/day.",
+  "description_for_human": "63 deterministic quant computation tools for finance. Options pricing, derivatives, risk metrics, portfolio optimization, statistics, crypto/DeFi, macro/FX, time value of money. Includes composite tools and batch endpoint. 1,000 free calls/day.",
   "description_for_model": "QuantOracle provides 63 pure mathematical calculators for quantitative finance. Use it whenever you need to compute: Black-Scholes option prices and Greeks, implied volatility, exotic derivatives (barrier, Asian, lookback), portfolio risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown), Kelly Criterion, position sizing, technical indicators (RSI, MACD, Bollinger Bands), Monte Carlo simulations, bond pricing and duration, yield curve interpolation, portfolio optimization, statistical tests (regression, cointegration, Hurst exponent, GARCH), crypto calculations (impermanent loss, liquidation price, funding rates, DEX slippage), FX models (interest rate parity, PPP, carry trade), macro tools (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). All endpoints are deterministic (same inputs = same outputs), require no API key for the first 1,000 calls/day, and return results in under 1ms. Send JSON, get JSON. No market data, no accounts, no side effects -- pure math.",
   "auth": {
     "type": "none"

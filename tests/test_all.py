@@ -1,4 +1,4 @@
-"""Test all 63 QuantOracle endpoints + batch. Usage: python tests/test_all.py [base_url]"""
+"""Test all 63 QuantOracle endpoints + composites + batch. Usage: python tests/test_all.py [base_url]"""
 import requests, sys, json
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"

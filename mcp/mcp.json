@@ -1,7 +1,7 @@
 {
   "name": "quantoracle",
   "version": "2.0.0",
-  "description": "63 deterministic quant computation tools for autonomous financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis, time value of money. 1,000 free calls/day -- no signup required.",
+  "description": "63 deterministic quant computation tools for autonomous financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis, time value of money. Includes 6 composite tools (spread-scan, regime-classify, risk tearsheet, trade-evaluate, portfolio-health, pairs-signal) and a batch endpoint for up to 100 computations per request. 1,000 free calls/day -- no signup required.",
   "homepage": "https://quantoracle.dev",
   "repository": "https://github.com/QuantOracledev/quantoracle",
   "documentation_url": "https://api.quantoracle.dev/docs",
@@ -74,6 +74,13 @@
     { "name": "future_value", "path": "/v1/tvm/future-value", "price": "$0.002", "method": "POST", "description": "Future value of a present lump sum and/or annuity stream" },
     { "name": "irr", "path": "/v1/tvm/irr", "price": "$0.005", "method": "POST", "description": "Internal rate of return via Newton-Raphson solver" },
     { "name": "npv", "path": "/v1/tvm/npv", "price": "$0.002", "method": "POST", "description": "Net present value with profitability index and payback period" },
-    { "name": "cagr", "path": "/v1/tvm/cagr", "price": "$0.002", "method": "POST", "description": "Compound annual growth rate with doubling time and forward projections" }
+    { "name": "cagr", "path": "/v1/tvm/cagr", "price": "$0.002", "method": "POST", "description": "Compound annual growth rate with doubling time and forward projections" },
+    { "name": "options_spread-scan", "path": "/v1/options/spread-scan", "price": "$0.05", "method": "POST", "description": "Scan and rank vertical spreads by risk/reward. Evaluates multiple strike combinations in one call. Replaces 8-16 individual options/price calls.", "composite": true, "paid_only": true },
+    { "name": "indicators_regime-classify", "path": "/v1/indicators/regime-classify", "price": "$0.015", "method": "POST", "description": "Combined regime classification: trend, volatility, RSI, direction, and strategy suggestion. Replaces technical + regime + realized-vol calls.", "composite": true, "paid_only": true },
+    { "name": "risk_full-analysis", "path": "/v1/risk/full-analysis", "price": "$0.04", "method": "POST", "description": "Complete risk tearsheet: Sharpe, Sortino, VaR, CVaR, Kelly, drawdown, Hurst, CAGR in one call. Replaces 7 individual risk/stats calls.", "composite": true, "paid_only": true },
+    { "name": "trade_evaluate", "path": "/v1/trade/evaluate", "price": "$0.025", "method": "POST", "description": "Full trade evaluation: position sizing, risk/reward, Kelly, transaction costs, regime detection, technical signals, and go/no-go verdict. Replaces 5 individual calls.", "composite": true, "paid_only": true },
+    { "name": "portfolio_health", "path": "/v1/portfolio/health", "price": "$0.04", "method": "POST", "description": "Portfolio health check: risk metrics, correlation matrix, drawdown, rebalance analysis, and stress test across 3 scenarios. Replaces 6 individual calls.", "composite": true, "paid_only": true },
+    { "name": "pairs_signal", "path": "/v1/pairs/signal", "price": "$0.025", "method": "POST", "description": "Complete pairs trading signal: cointegration test, Hurst exponent, z-score, half-life, hedge ratio, and trade signal. Replaces 4 individual calls.", "composite": true, "paid_only": true },
+    { "name": "batch", "path": "/v1/batch", "price": "dynamic", "method": "POST", "description": "Execute up to 100 computations in a single request. Price equals sum of individual endpoint prices. ~6x throughput vs sequential calls." }
   ]
 }

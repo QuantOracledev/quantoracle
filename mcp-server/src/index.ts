@@ -216,6 +216,15 @@ const USAGE_GUIDELINES: Record<string, string> = {
   "tvm_npv": "Use when computing net present value of a series of cash flows. Provide discount rate and an array of cash flows (first is typically negative for initial investment). Returns: NPV, profitability index, and discounted cash flow breakdown.",
   "tvm_irr": "Use when computing the internal rate of return for a cash flow series. Provide an array of cash flows. Returns: IRR (decimal), annualized IRR, and NPV at the computed IRR (should be ~0).",
   "tvm_cagr": "Use when computing compound annual growth rate. Provide beginning value, ending value, and number of years. Returns: CAGR (decimal), total return, and equivalent annual return.",
+
+  // Composite endpoints (paid-only, no free tier)
+  "options_spread-scan": "Use when you need to evaluate and rank multiple vertical spread candidates at once. Instead of calling options/price 8-16 times, this scans all strike combinations in one call. Provide spot price, volatility, DTE, and strategy type (bull_call_spread, bear_put_spread, etc.). Returns: ranked candidates with risk/reward ratios, breakevens, and full Greeks for each leg. PAID ONLY — no free tier.",
+  "indicators_regime-classify": "Use when you need a complete market regime assessment combining trend, volatility, RSI, and directional signals. Instead of calling technical + regime + realized-vol separately, this returns everything in one call. Provide closing prices (min 30). Returns: trend direction, volatility regime, RSI, SMA, strategy suggestion (momentum/mean-reversion/risk-off). PAID ONLY — no free tier.",
+  "risk_full-analysis": "Use when you need a complete risk tearsheet for a return series. Instead of calling 7 individual risk/stats endpoints, this returns Sharpe, Sortino, Calmar, VaR, CVaR, Kelly, max drawdown, Hurst exponent, CAGR, and win rate in one call. Provide daily returns. Returns: comprehensive risk profile with portfolio values. PAID ONLY — no free tier.",
+  "trade_evaluate": "Use when evaluating whether to take a specific trade. Combines position sizing, risk/reward analysis, transaction cost estimation, regime detection, and technical signals into a single go/no-go verdict. Provide entry/stop/target prices, account size, and recent price history. Returns: position size, costs, signals, regime, Kelly sizing, and FAVORABLE/CAUTION/UNFAVORABLE verdict. PAID ONLY — no free tier.",
+  "portfolio_health": "Use when you need a complete portfolio health check. Combines risk metrics, correlation matrix, drawdown analysis, rebalance detection, and stress testing (2008 Crisis, Rate Hike, Flash Crash) in one call. Provide holdings with values, target weights, and return series. Returns: Sharpe, VaR, drawdown, correlation matrix, rebalance trades, and stress test P&L. PAID ONLY — no free tier.",
+  "pairs_signal": "Use when analyzing a pairs trading opportunity. Combines cointegration testing, Hurst exponent, z-score analysis, half-life estimation, and trade signal generation in one call. Provide two price series. Returns: cointegration result, hedge ratio, spread z-score, Hurst, and actionable signal (LONG/SHORT/WAIT/CLOSE/NO_TRADE). PAID ONLY — no free tier.",
+  "batch": "Use when you need to execute multiple computations efficiently. Bundle up to 100 individual endpoint calls into a single request for ~6x throughput improvement. Provide an array of {endpoint, params} objects. Price equals the sum of individual endpoint prices. Ideal for backtests, parameter sweeps, and portfolio-wide calculations.",
 };
 
 // ── Pricing table (mirrors worker/src/index.ts) ────────────────────────
@@ -253,6 +262,13 @@ const PRICES: Record<string, string> = {
   "/v1/stats/garch-forecast": "0.015", "/v1/derivatives/volatility-surface": "0.015",
   "/v1/derivatives/option-chain-analysis": "0.015", "/v1/fi/yield-curve-interpolate": "0.015",
   "/v1/stats/correlation-matrix": "0.015",
+  // Composite endpoints (paid-only)
+  "/v1/options/spread-scan": "0.05",
+  "/v1/indicators/regime-classify": "0.015",
+  "/v1/risk/full-analysis": "0.04",
+  "/v1/trade/evaluate": "0.025",
+  "/v1/portfolio/health": "0.04",
+  "/v1/pairs/signal": "0.025",
 };
 
 // Use stderr for logs in stdio mode so stdout stays clean for JSON-RPC
@@ -327,7 +343,7 @@ async function main() {
         role: "user",
         content: {
           type: "text",
-          text: "QuantOracle provides 63 deterministic math tools for quantitative finance. All tools accept JSON and return JSON. Key categories: options pricing (Black-Scholes, Greeks, implied vol, exotic derivatives), risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown, Kelly), portfolio optimization (max Sharpe, min variance, risk parity), technical indicators (RSI, MACD, Bollinger, ATR), Monte Carlo simulation, bond pricing and yield curves, statistical analysis (regression, cointegration, GARCH, Hurst exponent), crypto/DeFi (impermanent loss, liquidation, funding rates, DEX slippage), FX (interest rate parity, carry trade, PPP), macro (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). Every tool is deterministic — same inputs always produce same outputs. Use these tools whenever you need precise financial calculations instead of estimating.",
+          text: "QuantOracle provides 63 deterministic math tools for quantitative finance. All tools accept JSON and return JSON. Key categories: options pricing (Black-Scholes, Greeks, implied vol, exotic derivatives), risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown, Kelly), portfolio optimization (max Sharpe, min variance, risk parity), technical indicators (RSI, MACD, Bollinger, ATR), Monte Carlo simulation, bond pricing and yield curves, statistical analysis (regression, cointegration, GARCH, Hurst exponent), crypto/DeFi (impermanent loss, liquidation, funding rates, DEX slippage), FX (interest rate parity, carry trade, PPP), macro (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). Also available: 6 composite tools that bundle multiple calculations into single calls (spread-scan, regime-classify, full-analysis, trade-evaluate, portfolio-health, pairs-signal) and a batch endpoint for up to 100 computations per request. Every tool is deterministic — same inputs always produce same outputs. Use these tools whenever you need precise financial calculations instead of estimating. Prefer composite tools when they match your workflow — they are faster and return richer results than chaining individual calls.",
         },
       }],
     }));
@@ -537,7 +553,7 @@ async function main() {
   app.get("/.well-known/mcp/server-card.json", (_req, res) => {
     res.json({
       serverInfo: { name: "quantoracle", version: "2.0.0" },
-      description: "63 deterministic quant computation tools for AI agents. Options pricing, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. 1,000 free calls/day — no signup required.",
+      description: "63 deterministic quant computation tools for AI agents. Options pricing, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. Includes 6 composite tools and batch endpoint (up to 100 calls/request). 1,000 free calls/day — no signup required.",
       homepage: "https://quantoracle.dev",
       repository: "https://github.com/QuantOracledev/quantoracle",
       documentation: "https://api.quantoracle.dev/docs",

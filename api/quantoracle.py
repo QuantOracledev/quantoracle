@@ -3249,7 +3249,7 @@ async def tools():
     """MCP-compatible tool listing for agent discovery."""
     return {
         "name": "quantoracle", "version": "2.0.0", "homepage": "https://quantoracle.dev",
-        "description": "53 deterministic quant computation tools for financial agents",
+        "description": "63 deterministic quant computation tools for financial agents",
         "payment": {"protocol": "x402", "network": "base", "currency": "USDC"},
         "tools": [{"name": k, "path": f"/v1/{k}", "price_usdc": v} for k, v in PRICES.items()]
     }
