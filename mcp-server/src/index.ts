@@ -178,7 +178,7 @@ const USAGE_GUIDELINES: Record<string, string> = {
   "derivatives_volatility-surface": "Use when constructing an implied volatility surface from market data. Provide arrays of strikes, expiries, and IV values. Returns: interpolated IV surface, skew metrics, term structure, and smile parameters.",
 
   // Simulate
-  "simulate_montecarlo": "Use when running a Monte Carlo simulation for asset price paths. Provide starting price, drift, volatility, time horizon, and number of simulations. Returns: simulated terminal prices, percentile distribution (5th/25th/50th/75th/95th), expected value, probability of profit, and path statistics.",
+  "simulate_montecarlo": "Use when running a Monte Carlo simulation for asset price paths. Provide starting price, drift, volatility, time horizon, and number of simulations. Returns: simulated terminal prices, percentile distribution (5th/25th/50th/75th/95th), expected value, probability of profit, and path statistics. NOTE: Via MCP, keep simulations ≤ 1000 and years ≤ 30 for fastest response. For larger simulations (up to 5000 paths, 100 years), call the REST API directly at https://api.quantoracle.dev/v1/simulate/montecarlo.",
 
   // Portfolio
   "portfolio_optimize": "Use when optimizing portfolio weights for max Sharpe, min volatility, or risk parity. Provide expected returns and a covariance matrix. Returns: optimal weights, expected return, volatility, Sharpe ratio, and efficient frontier points.",
