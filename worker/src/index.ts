@@ -118,6 +118,38 @@ function todayKey(ip: string): string {
   return `calls:${ip}:${date}`;
 }
 
+// ── x402 discovery endpoint ────────────────────────────────────────────
+
+app.get('/.well-known/x402', (c) => {
+  const wallet = c.env.WALLET_ADDRESS;
+  const resources = Object.entries(PRICES).map(([path, price]) => ({
+    url: `https://api.quantoracle.dev${path}`,
+    method: 'POST',
+    description: `QuantOracle: ${path.replace('/v1/', '')}`,
+    mimeType: 'application/json',
+    accepts: [{
+      scheme: 'exact',
+      network: 'eip155:8453',
+      amount: String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000)),
+      asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      payTo: wallet,
+      maxTimeoutSeconds: 30,
+    }],
+  }));
+
+  const discovery = {
+    x402Version: 2,
+    name: 'QuantOracle',
+    description: '63 deterministic quant finance tools for AI agents. Options, risk, portfolio, Monte Carlo, stats, crypto, FX, macro, TVM.',
+    homepage: 'https://quantoracle.dev',
+    logo: 'https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/quantoraclelogo.png',
+    freeTier: '1,000 calls/IP/day, no API key',
+    resources,
+  };
+
+  return c.json(discovery, 200);
+});
+
 // ── Free endpoints ──────────────────────────────────────────────────────
 
 app.get('/health', async (c) => {
