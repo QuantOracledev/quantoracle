@@ -490,6 +490,37 @@ app.all('/v1/*', async (c, next) => {
     return c.json(data as any, resp.status as any);
   }
 
+  // Empty body probe (x402 scanners) — return 402 with payment requirements
+  if (c.req.method === 'POST' && price) {
+    let bodyText = '';
+    try { bodyText = await c.req.text(); } catch {}
+    const isEmpty = !bodyText || bodyText.trim() === '' || bodyText.trim() === '{}';
+    if (isEmpty) {
+      const paymentRequired = {
+        x402Version: 2,
+        error: 'Payment required',
+        resource: {
+          url: `https://api.quantoracle.dev${path}`,
+          description: `QuantOracle: ${path.replace('/v1/', '')}`,
+          mimeType: 'application/json',
+        },
+        accepts: [{
+          scheme: 'exact',
+          network: 'eip155:8453',
+          amount: String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000)),
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+          payTo: wallet,
+          maxTimeoutSeconds: 30,
+        }],
+      };
+      return c.json(paymentRequired, 402, {
+        'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+      });
+    }
+    // Stash body for later use since we already consumed the stream
+    (c as any)._bodyText = bodyText;
+  }
+
   // Composite endpoints are paid-only — no free tier
   const PAID_ONLY = new Set([
     '/v1/options/spread-scan',
@@ -600,7 +631,7 @@ app.all('/v1/*', async (c, next) => {
   const resp = await fetch(backendUrl, {
     method: c.req.method,
     headers,
-    body: c.req.method !== 'GET' ? await c.req.text() : undefined,
+    body: c.req.method !== 'GET' ? ((c as any)._bodyText || await c.req.text()) : undefined,
   });
 
   const data = await resp.json();
