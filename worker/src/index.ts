@@ -354,6 +354,33 @@ app.post('/v1/batch', async (c, next) => {
   const ip = getClientIP(c);
   const wallet = c.env.WALLET_ADDRESS;
 
+  // Empty body probe (x402 scanners) — return 402
+  let rawBody = '';
+  try { rawBody = await c.req.text(); } catch {}
+  const isEmpty = !rawBody || rawBody.trim() === '' || rawBody.trim() === '{}';
+  if (isEmpty) {
+    const paymentRequired = {
+      x402Version: 2,
+      error: 'Payment required',
+      resource: {
+        url: 'https://api.quantoracle.dev/v1/batch',
+        description: 'QuantOracle: batch computation',
+        mimeType: 'application/json',
+      },
+      accepts: [{
+        scheme: 'exact',
+        network: 'eip155:8453',
+        amount: '5000',
+        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        payTo: wallet,
+        maxTimeoutSeconds: 30,
+      }],
+    };
+    return c.json(paymentRequired, 402, {
+      'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+    });
+  }
+
   // Owner key — unlimited
   const apiKey = c.req.header('X-Api-Key');
   if (apiKey && c.env.OWNER_KEY && apiKey === c.env.OWNER_KEY) {
@@ -363,7 +390,7 @@ app.post('/v1/batch', async (c, next) => {
         'Content-Type': 'application/json',
         'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
       },
-      body: await c.req.text(),
+      body: rawBody,
     });
     return c.json(await resp.json() as any, resp.status as any);
   }
@@ -371,7 +398,7 @@ app.post('/v1/batch', async (c, next) => {
   // Parse body to compute dynamic price
   let body: any;
   try {
-    body = await c.req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return c.json({ error: 'invalid_json' }, 400);
   }
