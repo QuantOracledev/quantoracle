@@ -149,6 +149,10 @@ def _make_tool(
             f"{api_url}{path}",
             json=kwargs,
             timeout=timeout,
+            headers={
+                "User-Agent": "langchain-quantoracle/0.1.0",
+                "X-Source": "langchain",
+            },
         )
         resp.raise_for_status()
         return json.dumps(resp.json())

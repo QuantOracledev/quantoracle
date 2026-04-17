@@ -413,7 +413,11 @@ async function main() {
       try {
         const resp = await fetch(`${BACKEND_URL}${tool.path}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "quantoracle-mcp/2.2.1",
+            "X-Source": "mcp",
+          },
           body: JSON.stringify(args || {}),
         });
 

@@ -22,8 +22,33 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# ── Per-request IP tracking via context variable ──────────────────────────
+# ── Per-request IP + source tracking via context variables ───────────────
 _request_ip: ContextVar[str] = ContextVar("request_ip", default="unknown")
+_request_source: ContextVar[str] = ContextVar("request_source", default="unknown")
+
+def _classify_source(x_source: str, user_agent: str) -> str:
+    """Classify traffic source for metrics segmentation."""
+    if x_source:
+        s = x_source.lower()
+        if "mcp" in s: return "mcp"
+        if "cli" in s: return "cli"
+        if "langchain" in s: return "langchain"
+        if "gpt" in s or "openai" in s: return "openai-gpt"
+        return s[:32]
+    ua = (user_agent or "").lower()
+    if not ua: return "unknown"
+    if "x402scan" in ua or "x402-scan" in ua: return "x402scan"
+    if "smithery" in ua: return "smithery"
+    if "glama" in ua: return "glama"
+    if "claude" in ua: return "claude"
+    if "openai" in ua or "chatgpt" in ua: return "openai-gpt"
+    if "python-httpx" in ua or "python-requests" in ua or "langchain" in ua: return "python-client"
+    if "node-fetch" in ua or "undici" in ua or "axios" in ua: return "node-client"
+    if "curl" in ua: return "curl"
+    if "mozilla" in ua or "chrome" in ua or "safari" in ua: return "browser"
+    if "postman" in ua or "insomnia" in ua: return "api-tool"
+    if "cloudflare-workers" in ua or "cloudflare" in ua: return "cloudflare"
+    return "other"
 
 @app.middleware("http")
 async def capture_client_ip(request: Request, call_next):
@@ -31,7 +56,12 @@ async def capture_client_ip(request: Request, call_next):
           or request.headers.get("x-real-ip")
           or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
           or (request.client.host if request.client else "unknown"))
+    source = _classify_source(
+        request.headers.get("x-source", ""),
+        request.headers.get("user-agent", ""),
+    )
     _request_ip.set(ip)
+    _request_source.set(source)
     return await call_next(request)
 
 @app.exception_handler(Exception)
@@ -74,6 +104,12 @@ def _init_db():
         CREATE INDEX IF NOT EXISTS idx_calls_endpoint ON calls(endpoint);
         CREATE INDEX IF NOT EXISTS idx_calls_ip ON calls(ip);
     """)
+    # Auto-migrate: add source column if it doesn't exist
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(calls)").fetchall()}
+    if "source" not in cols:
+        conn.execute("ALTER TABLE calls ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_calls_source ON calls(source)")
+        conn.commit()
     conn.close()
 
 _init_db()
@@ -133,13 +169,14 @@ PRICES = {
 def hit(ep):
     """Record an API call — persisted to SQLite immediately."""
     ip = _request_ip.get("unknown")
+    source = _request_source.get("unknown")
     now = datetime.now(timezone.utc)
     price = PRICES.get(ep, 0)
     try:
         conn = _get_db()
         conn.execute(
-            "INSERT INTO calls (ts, date, endpoint, ip, price) VALUES (?, ?, ?, ?, ?)",
-            (now.isoformat(), now.strftime("%Y-%m-%d"), ep, ip, price)
+            "INSERT INTO calls (ts, date, endpoint, ip, price, source) VALUES (?, ?, ?, ?, ?, ?)",
+            (now.isoformat(), now.strftime("%Y-%m-%d"), ep, ip, price, source)
         )
         conn.commit()
         # Prune old data once per day (cheap check)
@@ -3230,6 +3267,18 @@ async def metrics():
             "SELECT date, COUNT(*) FROM calls WHERE date >= ? GROUP BY date ORDER BY date",
             ((datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d"),)
         ).fetchall())
+        # Source breakdown (all-time + today)
+        by_source_all = dict(conn.execute(
+            "SELECT source, COUNT(*) FROM calls GROUP BY source ORDER BY COUNT(*) DESC"
+        ).fetchall())
+        by_source_today = dict(conn.execute(
+            "SELECT source, COUNT(*) FROM calls WHERE date=? GROUP BY source ORDER BY COUNT(*) DESC", (today,)
+        ).fetchall())
+        # External traffic (exclude localhost)
+        ext_today = conn.execute(
+            "SELECT COUNT(*), COUNT(DISTINCT ip) FROM calls WHERE date=? AND ip NOT IN ('127.0.0.1','unknown','localhost')",
+            (today,)
+        ).fetchone()
         conn.close()
         return {
             "calls": total[0], "by_endpoint": by_ep, "revenue": round(total[1], 4),
@@ -3237,8 +3286,11 @@ async def metrics():
             "today": {
                 "date": today, "calls": t_total, "unique_ips": t_ips,
                 "top_endpoints": t_top_ep, "top_callers": t_top_ip,
+                "by_source": by_source_today,
+                "external": {"calls": ext_today[0], "unique_ips": ext_today[1]},
             },
             "all_time": {"unique_ips": all_ips, "days_tracked": all_days},
+            "by_source": by_source_all,
             "daily_history": daily,
         }
     except Exception as e:

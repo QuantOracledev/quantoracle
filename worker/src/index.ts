@@ -389,6 +389,8 @@ app.post('/v1/batch', async (c, next) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
+        'User-Agent': c.req.header('User-Agent') || '',
+        'X-Source': c.req.header('X-Source') || '',
       },
       body: rawBody,
     });
@@ -482,6 +484,8 @@ app.post('/v1/batch', async (c, next) => {
     headers: {
       'Content-Type': 'application/json',
       'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
+      'User-Agent': c.req.header('User-Agent') || '',
+      'X-Source': c.req.header('X-Source') || '',
     },
     body: JSON.stringify(body),
   });
@@ -507,6 +511,8 @@ app.all('/v1/*', async (c, next) => {
       'X-Forwarded-For': ip,
       'X-Real-IP': ip,
       'CF-Connecting-IP': ip,
+      'User-Agent': c.req.header('User-Agent') || '',
+      'X-Source': c.req.header('X-Source') || '',
     };
     const resp = await fetch(backendUrl, {
       method: c.req.method,
@@ -653,6 +659,8 @@ app.all('/v1/*', async (c, next) => {
     'X-Forwarded-For': ip,
     'X-Real-IP': ip,
     'CF-Connecting-IP': ip,
+    'User-Agent': c.req.header('User-Agent') || '',
+    'X-Source': c.req.header('X-Source') || '',
   };
 
   const resp = await fetch(backendUrl, {
