@@ -137,6 +137,21 @@ const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const SOLANA_MAINNET = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
 
+// Cache resourceServer globally so feePayer stays stable across initial 402 and verify
+// (CDP rotates feePayer on each getSupported() call, breaking deepEqual match)
+let _cachedResourceServer: any = null;
+async function getResourceServer(env: Env) {
+  if (_cachedResourceServer) return _cachedResourceServer;
+  const facilitatorConfig = createFacilitatorConfig(env.CDP_API_KEY_ID, env.CDP_API_KEY_SECRET);
+  const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
+  const rs = new x402ResourceServer(facilitatorClient)
+    .register('eip155:8453', new ExactEvmScheme())
+    .register(SOLANA_MAINNET, new ExactSvmScheme());
+  await rs.initialize();
+  _cachedResourceServer = rs;
+  return rs;
+}
+
 app.get('/.well-known/x402', (c) => {
   const wallet = c.env.WALLET_ADDRESS;
   const solanaWallet = c.env.SOLANA_WALLET_ADDRESS;
@@ -468,16 +483,7 @@ app.post('/v1/batch', async (c, next) => {
   const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment');
 
   if (hasPayment) {
-    // Verify payment for the dynamic total
-    const facilitatorConfig = createFacilitatorConfig(
-      c.env.CDP_API_KEY_ID,
-      c.env.CDP_API_KEY_SECRET,
-    );
-    const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
-    const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register('eip155:8453', new ExactEvmScheme())
-      .register(SOLANA_MAINNET, new ExactSvmScheme());
-    await resourceServer.initialize();
+    const resourceServer = await getResourceServer(c.env);
 
     const batchAccepts: any[] = [
       {
@@ -650,15 +656,7 @@ app.all('/v1/*', async (c, next) => {
   const shouldPaymentGate = (PAID_ONLY.has(path) && price) || (hasPayment && price);
 
   if (shouldPaymentGate) {
-    const facilitatorConfig = createFacilitatorConfig(
-      c.env.CDP_API_KEY_ID,
-      c.env.CDP_API_KEY_SECRET,
-    );
-    const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
-    const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register('eip155:8453', new ExactEvmScheme())
-      .register(SOLANA_MAINNET, new ExactSvmScheme());
-    await resourceServer.initialize();
+    const resourceServer = await getResourceServer(c.env);
 
     const accepts: any[] = [
       {
