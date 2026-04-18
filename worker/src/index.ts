@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { paymentMiddleware, x402ResourceServer } from '@x402/hono';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
+import { ExactSvmScheme } from '@x402/svm/exact/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 import { createFacilitatorConfig } from '@coinbase/x402';
 
@@ -10,6 +11,7 @@ interface Env {
   RATE_LIMITS: KVNamespace;
   FREE_DAILY_LIMIT: string;
   WALLET_ADDRESS: string;
+  SOLANA_WALLET_ADDRESS: string;
   CDP_API_KEY_ID: string;
   CDP_API_KEY_SECRET: string;
   ADMIN_KEY: string;
@@ -130,23 +132,42 @@ function todayKey(ip: string): string {
 
 // ── x402 discovery endpoint ────────────────────────────────────────────
 
+// USDC contract addresses
+const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const SOLANA_MAINNET = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
+
 app.get('/.well-known/x402', (c) => {
   const wallet = c.env.WALLET_ADDRESS;
-  const resources = Object.entries(PRICES).map(([path, price]) => ({
-    url: `https://api.quantoracle.dev${path}`,
-    method: 'POST',
-    description: `QuantOracle: ${path.replace('/v1/', '')}`,
-    mimeType: 'application/json',
-    accepts: [{
-      scheme: 'exact',
-      network: 'eip155:8453',
-      amount: String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000)),
-      asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-      payTo: wallet,
-      maxTimeoutSeconds: 30,
-          extra: { name: "USD Coin", version: "2" },
-        }],
-  }));
+  const solanaWallet = c.env.SOLANA_WALLET_ADDRESS;
+  const resources = Object.entries(PRICES).map(([path, price]) => {
+    const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
+    return {
+      url: `https://api.quantoracle.dev${path}`,
+      method: 'POST',
+      description: `QuantOracle: ${path.replace('/v1/', '')}`,
+      mimeType: 'application/json',
+      accepts: [
+        {
+          scheme: 'exact',
+          network: 'eip155:8453',
+          amount: atomicUsdc,
+          asset: USDC_BASE,
+          payTo: wallet,
+          maxTimeoutSeconds: 30,
+          extra: { name: 'USD Coin', version: '2' },
+        },
+        ...(solanaWallet ? [{
+          scheme: 'exact',
+          network: SOLANA_MAINNET,
+          amount: atomicUsdc,
+          asset: USDC_SOLANA,
+          payTo: solanaWallet,
+          maxTimeoutSeconds: 30,
+        }] : []),
+      ],
+    };
+  });
 
   const discovery = {
     x402Version: 2,
@@ -378,15 +399,28 @@ app.post('/v1/batch', async (c, next) => {
         description: 'QuantOracle: batch computation',
         mimeType: 'application/json',
       },
-      accepts: [{
-        scheme: 'exact',
-        network: 'eip155:8453',
-        amount: '5000',
-        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        payTo: wallet,
-        maxTimeoutSeconds: 30,
-          extra: { name: "USD Coin", version: "2" },
-        }],
+      accepts: (() => {
+        const a: any[] = [{
+          scheme: 'exact',
+          network: 'eip155:8453',
+          amount: '5000',
+          asset: USDC_BASE,
+          payTo: wallet,
+          maxTimeoutSeconds: 30,
+          extra: { name: 'USD Coin', version: '2' },
+        }];
+        if (c.env.SOLANA_WALLET_ADDRESS) {
+          a.push({
+            scheme: 'exact',
+            network: SOLANA_MAINNET,
+            amount: '5000',
+            asset: USDC_SOLANA,
+            payTo: c.env.SOLANA_WALLET_ADDRESS,
+            maxTimeoutSeconds: 30,
+          });
+        }
+        return a;
+      })(),
     };
     return c.json(paymentRequired, 402, {
       'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
@@ -441,17 +475,30 @@ app.post('/v1/batch', async (c, next) => {
     );
     const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
     const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register('eip155:8453', new ExactEvmScheme());
+      .register('eip155:8453', new ExactEvmScheme())
+      .register(SOLANA_MAINNET, new ExactSvmScheme());
     await resourceServer.initialize();
+
+    const batchAccepts: any[] = [
+      {
+        scheme: 'exact',
+        network: 'eip155:8453' as const,
+        payTo: wallet,
+        price: `$${totalPrice.toFixed(4)}`,
+      },
+    ];
+    if (c.env.SOLANA_WALLET_ADDRESS) {
+      batchAccepts.push({
+        scheme: 'exact',
+        network: SOLANA_MAINNET,
+        payTo: c.env.SOLANA_WALLET_ADDRESS,
+        price: `$${totalPrice.toFixed(4)}`,
+      });
+    }
 
     const routes = {
       'POST /v1/batch': {
-        accepts: [{
-          scheme: 'exact',
-          network: 'eip155:8453' as const,
-          payTo: wallet,
-          price: `$${totalPrice.toFixed(4)}`,
-        }],
+        accepts: batchAccepts,
         description: 'QuantOracle: batch computation',
         mimeType: 'application/json',
       },
@@ -543,6 +590,26 @@ app.all('/v1/*', async (c, next) => {
     try { bodyText = await c.req.text(); } catch {}
     const isEmpty = !bodyText || bodyText.trim() === '' || bodyText.trim() === '{}';
     if (isEmpty) {
+      const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
+      const accepts: any[] = [{
+        scheme: 'exact',
+        network: 'eip155:8453',
+        amount: atomicUsdc,
+        asset: USDC_BASE,
+        payTo: wallet,
+        maxTimeoutSeconds: 30,
+        extra: { name: 'USD Coin', version: '2' },
+      }];
+      if (c.env.SOLANA_WALLET_ADDRESS) {
+        accepts.push({
+          scheme: 'exact',
+          network: SOLANA_MAINNET,
+          amount: atomicUsdc,
+          asset: USDC_SOLANA,
+          payTo: c.env.SOLANA_WALLET_ADDRESS,
+          maxTimeoutSeconds: 30,
+        });
+      }
       const paymentRequired = {
         x402Version: 2,
         error: 'Payment required',
@@ -551,15 +618,7 @@ app.all('/v1/*', async (c, next) => {
           description: `QuantOracle: ${path.replace('/v1/', '')}`,
           mimeType: 'application/json',
         },
-        accepts: [{
-          scheme: 'exact',
-          network: 'eip155:8453',
-          amount: String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000)),
-          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-          payTo: wallet,
-          maxTimeoutSeconds: 30,
-          extra: { name: "USD Coin", version: "2" },
-        }],
+        accepts,
       };
       return c.json(paymentRequired, 402, {
         'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
@@ -597,17 +656,30 @@ app.all('/v1/*', async (c, next) => {
     );
     const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
     const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register('eip155:8453', new ExactEvmScheme());
+      .register('eip155:8453', new ExactEvmScheme())
+      .register(SOLANA_MAINNET, new ExactSvmScheme());
     await resourceServer.initialize();
+
+    const accepts: any[] = [
+      {
+        scheme: 'exact',
+        network: 'eip155:8453' as const,
+        payTo: wallet,
+        price,
+      },
+    ];
+    if (c.env.SOLANA_WALLET_ADDRESS) {
+      accepts.push({
+        scheme: 'exact',
+        network: SOLANA_MAINNET,
+        payTo: c.env.SOLANA_WALLET_ADDRESS,
+        price,
+      });
+    }
 
     const routes = {
       [`POST ${path}`]: {
-        accepts: [{
-          scheme: 'exact',
-          network: 'eip155:8453' as const,
-          payTo: wallet,
-          price,
-        }],
+        accepts,
         description: `QuantOracle: ${path}`,
         mimeType: 'application/json',
       },
@@ -652,6 +724,26 @@ app.all('/v1/*', async (c, next) => {
 
     if (count >= limit) {
       // Free tier exhausted — return x402 payment required
+      const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
+      const accepts: any[] = [{
+        scheme: 'exact',
+        network: 'eip155:8453',
+        amount: atomicUsdc,
+        asset: USDC_BASE,
+        payTo: wallet,
+        maxTimeoutSeconds: 30,
+        extra: { name: 'USD Coin', version: '2' },
+      }];
+      if (c.env.SOLANA_WALLET_ADDRESS) {
+        accepts.push({
+          scheme: 'exact',
+          network: SOLANA_MAINNET,
+          amount: atomicUsdc,
+          asset: USDC_SOLANA,
+          payTo: c.env.SOLANA_WALLET_ADDRESS,
+          maxTimeoutSeconds: 30,
+        });
+      }
       const paymentRequired = {
         x402Version: 2,
         error: 'Payment required',
@@ -660,15 +752,7 @@ app.all('/v1/*', async (c, next) => {
           description: `QuantOracle: ${path}`,
           mimeType: 'application/json',
         },
-        accepts: [{
-          scheme: 'exact',
-          network: 'eip155:8453',
-          amount: String(parseFloat(price.replace('$', '')) * 1_000_000),
-          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-          payTo: wallet,
-          maxTimeoutSeconds: 30,
-          extra: { name: "USD Coin", version: "2" },
-        }],
+        accepts,
       };
 
       return c.json(paymentRequired, 402, {

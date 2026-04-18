@@ -7,6 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 BACKEND_URL = "http://backend.quantoracle.dev:8001"
 FREE_DAILY_LIMIT = "1000"
 WALLET_ADDRESS = "0xC94f5F33ae446a50Ce31157db81253BfddFE2af6"
+SOLANA_WALLET_ADDRESS = "9biztrXscReJ3Wi8EfkD2gL3WXzYUmzTEohD26Bxp39u"
 # Replace with your actual values after deploy
 
 # KV namespace for rate limiting (1000 free calls/IP/day)
