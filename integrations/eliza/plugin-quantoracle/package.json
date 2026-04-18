@@ -1,0 +1,58 @@
+{
+  "name": "@quantoracle/plugin-quantoracle",
+  "version": "0.1.0",
+  "description": "QuantOracle plugin for elizaOS — 63 deterministic quant finance calculators + 10 composite workflows. Black-Scholes, Greeks, risk metrics, Monte Carlo, strategy backtests, rebalance planning, hedging recommendations. x402 USDC payments on Base or Solana.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md", "logo.png", "banner.png"],
+  "scripts": {
+    "build": "tsup --format esm --dts",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@elizaos/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "elizaos",
+    "elizaos-plugin",
+    "quantitative-finance",
+    "options-pricing",
+    "black-scholes",
+    "risk-metrics",
+    "monte-carlo",
+    "backtesting",
+    "portfolio-optimization",
+    "x402",
+    "solana"
+  ],
+  "author": "QuantOracle <hello@quantoracle.dev>",
+  "license": "MIT",
+  "homepage": "https://github.com/QuantOracledev/quantoracle",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QuantOracledev/quantoracle",
+    "directory": "integrations/eliza/plugin-quantoracle"
+  },
+  "agentConfig": {
+    "pluginType": "elizaos:plugin:1.0.0",
+    "pluginParameters": {
+      "QUANTORACLE_API_URL": {
+        "type": "string",
+        "required": false,
+        "default": "https://api.quantoracle.dev",
+        "description": "Base URL for QuantOracle API. Override to use a self-hosted instance."
+      },
+      "QUANTORACLE_TIMEOUT_MS": {
+        "type": "number",
+        "required": false,
+        "default": 30000,
+        "description": "Request timeout in milliseconds"
+      }
+    }
+  }
+}
