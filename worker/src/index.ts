@@ -21,8 +21,14 @@ const app = new Hono<{ Bindings: Env }>();
 app.use('*', cors());
 
 app.onError((err, c) => {
-  return c.json({ error: 'worker_error', detail: err.message }, 500);
+  return c.json({
+    error: 'worker_error',
+    detail: err.message,
+    cause: (err as any).cause?.message || String((err as any).cause || ''),
+    stack: err.stack?.split('\n').slice(0, 5).join(' | ')
+  }, 500);
 });
+
 
 // ── Pricing table — 50% cheaper than LLM token cost ────────────────────
 const PRICES: Record<string, string> = {
@@ -134,7 +140,8 @@ app.get('/.well-known/x402', (c) => {
       asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
       payTo: wallet,
       maxTimeoutSeconds: 30,
-    }],
+          extra: { name: "USD Coin", version: "2" },
+        }],
   }));
 
   const discovery = {
@@ -374,7 +381,8 @@ app.post('/v1/batch', async (c, next) => {
         asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
         payTo: wallet,
         maxTimeoutSeconds: 30,
-      }],
+          extra: { name: "USD Coin", version: "2" },
+        }],
     };
     return c.json(paymentRequired, 402, {
       'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
@@ -430,6 +438,7 @@ app.post('/v1/batch', async (c, next) => {
     const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
     const resourceServer = new x402ResourceServer(facilitatorClient)
       .register('eip155:8453', new ExactEvmScheme());
+    await resourceServer.initialize();
 
     const routes = {
       'POST /v1/batch': {
@@ -469,7 +478,8 @@ app.post('/v1/batch', async (c, next) => {
         asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
         payTo: wallet,
         maxTimeoutSeconds: 30,
-      }],
+          extra: { name: "USD Coin", version: "2" },
+        }],
     };
     return c.json(paymentRequired, 402, {
       'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
@@ -544,6 +554,7 @@ app.all('/v1/*', async (c, next) => {
           asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
           payTo: wallet,
           maxTimeoutSeconds: 30,
+          extra: { name: "USD Coin", version: "2" },
         }],
       };
       return c.json(paymentRequired, 402, {
@@ -565,10 +576,13 @@ app.all('/v1/*', async (c, next) => {
   ]);
 
   // Check if this request has an x402 payment signature
-  const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment');
+  const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment') || c.req.header('x-payment');
 
-  if (hasPayment && price) {
-    // Verify and settle payment via CDP facilitator
+  // For paid endpoints (PAID_ONLY always, or free-tier exhausted) — run through payment middleware
+  // so the 402 response format and verification use the same payment requirements
+  const shouldPaymentGate = (PAID_ONLY.has(path) && price) || (hasPayment && price);
+
+  if (shouldPaymentGate) {
     const facilitatorConfig = createFacilitatorConfig(
       c.env.CDP_API_KEY_ID,
       c.env.CDP_API_KEY_SECRET,
@@ -576,6 +590,7 @@ app.all('/v1/*', async (c, next) => {
     const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
     const resourceServer = new x402ResourceServer(facilitatorClient)
       .register('eip155:8453', new ExactEvmScheme());
+    await resourceServer.initialize();
 
     const routes = {
       [`POST ${path}`]: {
@@ -590,32 +605,36 @@ app.all('/v1/*', async (c, next) => {
       },
     };
 
-    const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
-    return middleware(c, next);
-  }
-
-  // Paid-only endpoints — always require payment, no free tier
-  if (PAID_ONLY.has(path) && price && !hasPayment) {
-    const paymentRequired = {
-      x402Version: 2,
-      error: 'Payment required - composite endpoints are paid-only',
-      resource: {
-        url: `https://api.quantoracle.dev${path}`,
-        description: `QuantOracle: ${path}`,
-        mimeType: 'application/json',
-      },
-      accepts: [{
-        scheme: 'exact',
-        network: 'eip155:8453',
-        amount: String(parseFloat(price.replace('$', '')) * 1_000_000),
-        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        payTo: wallet,
-        maxTimeoutSeconds: 30,
-      }],
+    // Custom next: after payment verification, proxy to backend and set c.res
+    const customNext = async () => {
+      const backendUrl = `${c.env.BACKEND_URL}${path}`;
+      const bodyText = (c as any)._bodyText || await c.req.text();
+      const resp = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-For': ip,
+          'X-Real-IP': ip,
+          'CF-Connecting-IP': ip,
+          'User-Agent': c.req.header('User-Agent') || '',
+          'X-Source': c.req.header('X-Source') || '',
+        },
+        body: bodyText,
+      });
+      const data = await resp.json();
+      c.res = new Response(JSON.stringify(data), {
+        status: resp.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     };
-    return c.json(paymentRequired, 402, {
-      'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
-    });
+
+    const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
+    try {
+      return await middleware(c, customNext);
+    } catch (e: any) {
+      console.log('[pay] middleware error: ' + e.message + ' cause=' + (e.cause?.message || String(e.cause || '')));
+      return c.json({ error: 'payment_verify_failed', detail: e.message, cause: e.cause?.message || String(e.cause || '') }, 402);
+    }
   }
 
   // No payment — check free tier
@@ -640,6 +659,7 @@ app.all('/v1/*', async (c, next) => {
           asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
           payTo: wallet,
           maxTimeoutSeconds: 30,
+          extra: { name: "USD Coin", version: "2" },
         }],
       };
 

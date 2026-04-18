@@ -1,6 +1,7 @@
 name = "quantoracle"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
 BACKEND_URL = "http://backend.quantoracle.dev:8001"
