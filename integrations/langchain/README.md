@@ -1,6 +1,6 @@
 # langchain-quantoracle
 
-63 deterministic quant computation tools for LangChain agents. Options pricing, risk metrics, portfolio optimization, technical indicators, statistics, crypto/DeFi, FX, macro, and more.
+63 deterministic quant calculators + 10 composite workflows for LangChain agents. Options pricing, risk metrics, portfolio optimization, technical indicators, statistics, crypto/DeFi, FX/macro, strategy backtesting, rebalance planning, options strategy selection, hedging recommendations, and more.
 
 ## Install
 
@@ -13,11 +13,11 @@ pip install langchain-quantoracle
 ```python
 from langchain_quantoracle import QuantOracleToolkit
 
-# Load all 63 tools
+# Load all tools (63 calculators + 10 composites)
 tools = QuantOracleToolkit().get_tools()
 
 # Or filter by category
-tools = QuantOracleToolkit(categories=["options", "risk"]).get_tools()
+tools = QuantOracleToolkit(categories=["options", "risk", "backtest"]).get_tools()
 
 # Use with any LangChain agent
 from langchain_openai import ChatOpenAI
@@ -44,10 +44,15 @@ tools = QuantOracleToolkit(api_url="http://localhost:8000").get_tools()
 
 ## Categories
 
-`options`, `derivatives`, `risk`, `indicators`, `simulate`, `portfolio`, `fixed-income`, `fi`, `stats`, `crypto`, `fx`, `macro`, `tvm`, `trade`, `pairs`
+`options`, `derivatives`, `risk`, `indicators`, `simulate`, `portfolio`, `fixed-income`, `fi`, `stats`, `crypto`, `fx`, `macro`, `tvm`, `trade`, `pairs`, `backtest`, `hedging`
+
+## Paid endpoints (x402)
+
+After 1,000 free calls/day, or for composite workflows (paid-only), payments are handled via x402 micropayments in USDC on **Base** or **Solana**. Any x402-compatible wallet (AgentCash, Coinbase AgentKit, etc.) works. The toolkit transparently forwards the `X-Source: langchain` header so traffic shows up correctly in usage metrics.
 
 ## Links
 
 - API docs: https://api.quantoracle.dev/docs
+- x402 discovery (Base + Solana): https://api.quantoracle.dev/.well-known/x402
 - GitHub: https://github.com/QuantOracledev/quantoracle
 - 1,000 free calls/day, no signup

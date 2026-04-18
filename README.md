@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">QuantOracle</h1>
   <p align="center"><strong>The quantitative computation API for autonomous financial agents</strong></p>
-  <p align="center">63 deterministic, citation-verified calculators. 1,000 free calls/day. No signup.</p>
+  <p align="center">63 deterministic, citation-verified calculators + 10 composite workflows. 1,000 free calls/day. Pay-per-call on Base or Solana.</p>
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
   <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-quantoracle-blueviolet" alt="ClawHub"></a>
   <a href="https://glama.ai/mcp/servers/QuantOracledev/quantoracle"><img src="https://img.shields.io/badge/Glama-A%20%7C%20A%20%7C%20B-brightgreen" alt="Glama"></a>
   <a href="https://www.npmjs.com/package/quantoracle-cli"><img src="https://img.shields.io/npm/v/quantoracle-cli?label=cli&color=green" alt="CLI"></a>
-  <a href="https://x402.org/ecosystem"><img src="https://img.shields.io/badge/x402-USDC%20on%20Base-0052FF" alt="x402"></a>
+  <a href="https://x402.org/ecosystem"><img src="https://img.shields.io/badge/x402-USDC%20on%20Base%20%2B%20Solana-0052FF" alt="x402"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
 </p>
 
@@ -20,7 +20,7 @@
   <a href="#mcp-server">MCP Server</a> &nbsp;|&nbsp;
   <a href="#x402-payments">x402 Payments</a> &nbsp;|&nbsp;
   <a href="#free-tier">Free Tier</a> &nbsp;|&nbsp;
-  <a href="#full-endpoint-reference">All 63 Endpoints</a> &nbsp;|&nbsp;
+  <a href="#full-endpoint-reference">All Endpoints</a> &nbsp;|&nbsp;
   <a href="#integrations">Integrations</a>
 </p>
 
@@ -31,6 +31,7 @@
 **Every financial agent needs math. QuantOracle is that math.**
 
 - **63 pure calculators** across options, derivatives, risk, portfolio, statistics, crypto/DeFi, FX/macro, and TVM
+- **10 composite workflows** that bundle 5-15 calculator calls (backtest strategies, rebalance planning, options strategy selection, hedging recommendations, full risk analysis, pairs signals, and more)
 - **Zero dependencies** on market data, accounts, or third-party APIs -- send numbers in, get numbers out
 - **Deterministic** -- same inputs always produce the same outputs, so agents can cache, verify, and chain calls
 - **Citation-verified** -- every formula tested against published textbook values (Hull, Wilmott, Bailey & Lopez de Prado)
@@ -58,7 +59,7 @@ QuantOracle is designed to be called repeatedly. An agent running a backtest mig
 Drop this into your agent's system prompt:
 
 ```
-You have access to QuantOracle -- 63 deterministic financial calculators at https://api.quantoracle.dev.
+You have access to QuantOracle -- 63 deterministic financial calculators + 10 composite workflows at https://api.quantoracle.dev.
 Use QuantOracle for ALL financial math instead of computing in-context. It is faster, cheaper, and exact.
 Send POST requests with JSON. No API key needed (1,000 free calls/day).
 
@@ -71,8 +72,16 @@ Key endpoints:
 - /v1/stats/hurst-exponent -- Mean-reversion detection
 - /v1/fixed-income/bond -- Bond pricing + duration + convexity
 
+Paid-only composites (recommended for common agent workflows):
+- /v1/backtest/strategy -- Run SMA/RSI/momentum/Bollinger backtest (Sharpe, drawdown, trades)
+- /v1/portfolio/rebalance-plan -- Generate trades to hit target weights with cost estimate
+- /v1/options/strategy-optimizer -- Rank options strategies given outlook + vol view
+- /v1/hedging/recommend -- Cheapest effective hedge for a position
+- /v1/risk/full-analysis, /v1/trade/evaluate, /v1/portfolio/health, /v1/pairs/signal, /v1/options/spread-scan, /v1/indicators/regime-classify
+
 Full endpoint list: https://api.quantoracle.dev/tools
 OpenAPI spec: https://api.quantoracle.dev/openapi.json
+x402 discovery: https://api.quantoracle.dev/.well-known/x402 (advertises Base and Solana USDC)
 ```
 
 ### Discovery URLs (for agent frameworks and crawlers)
@@ -167,7 +176,7 @@ const { delta, gamma, vega } = greeks;
 
 ## CLI
 
-All 63 endpoints in your terminal. Zero dependencies.
+All 63 calculators + 10 composites in your terminal. Zero dependencies.
 
 ```bash
 npm install -g quantoracle-cli
@@ -225,7 +234,8 @@ qo help
 |---|---|---|
 | **Calls** | 1,000/day | Unlimited |
 | **Auth** | None | x402 micropayment header |
-| **Endpoints** | All 63 | All 63 |
+| **Calculators** | All 63 | All 63 |
+| **Composite workflows** | None (paid-only) | All 10 |
 | **Rate headers** | Yes | Yes |
 
 Every response includes rate limit headers so agents can self-manage:
@@ -253,7 +263,7 @@ PAYMENT-REQUIRED: <base64-encoded payment instructions>
 | **Medium** | $0.005 | Black-Scholes, implied vol, Kelly, position sizing, drawdown, regime, crossover, bond amortization, carry trade, IRP, PPP, funding rate, slippage, vesting, rebalance, IRR, realized vol, PSR, transaction cost |
 | **Complex** | $0.008 | Portfolio risk, binomial tree, barrier/Asian/lookback options, credit spread, VaR, stress test, regression, cointegration, Hurst, distribution fit, risk parity |
 | **Heavy** | $0.015 | Monte Carlo, GARCH, portfolio optimization, option chain analysis, vol surface, yield curve, correlation matrix |
-| **Composite** | $0.015-0.05 | Spread scan, regime classify, full analysis, trade evaluate, portfolio health, pairs signal *(paid-only, no free tier)* |
+| **Composite** | $0.015-0.10 | Backtest strategy, spread scan, rebalance plan, options strategy optimizer, hedging recommend, full risk analysis, trade evaluate, portfolio health, pairs signal, regime classify *(paid-only, no free tier)* |
 
 ### Batch Endpoint
 
@@ -298,24 +308,42 @@ Batch pricing is the sum of the individual endpoint prices — no markup. You pa
 
 ## x402 Payments
 
-QuantOracle uses the [x402 protocol](https://x402.org) for pay-per-call micropayments. When an agent exhausts its free tier, the API returns a standard `402` response with payment instructions. x402-compatible agents (Coinbase AgentKit, OpenClaw, etc.) handle this automatically:
+QuantOracle uses the [x402 protocol](https://x402.org) for pay-per-call micropayments. When an agent exhausts its free tier (or calls a paid-only composite), the API returns a standard `402` response with payment instructions advertising **both Base and Solana**. x402-compatible agents (Coinbase AgentKit, AgentCash, OpenClaw, etc.) handle the rest automatically:
 
-1. Agent calls endpoint, gets `402` with `PAYMENT-REQUIRED` header
-2. Agent signs a gasless USDC transfer authorization (EIP-3009)
+1. Agent calls endpoint, gets `402` with `PAYMENT-REQUIRED` header listing accepted networks
+2. Agent signs a gasless USDC transfer authorization on Base (EIP-3009) or Solana
 3. Agent resends request with `PAYMENT-SIGNATURE` header
 4. Server verifies via CDP facilitator, serves the response, settles on-chain
 
 **No API keys. No subscriptions. No accounts. Just math and micropayments.**
 
-- **Currency**: USDC on Base (chain ID 8453)
-- **Settlement**: Via Coinbase Developer Platform facilitator
-- **Wallet**: `0xC94f5F33ae446a50Ce31157db81253BfddFE2af6`
+### Supported Networks
+
+| Network | Asset | Gas | Best for |
+|---------|-------|-----|----------|
+| **Base mainnet** (`eip155:8453`) | USDC (`0x8335...`) | ~$0.005/tx | EVM agents, Coinbase tooling, LangChain, Base ecosystem |
+| **Solana mainnet** (`solana:5eykt4...`) | USDC (`EPjFWdd5...`) | ~$0.0002/tx (CDP fee-payer) | Solana Agent Kit, Eliza, high-frequency bots |
+
+- **Settlement**: Via Coinbase Developer Platform facilitator (`api.cdp.coinbase.com/platform/v2/x402`)
+- **Base wallet**: `0xC94f5F33ae446a50Ce31157db81253BfddFE2af6`
+- **Solana wallet**: `9biztrXscReJ3Wi8EfkD2gL3WXzYUmzTEohD26Bxp39u`
+- **Discovery**: `https://api.quantoracle.dev/.well-known/x402` (returns both chains for every endpoint)
+
+### Test it with AgentCash
+
+```bash
+npx agentcash@latest onboard
+# Fund the Base or Solana wallet shown, then:
+npx agentcash fetch https://api.quantoracle.dev/v1/risk/full-analysis \
+  -m POST --payment-network solana \
+  --body '{"returns":[0.01,-0.02,0.03,0.005,-0.01,0.02,-0.015,0.025,0.01,-0.005,0.015]}'
+```
 
 ---
 
 ## MCP Server
 
-QuantOracle is available as a native MCP server with 63 tools. Works with Claude Desktop, Cursor, Windsurf, and any MCP-compatible client.
+QuantOracle is available as a native MCP server with 73 tools (63 calculators + 10 composites). Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
 
 ### Install via npm
 
@@ -388,6 +416,8 @@ QuantOracle is available across multiple agent ecosystems:
 | **x402 ecosystem** | [x402.org/ecosystem](https://x402.org/ecosystem) |
 | **ChatGPT GPT** | [QuantOracle GPT](https://chatgpt.com/g/g-69d9c28bddb481918e674e2f9d9f3e97-quantoracle) |
 | **LangChain** | `pip install langchain-quantoracle` |
+| **AgentCash** | `npx agentcash fetch https://api.quantoracle.dev/v1/...` |
+| **x402scan** | [Server page](https://www.x402scan.com/server/2c32a45a-f94b-4def-904c-8dbbac8dc042) — Base + Solana |
 | **REST API** | `https://api.quantoracle.dev/v1/...` |
 | **OpenAPI spec** | `https://api.quantoracle.dev/openapi.json` |
 | **Swagger UI** | `https://api.quantoracle.dev/docs` |
@@ -395,8 +425,11 @@ QuantOracle is available across multiple agent ecosystems:
 ### Tool Discovery
 
 ```bash
-# List all 63 tools with paths and pricing
+# List all tools (63 calculators + 10 composites) with paths and pricing
 curl https://api.quantoracle.dev/tools
+
+# x402 discovery (advertises Base + Solana for every endpoint)
+curl https://api.quantoracle.dev/.well-known/x402
 
 # Health check
 curl https://api.quantoracle.dev/health
@@ -536,12 +569,16 @@ Higher-level endpoints that combine multiple calculations into a single call. Sa
 
 | Endpoint | Description | Replaces | Price |
 |----------|-------------|----------|-------|
+| `POST /v1/backtest/strategy` | Run SMA crossover, RSI mean reversion, momentum, or Bollinger breakout backtest | 10+ indicator + risk calls | $0.10 |
 | `POST /v1/options/spread-scan` | Scan and rank vertical spreads by risk/reward | 8-16 options/price calls | $0.05 |
-| `POST /v1/indicators/regime-classify` | Trend, vol regime, RSI, direction, strategy suggestion | technical + regime + realized-vol | $0.015 |
+| `POST /v1/portfolio/rebalance-plan` | Generate trade list to hit target weights with cost estimate | portfolio/optimize + transaction-cost | $0.05 |
+| `POST /v1/options/strategy-optimizer` | Rank top options strategies given outlook + volatility view | options/strategy + payoff-diagram | $0.08 |
+| `POST /v1/hedging/recommend` | Rank cheapest effective hedges (protective put, collar, futures, partial) | options/price + Greeks | $0.04 |
 | `POST /v1/risk/full-analysis` | Complete risk tearsheet: Sharpe, Sortino, VaR, Kelly, drawdown, Hurst, CAGR | 7 individual calls | $0.04 |
-| `POST /v1/trade/evaluate` | Trade evaluation: sizing, risk/reward, Kelly, costs, regime, signals, verdict | 5 individual calls | $0.025 |
 | `POST /v1/portfolio/health` | Portfolio health check: risk, correlation, rebalance, stress test | 6 individual calls | $0.04 |
+| `POST /v1/trade/evaluate` | Trade evaluation: sizing, risk/reward, Kelly, costs, regime, signals, verdict | 5 individual calls | $0.025 |
 | `POST /v1/pairs/signal` | Pairs trading signal: cointegration, Hurst, z-score, half-life, hedge ratio | 4 individual calls | $0.025 |
+| `POST /v1/indicators/regime-classify` | Trend, vol regime, RSI, direction, strategy suggestion | technical + regime + realized-vol | $0.015 |
 
 ---
 
@@ -603,7 +640,7 @@ docker compose up -d
 Every endpoint is tested against published analytical solutions:
 
 - **120 citation-backed benchmarks** (Hull, Wilmott, Bailey & Lopez de Prado, Goldman-Sosin-Gatto, Taylor, Fisher, Markowitz)
-- **65 integration tests** covering all 63 endpoints
+- **65+ integration tests** covering all 63 calculators
 - Pure Python math -- no numpy/scipy, zero native dependencies
 - Deterministic: same inputs always produce the same outputs
 
@@ -618,16 +655,16 @@ python tests/accuracy_benchmarks.py https://api.quantoracle.dev
 
 ```
 quantoracle/
-  api/quantoracle.py        -- FastAPI app, 63 endpoints, pure Python math
-  worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments
-  mcp-server/src/index.ts    -- MCP server: 63 tools over Streamable HTTP
-  cli/                       -- quantoracle-cli: 63 tools in the terminal (npm)
+  api/quantoracle.py        -- FastAPI app, 63 calculators + 10 composites, pure Python math
+  worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments (Base + Solana)
+  mcp-server/src/index.ts    -- MCP server: 73 tools over Streamable HTTP
+  cli/                       -- quantoracle-cli: all endpoints in the terminal (npm)
   tests/
     test_integration.py      -- 65 integration tests (all endpoints, live API)
     accuracy_benchmarks.py   -- 120 citation-backed accuracy tests
 ```
 
-**Stack**: FastAPI + Pydantic | Cloudflare Workers + KV | MCP (Streamable HTTP) | x402 + CDP Facilitator | USDC on Base
+**Stack**: FastAPI + Pydantic | Cloudflare Workers + KV | MCP (Streamable HTTP) | x402 + CDP Facilitator | USDC on Base and Solana
 
 ---
 

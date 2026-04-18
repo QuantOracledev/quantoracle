@@ -1,14 +1,14 @@
 {
   "name": "quantoracle",
-  "version": "2.0.0",
-  "description": "63 deterministic quant computation tools for autonomous financial agents. Options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis, time value of money. Includes 6 composite tools (spread-scan, regime-classify, risk tearsheet, trade-evaluate, portfolio-health, pairs-signal) and a batch endpoint for up to 100 computations per request. 1,000 free calls/day -- no signup required.",
+  "version": "2.3.0",
+  "description": "63 deterministic quant calculators + 10 composite workflows for autonomous financial agents. Calculators: options pricing, exotic derivatives, risk metrics, technical indicators, Monte Carlo, portfolio optimization, crypto/DeFi, macro/FX, statistical analysis, time value of money. Composites: backtest-strategy, options-spread-scan, portfolio-rebalance-plan, options-strategy-optimizer, hedging-recommend, risk-full-analysis, trade-evaluate, portfolio-health, pairs-signal, indicators-regime-classify. Plus a batch endpoint for up to 100 computations per request. 1,000 free calls/day -- no signup required. x402 payments on Base or Solana.",
   "homepage": "https://quantoracle.dev",
   "repository": "https://github.com/QuantOracledev/quantoracle",
   "documentation_url": "https://api.quantoracle.dev/docs",
   "openapi_url": "https://api.quantoracle.dev/openapi.json",
   "transport": { "type": "streamable-http", "url": "https://mcp.quantoracle.dev/mcp" },
   "free_tier": { "calls_per_day": 1000, "auth_required": false, "ip_based": true, "window": "24h" },
-  "payment": { "protocol": "x402", "network": "base", "currency": "USDC" },
+  "payment": { "protocol": "x402", "networks": ["base", "solana"], "currency": "USDC" },
   "tags": ["finance", "quantitative", "options", "derivatives", "risk", "portfolio", "statistics", "crypto", "defi", "macro", "fx", "backtesting", "agent-ready", "deterministic", "mcp", "calculator"],
   "categories": ["Finance", "Mathematics", "Data Analysis", "Crypto"],
   "tools": [
@@ -81,6 +81,10 @@
     { "name": "trade_evaluate", "path": "/v1/trade/evaluate", "price": "$0.025", "method": "POST", "description": "Full trade evaluation: position sizing, risk/reward, Kelly, transaction costs, regime detection, technical signals, and go/no-go verdict. Replaces 5 individual calls.", "composite": true, "paid_only": true },
     { "name": "portfolio_health", "path": "/v1/portfolio/health", "price": "$0.04", "method": "POST", "description": "Portfolio health check: risk metrics, correlation matrix, drawdown, rebalance analysis, and stress test across 3 scenarios. Replaces 6 individual calls.", "composite": true, "paid_only": true },
     { "name": "pairs_signal", "path": "/v1/pairs/signal", "price": "$0.025", "method": "POST", "description": "Complete pairs trading signal: cointegration test, Hurst exponent, z-score, half-life, hedge ratio, and trade signal. Replaces 4 individual calls.", "composite": true, "paid_only": true },
+    { "name": "backtest_strategy", "path": "/v1/backtest/strategy", "price": "$0.10", "method": "POST", "description": "Backtest a trading strategy on price history. Supports sma_crossover, rsi_mean_reversion, momentum, and bollinger_breakout. Returns total return, Sharpe, Calmar, max drawdown, win rate, trade list, and vs buy-and-hold. Replaces 10+ individual indicator + risk calls.", "composite": true, "paid_only": true },
+    { "name": "portfolio_rebalance-plan", "path": "/v1/portfolio/rebalance-plan", "price": "$0.05", "method": "POST", "description": "Generate trade list to rebalance from current holdings to target weights with transaction cost estimate. Returns buy/sell actions, total cost, drift before/after.", "composite": true, "paid_only": true },
+    { "name": "options_strategy-optimizer", "path": "/v1/options/strategy-optimizer", "price": "$0.08", "method": "POST", "description": "Rank top options strategies given market outlook (bullish/bearish/neutral) and volatility view (rising/falling/stable). Returns long call, bull call spread, iron condor, long straddle, etc. with legs, max profit/loss, breakevens, and score.", "composite": true, "paid_only": true },
+    { "name": "hedging_recommend", "path": "/v1/hedging/recommend", "price": "$0.04", "method": "POST", "description": "Rank cheapest effective hedges for a position. Compares protective puts, collars, futures shorts, and partial hedges with cost, protection level, and affordability.", "composite": true, "paid_only": true },
     { "name": "batch", "path": "/v1/batch", "price": "dynamic", "method": "POST", "description": "Execute up to 100 computations in a single request. Price equals sum of individual endpoint prices. ~6x throughput vs sequential calls." }
   ]
 }

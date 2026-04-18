@@ -1,7 +1,7 @@
 ---
 name: quantoracle
-description: 63 deterministic quantitative finance calculations via MCP. Options pricing, Greeks, implied volatility, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo simulation, statistics, crypto/DeFi, macro/FX, time value of money.
-version: 2.1.1
+description: 63 deterministic quantitative finance calculators + 10 composite workflows via MCP. Options pricing, Greeks, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, FX/macro, TVM, strategy backtesting, rebalance planning, options strategy selection, hedging. Paid via x402 on Base or Solana.
+version: 2.3.0
 metadata:
   openclaw:
     requires:
@@ -13,7 +13,7 @@ metadata:
 
 # QuantOracle
 
-63 deterministic quant computation tools for AI agents. Every tool accepts JSON and returns JSON. Same inputs always produce same outputs.
+63 deterministic quant calculators + 10 composite workflows for AI agents. Every tool accepts JSON and returns JSON. Same inputs always produce same outputs. Paid via x402 micropayments in USDC on Base or Solana.
 
 ## Install
 
@@ -51,14 +51,27 @@ https://mcp.quantoracle.dev/mcp
 
 **Time Value of Money**: Present value, future value, NPV, IRR, CAGR.
 
+**Composite Workflows (paid-only, bundles multiple calculators)**:
+- `backtest/strategy` ($0.10) — SMA crossover, RSI mean reversion, momentum, Bollinger breakout backtests
+- `options/spread-scan` ($0.05) — Rank vertical spreads by risk/reward
+- `portfolio/rebalance-plan` ($0.05) — Trade list + cost estimate to hit target weights
+- `options/strategy-optimizer` ($0.08) — Best options strategies given outlook + vol view
+- `hedging/recommend` ($0.04) — Cheapest effective hedge for a position
+- `risk/full-analysis` ($0.04) — Complete risk tearsheet (Sharpe, Sortino, VaR, Kelly, drawdown, Hurst, CAGR)
+- `portfolio/health` ($0.04) — Risk + correlation + rebalance + stress test
+- `trade/evaluate` ($0.025) — Sizing + R/R + Kelly + costs + regime + signals
+- `pairs/signal` ($0.025) — Cointegration + Hurst + z-score + hedge ratio signal
+- `indicators/regime-classify` ($0.015) — Trend + vol regime + direction + strategy suggestion
+
 ## Pricing
 
-1,000 free calls per day. After that, pay-per-call via x402 (USDC on Base):
+1,000 free calls per day per IP. After that, pay-per-call via x402. Payments accepted in **USDC on Base** (`eip155:8453`) or **USDC on Solana** (`solana:5eykt4...`) — every 402 advertises both.
 
 - $0.002 — Simple formulas (z-score, APY convert, TVM)
 - $0.005 — Medium computation (Black-Scholes, Kelly, indicators)
 - $0.008 — Complex computation (exotic derivatives, regression, GARCH)
 - $0.015 — Heavy optimization (Monte Carlo, portfolio optimize, vol surface)
+- $0.015–$0.10 — Composite workflows (paid-only, no free tier)
 
 ## Usage
 
