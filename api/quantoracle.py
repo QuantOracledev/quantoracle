@@ -164,6 +164,10 @@ PRICES = {
     "trade/evaluate": 0.025,
     "portfolio/health": 0.04,
     "pairs/signal": 0.025,
+    "backtest/strategy": 0.10,
+    "portfolio/rebalance-plan": 0.05,
+    "options/strategy-optimizer": 0.08,
+    "hedging/recommend": 0.04,
 }
 
 def hit(ep):
@@ -3235,7 +3239,7 @@ async def t63(req: T63In):
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "quantoracle", "version": "2.0.0",
-            "domain": "quantoracle.dev", "tools": 63,
+            "domain": "quantoracle.dev", "tools": len(PRICES),
             "uptime": str(datetime.now(timezone.utc) - _boot)}
 
 @app.get("/metrics")
@@ -3846,6 +3850,467 @@ async def batch(req: BatchIn):
         "batch_size": len(req.requests),
         "total_price_usdc": round(total_price, 4),
         "results": results,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 7: BACKTEST STRATEGY — $0.10
+# ══════════════════════════════════════════════════════════════════════════
+class BacktestStrategyIn(BaseModel):
+    prices: list[float] = Field(..., min_length=30, description="Price history (daily closes, oldest first)")
+    strategy: str = Field("sma_crossover", description="sma_crossover | rsi_mean_reversion | momentum | bollinger_breakout")
+    params: dict = Field(default_factory=dict, description="Strategy params. SMA: {fast,slow}. RSI: {period,oversold,overbought}. Momentum: {lookback}. Bollinger: {period,std}.")
+    initial_capital: float = Field(10000, gt=0, description="Starting capital")
+    commission_bps: float = Field(5, ge=0, description="Round-trip commission in basis points")
+    slippage_bps: float = Field(5, ge=0, description="One-way slippage in basis points")
+
+@app.post("/v1/backtest/strategy", tags=["Composite"], dependencies=auth)
+async def backtest_strategy(req: BacktestStrategyIn):
+    """Deterministic backtest of SMA crossover, RSI mean reversion, momentum, or Bollinger breakout. Replaces 10+ individual calls."""
+    t0 = time.perf_counter(); hit("backtest/strategy")
+    P = req.prices; n = len(P)
+    strat = req.strategy.lower(); p = req.params or {}
+
+    # Generate signals (1=long, 0=flat, -1=short) for each bar
+    signals = [0] * n
+
+    if strat == "sma_crossover":
+        fast = int(p.get("fast", 20)); slow = int(p.get("slow", 50))
+        if slow <= fast or slow >= n:
+            raise HTTPException(400, f"Invalid SMA params: slow ({slow}) must be > fast ({fast}) and < {n}")
+        for i in range(slow, n):
+            fast_ma = sum(P[i-fast+1:i+1]) / fast
+            slow_ma = sum(P[i-slow+1:i+1]) / slow
+            signals[i] = 1 if fast_ma > slow_ma else -1
+
+    elif strat == "rsi_mean_reversion":
+        period = int(p.get("period", 14)); oversold = float(p.get("oversold", 30)); overbought = float(p.get("overbought", 70))
+        if period >= n:
+            raise HTTPException(400, f"RSI period ({period}) must be < {n}")
+        # Wilder's RSI
+        gains = [0.0] * n; losses = [0.0] * n
+        for i in range(1, n):
+            diff = P[i] - P[i-1]
+            gains[i] = max(diff, 0); losses[i] = max(-diff, 0)
+        avg_g = sum(gains[1:period+1]) / period; avg_l = sum(losses[1:period+1]) / period
+        pos = 0
+        for i in range(period, n):
+            if i > period:
+                avg_g = (avg_g * (period - 1) + gains[i]) / period
+                avg_l = (avg_l * (period - 1) + losses[i]) / period
+            rs = avg_g / avg_l if avg_l > 0 else float('inf')
+            rsi = 100 - (100 / (1 + rs)) if rs != float('inf') else 100
+            if rsi < oversold: pos = 1
+            elif rsi > overbought: pos = 0
+            signals[i] = pos
+
+    elif strat == "momentum":
+        lookback = int(p.get("lookback", 60))
+        if lookback >= n:
+            raise HTTPException(400, f"Momentum lookback ({lookback}) must be < {n}")
+        for i in range(lookback, n):
+            ret = (P[i] / P[i-lookback]) - 1
+            signals[i] = 1 if ret > 0 else -1
+
+    elif strat == "bollinger_breakout":
+        period = int(p.get("period", 20)); nstd = float(p.get("std", 2.0))
+        if period >= n:
+            raise HTTPException(400, f"Bollinger period ({period}) must be < {n}")
+        pos = 0
+        for i in range(period, n):
+            window = P[i-period+1:i+1]
+            m = sum(window) / period
+            std = math.sqrt(sum((x - m) ** 2 for x in window) / period)
+            upper = m + nstd * std; lower = m - nstd * std
+            if P[i] > upper: pos = 1
+            elif P[i] < lower: pos = -1
+            signals[i] = pos
+    else:
+        raise HTTPException(400, f"Unknown strategy '{strat}'. Valid: sma_crossover, rsi_mean_reversion, momentum, bollinger_breakout")
+
+    # Execute trades — compute returns with costs
+    cost_per_side = (req.commission_bps + req.slippage_bps) / 10000
+    equity = [req.initial_capital]; shares = 0; cash = req.initial_capital
+    trades = []; last_entry_idx = None; last_entry_price = None
+    wins = 0; losses = 0
+
+    for i in range(1, n):
+        price = P[i]; prev_sig = signals[i-1]; cur_sig = signals[i]
+        # Signal change = trade
+        if cur_sig != prev_sig and i > 0:
+            # Close existing position
+            if shares != 0:
+                exit_val = shares * price * (1 - cost_per_side * (1 if shares > 0 else -1))
+                cash += exit_val if shares > 0 else -exit_val
+                # Track trade P&L
+                if last_entry_idx is not None:
+                    pnl = (price - last_entry_price) * shares - abs(shares * price * cost_per_side)
+                    trades.append({"entry_idx": last_entry_idx, "exit_idx": i, "entry": r4(last_entry_price), "exit": r4(price), "shares": shares, "pnl": r2(pnl)})
+                    if pnl > 0: wins += 1
+                    else: losses += 1
+                shares = 0
+            # Open new position
+            if cur_sig != 0:
+                alloc = cash
+                new_shares = int(alloc / (price * (1 + cost_per_side))) * cur_sig
+                if new_shares != 0:
+                    cost = abs(new_shares) * price * (1 + cost_per_side)
+                    cash -= cost if new_shares > 0 else -cost
+                    shares = new_shares
+                    last_entry_idx = i; last_entry_price = price
+        # Mark-to-market
+        equity.append(cash + shares * price)
+
+    # Force-close at end
+    if shares != 0 and last_entry_idx is not None:
+        pnl = (P[-1] - last_entry_price) * shares
+        trades.append({"entry_idx": last_entry_idx, "exit_idx": n-1, "entry": r4(last_entry_price), "exit": r4(P[-1]), "shares": shares, "pnl": r2(pnl)})
+        if pnl > 0: wins += 1
+        else: losses += 1
+
+    # Stats
+    returns = [(equity[i] / equity[i-1] - 1) for i in range(1, len(equity)) if equity[i-1] > 0]
+    total_ret = (equity[-1] / equity[0]) - 1 if equity[0] > 0 else 0
+    ann_ret = ((1 + total_ret) ** (252 / n) - 1) if n > 0 else 0
+    ann_vol = sd(returns) * math.sqrt(252) if returns else 0
+    sharpe = (ann_ret - 0.045) / ann_vol if ann_vol > 0 else 0
+    mdd, _ = _max_dd(equity)
+    calmar = ann_ret / abs(mdd) if mdd != 0 else 0
+    benchmark = (P[-1] / P[0]) - 1 if P[0] > 0 else 0
+
+    # Subsample equity curve (max 50 points)
+    step = max(1, len(equity) // 50)
+    eq_sample = [r2(equity[i]) for i in range(0, len(equity), step)]
+
+    return {
+        "strategy": strat, "params": p, "bars": n, "num_trades": len(trades),
+        "performance": {
+            "total_return": r4(total_ret), "annualized_return": r4(ann_ret),
+            "annualized_vol": r4(ann_vol), "sharpe": r4(sharpe), "calmar": r4(calmar),
+            "max_drawdown": r4(mdd), "final_equity": r2(equity[-1]),
+        },
+        "trades_summary": {
+            "total": len(trades), "wins": wins, "losses": losses,
+            "win_rate": r4(wins / len(trades)) if trades else 0,
+            "avg_pnl": r2(sum(t["pnl"] for t in trades) / len(trades)) if trades else 0,
+        },
+        "vs_buy_hold": {"strategy_return": r4(total_ret), "buy_hold_return": r4(benchmark), "excess_return": r4(total_ret - benchmark)},
+        "equity_curve_sample": eq_sample,
+        "trades": trades[:20],  # First 20 trades only
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 8: PORTFOLIO REBALANCE PLAN — $0.05
+# ══════════════════════════════════════════════════════════════════════════
+class RebalancePlanIn(BaseModel):
+    current_holdings: dict[str, float] = Field(..., description="Asset symbol -> current dollar value")
+    target_weights: dict[str, float] = Field(..., description="Asset symbol -> target weight (must sum to ~1.0)")
+    transaction_cost_bps: float = Field(10, ge=0, description="One-way transaction cost in bps (incl. spread + commission)")
+    min_trade_usd: float = Field(10, ge=0, description="Minimum trade size in USD (smaller drifts are ignored)")
+
+@app.post("/v1/portfolio/rebalance-plan", tags=["Composite"], dependencies=auth)
+async def rebalance_plan(req: RebalancePlanIn):
+    """Generate trade list to rebalance from current holdings to target weights with transaction cost estimate."""
+    t0 = time.perf_counter(); hit("portfolio/rebalance-plan")
+    holdings = dict(req.current_holdings); targets = dict(req.target_weights)
+    portfolio_value = sum(holdings.values())
+    if portfolio_value <= 0:
+        raise HTTPException(400, "Portfolio value must be positive")
+    weight_sum = sum(targets.values())
+    if abs(weight_sum - 1.0) > 0.02:
+        raise HTTPException(400, f"Target weights must sum to ~1.0 (got {weight_sum:.4f})")
+
+    # Ensure all assets present in both dicts
+    all_assets = set(holdings.keys()) | set(targets.keys())
+    for a in all_assets:
+        holdings.setdefault(a, 0.0); targets.setdefault(a, 0.0)
+
+    # Current vs target weights and required deltas
+    current_weights = {a: holdings[a] / portfolio_value for a in all_assets}
+    target_dollar = {a: targets[a] * portfolio_value for a in all_assets}
+    drift_before = {a: r4(current_weights[a] - targets[a]) for a in all_assets}
+
+    # Generate trades
+    cost_rate = req.transaction_cost_bps / 10000
+    trades = []; total_cost = 0.0
+    for a in sorted(all_assets):
+        delta = target_dollar[a] - holdings[a]
+        if abs(delta) < req.min_trade_usd:
+            continue
+        action = "buy" if delta > 0 else "sell"
+        notional = abs(delta)
+        cost = notional * cost_rate
+        total_cost += cost
+        trades.append({
+            "asset": a, "action": action, "amount_usd": r2(notional),
+            "cost_usd": r4(cost), "current_value": r2(holdings[a]), "target_value": r2(target_dollar[a]),
+        })
+
+    # Post-rebalance weights (after trades, minus total cost)
+    post_value = portfolio_value - total_cost
+    post_weights = {a: r4(target_dollar[a] / post_value) if post_value > 0 else 0 for a in all_assets}
+    drift_after = {a: r4(post_weights[a] - targets[a]) for a in all_assets}
+
+    # Max drift metrics
+    max_drift_before = max(abs(d) for d in drift_before.values()) if drift_before else 0
+    max_drift_after = max(abs(d) for d in drift_after.values()) if drift_after else 0
+
+    return {
+        "portfolio_value": r2(portfolio_value),
+        "num_trades": len(trades), "total_cost_usd": r4(total_cost), "total_cost_bps": r2(total_cost / portfolio_value * 10000) if portfolio_value > 0 else 0,
+        "trades": trades,
+        "drift_before": drift_before, "drift_after": drift_after,
+        "max_drift_before": r4(max_drift_before), "max_drift_after": r4(max_drift_after),
+        "current_weights": {a: r4(current_weights[a]) for a in sorted(all_assets)},
+        "target_weights": {a: r4(targets[a]) for a in sorted(all_assets)},
+        "post_rebalance_weights": {a: post_weights[a] for a in sorted(all_assets)},
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 9: OPTIONS STRATEGY OPTIMIZER — $0.08
+# ══════════════════════════════════════════════════════════════════════════
+class StrategyOptimizerIn(BaseModel):
+    S: float = Field(..., gt=0, description="Spot price")
+    outlook: str = Field(..., description="bullish | bearish | neutral")
+    vol_view: str = Field("stable", description="rising | falling | stable")
+    T: float = Field(..., gt=0, description="Time to expiration in years")
+    sigma: float = Field(..., gt=0, description="Current implied volatility")
+    r: float = Field(0.05, description="Risk-free rate")
+    q: float = Field(0, description="Dividend yield")
+    capital: float = Field(10000, gt=0, description="Available capital")
+
+@app.post("/v1/options/strategy-optimizer", tags=["Composite"], dependencies=auth)
+async def strategy_optimizer(req: StrategyOptimizerIn):
+    """Rank top options strategies given market outlook + volatility view. Returns P&L, breakevens, max profit/loss for each."""
+    t0 = time.perf_counter(); hit("options/strategy-optimizer")
+    S, T, sigma, r, q = req.S, req.T, req.sigma, req.r, req.q
+    outlook = req.outlook.lower(); vol = req.vol_view.lower()
+    if outlook not in ("bullish", "bearish", "neutral"):
+        raise HTTPException(400, f"outlook must be bullish|bearish|neutral (got '{outlook}')")
+    if vol not in ("rising", "falling", "stable"):
+        raise HTTPException(400, f"vol_view must be rising|falling|stable (got '{vol}')")
+
+    # Define candidate strategies based on outlook + vol
+    candidates = []
+    # --- Bullish ---
+    if outlook == "bullish":
+        # Long Call (rising vol)
+        K_atm = S; call_atm = _bs(S, K_atm, T, r, sigma, q, "call")["price"]
+        candidates.append({
+            "name": "Long Call (ATM)", "legs": [{"type": "call", "K": r2(K_atm), "action": "buy", "premium": r4(call_atm)}],
+            "net_debit": r4(call_atm), "max_profit": float('inf'), "max_loss": r4(call_atm),
+            "breakeven": [r2(K_atm + call_atm)], "suits_vol": "rising", "bias": "bullish",
+        })
+        # Bull Call Spread (stable/falling vol)
+        K_long = S * 1.00; K_short = S * 1.05
+        c_long = _bs(S, K_long, T, r, sigma, q, "call")["price"]
+        c_short = _bs(S, K_short, T, r, sigma, q, "call")["price"]
+        net = c_long - c_short; max_p = (K_short - K_long) - net
+        candidates.append({
+            "name": "Bull Call Spread", "legs": [
+                {"type": "call", "K": r2(K_long), "action": "buy", "premium": r4(c_long)},
+                {"type": "call", "K": r2(K_short), "action": "sell", "premium": r4(c_short)},
+            ],
+            "net_debit": r4(net), "max_profit": r4(max_p), "max_loss": r4(net),
+            "breakeven": [r2(K_long + net)], "suits_vol": "stable", "bias": "bullish",
+        })
+        # Short Put (falling vol, income)
+        K_put = S * 0.95; p_atm = _bs(S, K_put, T, r, sigma, q, "put")["price"]
+        candidates.append({
+            "name": "Short Put (Cash-Secured)", "legs": [{"type": "put", "K": r2(K_put), "action": "sell", "premium": r4(p_atm)}],
+            "net_debit": r4(-p_atm), "max_profit": r4(p_atm), "max_loss": r4(K_put - p_atm),
+            "breakeven": [r2(K_put - p_atm)], "suits_vol": "falling", "bias": "bullish",
+        })
+    # --- Bearish ---
+    elif outlook == "bearish":
+        # Long Put
+        K_atm = S; put_atm = _bs(S, K_atm, T, r, sigma, q, "put")["price"]
+        candidates.append({
+            "name": "Long Put (ATM)", "legs": [{"type": "put", "K": r2(K_atm), "action": "buy", "premium": r4(put_atm)}],
+            "net_debit": r4(put_atm), "max_profit": r4(K_atm - put_atm), "max_loss": r4(put_atm),
+            "breakeven": [r2(K_atm - put_atm)], "suits_vol": "rising", "bias": "bearish",
+        })
+        # Bear Put Spread
+        K_long = S * 1.00; K_short = S * 0.95
+        p_long = _bs(S, K_long, T, r, sigma, q, "put")["price"]
+        p_short = _bs(S, K_short, T, r, sigma, q, "put")["price"]
+        net = p_long - p_short; max_p = (K_long - K_short) - net
+        candidates.append({
+            "name": "Bear Put Spread", "legs": [
+                {"type": "put", "K": r2(K_long), "action": "buy", "premium": r4(p_long)},
+                {"type": "put", "K": r2(K_short), "action": "sell", "premium": r4(p_short)},
+            ],
+            "net_debit": r4(net), "max_profit": r4(max_p), "max_loss": r4(net),
+            "breakeven": [r2(K_long - net)], "suits_vol": "stable", "bias": "bearish",
+        })
+        # Short Call (falling vol, income)
+        K_call = S * 1.05; c_atm = _bs(S, K_call, T, r, sigma, q, "call")["price"]
+        candidates.append({
+            "name": "Short Call (Covered/Naked)", "legs": [{"type": "call", "K": r2(K_call), "action": "sell", "premium": r4(c_atm)}],
+            "net_debit": r4(-c_atm), "max_profit": r4(c_atm), "max_loss": float('inf'),
+            "breakeven": [r2(K_call + c_atm)], "suits_vol": "falling", "bias": "bearish",
+        })
+    # --- Neutral ---
+    else:
+        # Long Straddle (rising vol)
+        c = _bs(S, S, T, r, sigma, q, "call")["price"]; p = _bs(S, S, T, r, sigma, q, "put")["price"]
+        net = c + p
+        candidates.append({
+            "name": "Long Straddle", "legs": [
+                {"type": "call", "K": r2(S), "action": "buy", "premium": r4(c)},
+                {"type": "put", "K": r2(S), "action": "buy", "premium": r4(p)},
+            ],
+            "net_debit": r4(net), "max_profit": float('inf'), "max_loss": r4(net),
+            "breakeven": [r2(S - net), r2(S + net)], "suits_vol": "rising", "bias": "neutral",
+        })
+        # Iron Condor (stable/falling vol, credit)
+        K_ps = S * 0.95; K_pl = S * 0.90; K_cs = S * 1.05; K_cl = S * 1.10
+        p_s = _bs(S, K_ps, T, r, sigma, q, "put")["price"]; p_l = _bs(S, K_pl, T, r, sigma, q, "put")["price"]
+        c_s = _bs(S, K_cs, T, r, sigma, q, "call")["price"]; c_l = _bs(S, K_cl, T, r, sigma, q, "call")["price"]
+        credit = (p_s - p_l) + (c_s - c_l); width = min(K_ps - K_pl, K_cl - K_cs)
+        candidates.append({
+            "name": "Iron Condor", "legs": [
+                {"type": "put", "K": r2(K_pl), "action": "buy", "premium": r4(p_l)},
+                {"type": "put", "K": r2(K_ps), "action": "sell", "premium": r4(p_s)},
+                {"type": "call", "K": r2(K_cs), "action": "sell", "premium": r4(c_s)},
+                {"type": "call", "K": r2(K_cl), "action": "buy", "premium": r4(c_l)},
+            ],
+            "net_debit": r4(-credit), "max_profit": r4(credit), "max_loss": r4(width - credit),
+            "breakeven": [r2(K_ps - credit), r2(K_cs + credit)], "suits_vol": "falling", "bias": "neutral",
+        })
+        # Long Strangle (rising vol, cheaper than straddle)
+        K_c = S * 1.05; K_p = S * 0.95
+        c2 = _bs(S, K_c, T, r, sigma, q, "call")["price"]; p2 = _bs(S, K_p, T, r, sigma, q, "put")["price"]
+        net2 = c2 + p2
+        candidates.append({
+            "name": "Long Strangle", "legs": [
+                {"type": "call", "K": r2(K_c), "action": "buy", "premium": r4(c2)},
+                {"type": "put", "K": r2(K_p), "action": "buy", "premium": r4(p2)},
+            ],
+            "net_debit": r4(net2), "max_profit": float('inf'), "max_loss": r4(net2),
+            "breakeven": [r2(K_p - net2), r2(K_c + net2)], "suits_vol": "rising", "bias": "neutral",
+        })
+
+    # Score each strategy: higher score for vol-alignment + risk/reward
+    for s in candidates:
+        vol_match = 1.0 if s["suits_vol"] == vol else (0.5 if s["suits_vol"] == "stable" or vol == "stable" else 0.2)
+        # Risk/reward ratio (capped for infinite-profit strategies)
+        mp = s["max_profit"] if s["max_profit"] != float('inf') else s.get("net_debit", 1) * 5
+        ml = s["max_loss"] if s["max_loss"] != float('inf') else s.get("net_debit", 1) * 5
+        rr = mp / ml if ml > 0 else 1.0
+        # Convert inf to displayable string
+        s["score"] = r4(vol_match * math.log(1 + rr))
+        if s["max_profit"] == float('inf'): s["max_profit"] = "unlimited"
+        if s["max_loss"] == float('inf'): s["max_loss"] = "unlimited"
+
+    # Rank by score
+    ranked = sorted(candidates, key=lambda x: x["score"], reverse=True)
+
+    return {
+        "inputs": {"spot": r2(S), "outlook": outlook, "vol_view": vol, "days_to_expiry": r2(T * 365), "implied_vol": r4(sigma)},
+        "strategies": ranked, "num_strategies": len(ranked),
+        "top_pick": ranked[0]["name"] if ranked else None,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# COMPOSITE 10: HEDGING RECOMMEND — $0.04
+# ══════════════════════════════════════════════════════════════════════════
+class HedgingIn(BaseModel):
+    position_type: str = Field(..., description="long_stock | short_stock | long_crypto | long_options")
+    position_value: float = Field(..., gt=0, description="Current dollar value of position")
+    asset_price: float = Field(..., gt=0, description="Current spot price")
+    volatility: float = Field(..., gt=0, description="Annualized volatility")
+    time_horizon_days: int = Field(30, gt=0, description="Hedge time horizon in days")
+    max_hedge_cost_pct: float = Field(0.05, gt=0, description="Max hedge cost as fraction of position (0.05 = 5%)")
+    r: float = Field(0.05, description="Risk-free rate")
+
+@app.post("/v1/hedging/recommend", tags=["Composite"], dependencies=auth)
+async def hedging_recommend(req: HedgingIn):
+    """Rank cheapest effective hedges for a given position. Compares protective puts, collars, inverse hedges."""
+    t0 = time.perf_counter(); hit("hedging/recommend")
+    pos_type = req.position_type.lower(); V = req.position_value; S = req.asset_price
+    sigma = req.volatility; T = req.time_horizon_days / 365; r = req.r
+    max_cost = V * req.max_hedge_cost_pct
+    shares = V / S
+
+    if pos_type not in ("long_stock", "short_stock", "long_crypto", "long_options"):
+        raise HTTPException(400, f"Invalid position_type (got '{pos_type}')")
+
+    hedges = []
+    is_long = pos_type in ("long_stock", "long_crypto", "long_options")
+
+    # 1. Protective Put (for longs) or Protective Call (for shorts)
+    K_prot = S * (0.95 if is_long else 1.05)
+    opt_type = "put" if is_long else "call"
+    premium = _bs(S, K_prot, T, r, sigma, 0, opt_type)["price"]
+    total_prem = premium * shares
+    cost_pct = total_prem / V if V > 0 else 0
+    max_loss_hedged = V - (K_prot * shares) + total_prem if is_long else (K_prot * shares) - V + total_prem
+    hedges.append({
+        "type": f"protective_{opt_type}", "description": f"Buy {'put' if is_long else 'call'} at strike {r2(K_prot)} ({'5% below' if is_long else '5% above'} spot)",
+        "cost_usd": r2(total_prem), "cost_pct": r4(cost_pct), "affordable": total_prem <= max_cost,
+        "protection": "full downside below strike" if is_long else "full upside above strike",
+        "max_loss_if_hedged": r2(max_loss_hedged), "breakeven_price": r2(K_prot - premium) if is_long else r2(K_prot + premium),
+        "score": r4(1 / (cost_pct + 0.001)),  # Lower cost = higher score
+    })
+
+    # 2. Collar (for longs) — buy put, sell call to finance it
+    if is_long:
+        K_put = S * 0.95; K_call = S * 1.10
+        p_prem = _bs(S, K_put, T, r, sigma, 0, "put")["price"]
+        c_prem = _bs(S, K_call, T, r, sigma, 0, "call")["price"]
+        net_per_share = p_prem - c_prem; total_net = net_per_share * shares
+        cost_pct = total_net / V if V > 0 else 0
+        hedges.append({
+            "type": "collar", "description": f"Buy put @ {r2(K_put)}, sell call @ {r2(K_call)}",
+            "cost_usd": r2(total_net), "cost_pct": r4(cost_pct), "affordable": abs(total_net) <= max_cost,
+            "protection": f"floor at {r2(K_put)}, capped upside at {r2(K_call)}",
+            "max_loss_if_hedged": r2(V - (K_put * shares) + total_net),
+            "max_gain_if_hedged": r2((K_call * shares) - V - total_net),
+            "score": r4(2 / (max(cost_pct, 0) + 0.001)),  # Collars typically best for tight budgets
+        })
+
+    # 3. Futures/inverse hedge — delta-neutral short (assumes available inverse instrument)
+    hedge_notional = V
+    daily_vol = sigma / math.sqrt(252)
+    # Use parametric VaR at 95% to estimate daily move
+    expected_move_1d = 1.645 * daily_vol * S
+    margin_req = hedge_notional * 0.10  # Typical 10% initial margin for futures
+    hedges.append({
+        "type": "futures_inverse_hedge", "description": f"Short ${r2(hedge_notional)} in futures or inverse {'short' if is_long else 'long'} ETF",
+        "cost_usd": r2(margin_req), "cost_pct": r4(margin_req / V) if V > 0 else 0, "affordable": True,
+        "protection": "delta-neutral (100% hedged against price moves, funding costs apply)",
+        "expected_daily_move_protected": r2(expected_move_1d * shares),
+        "note": "Requires margin account. P&L is offsetting, not capped.",
+        "score": r4(1.2),  # Moderate preference — effective but requires margin
+    })
+
+    # 4. Partial hedge — half the position
+    partial_shares = shares * 0.5
+    partial_prem = premium * partial_shares
+    hedges.append({
+        "type": "partial_put_hedge", "description": f"Buy puts on 50% of position at strike {r2(K_prot)}",
+        "cost_usd": r2(partial_prem), "cost_pct": r4(partial_prem / V) if V > 0 else 0, "affordable": partial_prem <= max_cost,
+        "protection": "half position protected below strike, half exposed",
+        "max_loss_if_hedged": r2(V * 0.5 - (K_prot * partial_shares) + partial_prem + V * 0.5 * 0.20),  # Assume 20% worst-case loss on unhedged half
+        "score": r4(0.8),
+    })
+
+    # Rank: affordable first, then by score
+    ranked = sorted(hedges, key=lambda h: (not h.get("affordable", False), -h.get("score", 0)))
+
+    return {
+        "position": {"type": pos_type, "value_usd": r2(V), "shares": r4(shares), "spot_price": r2(S)},
+        "constraints": {"max_hedge_cost_usd": r2(max_cost), "horizon_days": req.time_horizon_days, "volatility": r4(sigma)},
+        "hedges": ranked, "num_hedges": len(ranked),
+        "recommended": ranked[0]["type"] if ranked else None,
         "ms": r2((time.perf_counter() - t0) * 1000),
     }
 

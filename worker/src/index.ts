@@ -106,6 +106,10 @@ const PRICES: Record<string, string> = {
   '/v1/trade/evaluate': '$0.025',
   '/v1/portfolio/health': '$0.04',
   '/v1/pairs/signal': '$0.025',
+  '/v1/backtest/strategy': '$0.10',
+  '/v1/portfolio/rebalance-plan': '$0.05',
+  '/v1/options/strategy-optimizer': '$0.08',
+  '/v1/hedging/recommend': '$0.04',
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -573,6 +577,10 @@ app.all('/v1/*', async (c, next) => {
     '/v1/trade/evaluate',
     '/v1/portfolio/health',
     '/v1/pairs/signal',
+    '/v1/backtest/strategy',
+    '/v1/portfolio/rebalance-plan',
+    '/v1/options/strategy-optimizer',
+    '/v1/hedging/recommend',
   ]);
 
   // Check if this request has an x402 payment signature

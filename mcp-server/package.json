@@ -1,6 +1,6 @@
 {
   "name": "quantoracle-mcp",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "mcpName": "io.github.fel123/quantoracle",
   "description": "63 deterministic quant computation tools for AI agents via MCP. Options pricing, Greeks, derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. 1,000 free calls/day.",
   "type": "module",

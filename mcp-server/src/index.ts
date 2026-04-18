@@ -224,6 +224,10 @@ const USAGE_GUIDELINES: Record<string, string> = {
   "trade_evaluate": "Use when evaluating whether to take a specific trade. Combines position sizing, risk/reward analysis, transaction cost estimation, regime detection, and technical signals into a single go/no-go verdict. Provide entry/stop/target prices, account size, and recent price history. Returns: position size, costs, signals, regime, Kelly sizing, and FAVORABLE/CAUTION/UNFAVORABLE verdict. PAID ONLY — no free tier.",
   "portfolio_health": "Use when you need a complete portfolio health check. Combines risk metrics, correlation matrix, drawdown analysis, rebalance detection, and stress testing (2008 Crisis, Rate Hike, Flash Crash) in one call. Provide holdings with values, target weights, and return series. Returns: Sharpe, VaR, drawdown, correlation matrix, rebalance trades, and stress test P&L. PAID ONLY — no free tier.",
   "pairs_signal": "Use when analyzing a pairs trading opportunity. Combines cointegration testing, Hurst exponent, z-score analysis, half-life estimation, and trade signal generation in one call. Provide two price series. Returns: cointegration result, hedge ratio, spread z-score, Hurst, and actionable signal (LONG/SHORT/WAIT/CLOSE/NO_TRADE). PAID ONLY — no free tier.",
+  "backtest_strategy": "Use when backtesting a trading strategy on price history. Strategies: sma_crossover (params: fast, slow), rsi_mean_reversion (params: period, oversold, overbought), momentum (params: lookback), bollinger_breakout (params: period, std). Provide prices, strategy name, params, initial_capital, commission_bps. Returns: total return, Sharpe, Calmar, max drawdown, number of trades, win rate, equity curve, vs buy-and-hold. PAID ONLY — no free tier.",
+  "portfolio_rebalance-plan": "Use when generating the exact trades needed to rebalance a portfolio from current holdings to target weights. Provide current_holdings (asset -> USD value), target_weights (asset -> weight, sum to 1), transaction_cost_bps. Returns: list of trades (buy/sell with amounts), total cost, drift before/after, and post-rebalance weights. PAID ONLY — no free tier.",
+  "options_strategy-optimizer": "Use when agents need to pick the best options strategy given a market outlook. Provide spot price, outlook (bullish/bearish/neutral), vol_view (rising/falling/stable), T, sigma, r. Returns: ranked list of strategies (Long Call, Bull Call Spread, Iron Condor, Long Straddle, etc.) each with legs, max profit/loss, breakevens, net debit/credit, and score. PAID ONLY — no free tier.",
+  "hedging_recommend": "Use when agents need to hedge an existing position. Provide position_type (long_stock/short_stock/long_crypto/long_options), position_value, asset_price, volatility, time_horizon_days, max_hedge_cost_pct. Returns: ranked hedges (protective put, collar, futures short, partial hedge) each with cost, protection level, affordability flag, and max loss after hedge. PAID ONLY — no free tier.",
   "batch": "Use when you need to execute multiple computations efficiently. Bundle up to 100 individual endpoint calls into a single request for ~6x throughput improvement. Provide an array of {endpoint, params} objects. Price equals the sum of individual endpoint prices. Ideal for backtests, parameter sweeps, and portfolio-wide calculations.",
 };
 
@@ -269,6 +273,10 @@ const PRICES: Record<string, string> = {
   "/v1/trade/evaluate": "0.025",
   "/v1/portfolio/health": "0.04",
   "/v1/pairs/signal": "0.025",
+  "/v1/backtest/strategy": "0.10",
+  "/v1/portfolio/rebalance-plan": "0.05",
+  "/v1/options/strategy-optimizer": "0.08",
+  "/v1/hedging/recommend": "0.04",
 };
 
 // Use stderr for logs in stdio mode so stdout stays clean for JSON-RPC
