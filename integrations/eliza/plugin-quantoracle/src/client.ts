@@ -12,9 +12,11 @@ export interface QuantOracleClientConfig {
 }
 
 export function getConfig(runtime: IAgentRuntime): QuantOracleClientConfig {
+  const url = runtime.getSetting("QUANTORACLE_API_URL");
+  const timeout = runtime.getSetting("QUANTORACLE_TIMEOUT_MS");
   return {
-    baseUrl: runtime.getSetting("QUANTORACLE_API_URL") ?? "https://api.quantoracle.dev",
-    timeoutMs: Number(runtime.getSetting("QUANTORACLE_TIMEOUT_MS") ?? 30000),
+    baseUrl: typeof url === "string" ? url : "https://api.quantoracle.dev",
+    timeoutMs: typeof timeout === "string" || typeof timeout === "number" ? Number(timeout) : 30000,
   };
 }
 
