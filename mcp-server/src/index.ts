@@ -19,6 +19,30 @@ const PORT = parseInt(process.env.PORT || "8002");
 const DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT || "1000");
 const WALLET = process.env.WALLET_ADDRESS || "0xC94f5F33ae446a50Ce31157db81253BfddFE2af6";
 
+// ── Per-session MCP client identification ─────────────────────────────
+// Tracks the HTTP User-Agent of each MCP client session so we can forward
+// it to the backend (e.g. "smithery-gateway/1.2", "claude-desktop/0.8").
+const sessionUserAgents = new Map<string, string>();
+
+// ── Composite/batch endpoints that must go through Worker (x402 gated) ─
+const PAID_GATED_PATHS = new Set([
+  "/v1/options/spread-scan",
+  "/v1/indicators/regime-classify",
+  "/v1/risk/full-analysis",
+  "/v1/trade/evaluate",
+  "/v1/portfolio/health",
+  "/v1/pairs/signal",
+  "/v1/backtest/strategy",
+  "/v1/portfolio/rebalance-plan",
+  "/v1/options/strategy-optimizer",
+  "/v1/hedging/recommend",
+  "/v1/batch",
+]);
+
+// Worker URL (x402 enforcement lives here). Use this for composites/batch
+// so all callers — REST or MCP — pay after 1 free trial.
+const WORKER_URL = process.env.WORKER_URL || "https://api.quantoracle.dev";
+
 // ── Rate limiter (in-memory, resets daily) ─────────────────────────────
 const callCounts = new Map<string, { count: number; date: string }>();
 
@@ -329,8 +353,11 @@ async function main() {
   const sessionIPs = new Map<string, string>();
 
   // ── Server factory ───────────────────────────────────────────────────
-  function createServer(clientIP: string, sessionId: string): Server {
-    sessionIPs.set(sessionId, clientIP);
+  // getSessionId is a callback so the tool handler reads the *current*
+  // session UUID (the transport only sets it during first handleRequest).
+  function createServer(clientIP: string, getSessionId: () => string): Server {
+    const initialSid = getSessionId();
+    sessionIPs.set(initialSid, clientIP);
 
     const server = new Server(
       { name: "quantoracle", version: "2.0.0" },
@@ -387,6 +414,10 @@ async function main() {
         };
       }
 
+      // Read current session id dynamically so we find the map entries
+      // set AFTER createServer ran (sessionIdGenerator assigns the real UUID
+      // inside transport.handleRequest, not before).
+      const sessionId = getSessionId();
       // ── Rate limit check ───────────────────────────────────────────
       const ip = sessionIPs.get(sessionId) || clientIP;
       const rl = getRateLimit(ip);
@@ -417,21 +448,56 @@ async function main() {
         };
       }
 
-      // ── Forward to backend ─────────────────────────────────────────
+      // ── Route selection: composites/batch go through Worker (x402 gated)
+      // ── so free-tier and payment rules apply uniformly across REST + MCP.
+      // ── Regular calculators go to backend directly (faster, already free-tier
+      // ── rate-limited in this MCP process by getRateLimit).
+      const isPaidGated = PAID_GATED_PATHS.has(tool.path);
+      const targetBase = isPaidGated ? WORKER_URL : BACKEND_URL;
+      const mcpClientUA = sessionUserAgents.get(sessionId) || "unknown";
+
+      // IP-forwarding headers are for internal proxy chains (MCP server → localhost
+      // backend). Do NOT send them to Cloudflare Worker — Cloudflare rejects
+      // client requests that spoof CF-Connecting-IP ("DNS points to prohibited IP").
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "User-Agent": "quantoracle-mcp/2.3.0",
+        "X-Source": "mcp",
+        "X-MCP-Client": mcpClientUA.slice(0, 200),
+      };
+      if (!isPaidGated) {
+        headers["X-Forwarded-For"] = ip;
+        headers["X-Real-IP"] = ip;
+        headers["CF-Connecting-IP"] = ip;
+      }
+
       try {
-        const resp = await fetch(`${BACKEND_URL}${tool.path}`, {
+        const resp = await fetch(`${targetBase}${tool.path}`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "quantoracle-mcp/2.2.1",
-            "X-Source": "mcp",
-          },
+          headers,
           body: JSON.stringify(args || {}),
         });
 
         const data = await resp.json();
 
         if (!resp.ok) {
+          // If the Worker returned 402 for a paid-gated endpoint, surface it
+          // clearly so the MCP client knows to retry via REST with x402.
+          if (resp.status === 402 && isPaidGated) {
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify({
+                  error: "payment_required",
+                  message: `'${tool.path}' is a paid-only endpoint. Call https://api.quantoracle.dev${tool.path} directly with an x402-capable client (e.g. AgentCash) to pay and retrieve the result.`,
+                  protocol: "x402",
+                  rest_endpoint: `https://api.quantoracle.dev${tool.path}`,
+                  details: data,
+                }, null, 2),
+              }],
+              isError: true,
+            };
+          }
           return {
             content: [{
               type: "text",
@@ -466,7 +532,7 @@ async function main() {
 
   // ── Stdio mode (for mcp-proxy, Glama, Claude Desktop --stdio) ────────
   if (USE_STDIO) {
-    const server = createServer("stdio", "stdio-session");
+    const server = createServer("stdio", () => "stdio-session");
     const transport = new StdioServerTransport();
     await server.connect(transport);
     return; // blocks on stdio, never reaches Express
@@ -492,8 +558,11 @@ async function main() {
 
   app.post("/mcp", async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    const userAgent = (req.headers["user-agent"] as string) || "unknown";
 
     if (sessionId && transports.has(sessionId)) {
+      // Refresh UA mapping on every call (clients may reuse sessions)
+      sessionUserAgents.set(sessionId, userAgent);
       await transports.get(sessionId)!.handleRequest(req, res);
       return;
     }
@@ -516,16 +585,18 @@ async function main() {
       if (capturedSid) {
         transports.delete(capturedSid);
         sessionIPs.delete(capturedSid);
+        sessionUserAgents.delete(capturedSid);
       }
     };
 
-    const server = createServer(clientIP, capturedSid || "pending");
+    const server = createServer(clientIP, () => capturedSid || "pending");
     await server.connect(transport);
     await transport.handleRequest(req, res);
 
     // Update session ID mapping after transport assigns it
     if (capturedSid) {
       sessionIPs.set(capturedSid, clientIP);
+      sessionUserAgents.set(capturedSid, userAgent);
     }
   });
 

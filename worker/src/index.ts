@@ -472,6 +472,7 @@ app.post('/v1/batch', async (c, next) => {
         'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
         'User-Agent': c.req.header('User-Agent') || '',
         'X-Source': c.req.header('X-Source') || '',
+        'X-MCP-Client': c.req.header('X-MCP-Client') || '',
       },
       body: rawBody,
     });
@@ -573,6 +574,7 @@ app.post('/v1/batch', async (c, next) => {
       'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
       'User-Agent': c.req.header('User-Agent') || '',
       'X-Source': c.req.header('X-Source') || '',
+        'X-MCP-Client': c.req.header('X-MCP-Client') || '',
     },
     body: JSON.stringify(body),
   });
@@ -600,6 +602,7 @@ app.all('/v1/*', async (c, next) => {
       'CF-Connecting-IP': ip,
       'User-Agent': c.req.header('User-Agent') || '',
       'X-Source': c.req.header('X-Source') || '',
+        'X-MCP-Client': c.req.header('X-MCP-Client') || '',
     };
     const resp = await fetch(backendUrl, {
       method: c.req.method,
@@ -716,6 +719,7 @@ app.all('/v1/*', async (c, next) => {
           'CF-Connecting-IP': ip,
           'User-Agent': c.req.header('User-Agent') || '',
           'X-Source': c.req.header('X-Source') || '',
+        'X-MCP-Client': c.req.header('X-MCP-Client') || '',
         },
         body: bodyText,
       });
@@ -834,6 +838,7 @@ app.all('/v1/*', async (c, next) => {
     'CF-Connecting-IP': ip,
     'User-Agent': c.req.header('User-Agent') || '',
     'X-Source': c.req.header('X-Source') || '',
+        'X-MCP-Client': c.req.header('X-MCP-Client') || '',
   };
 
   const resp = await fetch(backendUrl, {

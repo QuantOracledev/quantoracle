@@ -26,11 +26,30 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 _request_ip: ContextVar[str] = ContextVar("request_ip", default="unknown")
 _request_source: ContextVar[str] = ContextVar("request_source", default="unknown")
 
-def _classify_source(x_source: str, user_agent: str) -> str:
+def _classify_source(x_source: str, user_agent: str, mcp_client: str = "") -> str:
     """Classify traffic source for metrics segmentation."""
+    # MCP path — use the upstream client's User-Agent (forwarded via X-MCP-Client)
+    # so we can distinguish Smithery vs Claude Desktop vs Cursor vs bots.
+    if x_source and "mcp" in x_source.lower():
+        m = (mcp_client or "").lower()
+        if not m: return "mcp-unknown"
+        if "smithery" in m: return "mcp-smithery"
+        if "claude" in m and "desktop" in m: return "mcp-claude-desktop"
+        if "claude-code" in m or "claude code" in m: return "mcp-claude-code"
+        if "claude" in m: return "mcp-claude"
+        if "cursor" in m: return "mcp-cursor"
+        if "windsurf" in m: return "mcp-windsurf"
+        if "cline" in m: return "mcp-cline"
+        if "glama" in m: return "mcp-glama"
+        if "agentcash" in m: return "mcp-agentcash"
+        if "openai" in m or "chatgpt" in m: return "mcp-openai"
+        if "python" in m: return "mcp-python"
+        if "node" in m or "fetch" in m: return "mcp-node"
+        if "curl" in m: return "mcp-curl"
+        return "mcp-other"
+
     if x_source:
         s = x_source.lower()
-        if "mcp" in s: return "mcp"
         if "cli" in s: return "cli"
         if "langchain" in s: return "langchain"
         if "gpt" in s or "openai" in s: return "openai-gpt"
@@ -59,6 +78,7 @@ async def capture_client_ip(request: Request, call_next):
     source = _classify_source(
         request.headers.get("x-source", ""),
         request.headers.get("user-agent", ""),
+        request.headers.get("x-mcp-client", ""),
     )
     _request_ip.set(ip)
     _request_source.set(source)
