@@ -16,6 +16,7 @@ interface Env {
   CDP_API_KEY_SECRET: string;
   ADMIN_KEY: string;
   OWNER_KEY: string;
+  INTERNAL_SETTLEMENT_KEY?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -196,6 +197,25 @@ app.get('/.well-known/x402', (c) => {
 
   return c.json(discovery, 200);
 });
+
+// ── ai-plugin.json (ChatGPT plugin spec, served for crawlers) ──────────
+
+const AI_PLUGIN_MANIFEST = {
+  schema_version: 'v1',
+  name_for_human: 'QuantOracle',
+  name_for_model: 'quantoracle',
+  description_for_human:
+    '63 deterministic quant calculators + 10 composite workflows (backtest, rebalance, strategy-optimizer, hedging, full analysis, pairs signal, etc.). Options pricing, derivatives, risk metrics, portfolio optimization, statistics, crypto/DeFi, macro/FX, TVM. 1,000 free calls/day. x402 payments on Base or Solana.',
+  description_for_model:
+    'QuantOracle provides 63 pure mathematical calculators + 10 paid composite workflows for quantitative finance. Calculators cover: Black-Scholes option prices and Greeks, implied volatility, exotic derivatives (barrier, Asian, lookback), portfolio risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown), Kelly Criterion, position sizing, technical indicators (RSI, MACD, Bollinger Bands), Monte Carlo simulations, bond pricing and duration, yield curve interpolation, portfolio optimization, statistical tests (regression, cointegration, Hurst exponent, GARCH), crypto calculations (impermanent loss, liquidation price, funding rates, DEX slippage), FX models (interest rate parity, PPP, carry trade), macro tools (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). Composite workflows (paid-only): /v1/backtest/strategy, /v1/portfolio/rebalance-plan, /v1/options/strategy-optimizer, /v1/hedging/recommend, /v1/risk/full-analysis, /v1/trade/evaluate, /v1/portfolio/health, /v1/pairs/signal, /v1/options/spread-scan, /v1/indicators/regime-classify. Batch endpoint bundles up to 100 calculator calls per request. All endpoints are deterministic, require no API key for the first 1,000 calls/day, and return results in under 70ms. Paid tier uses x402 micropayments in USDC on Base (eip155:8453) or Solana (solana:5eykt4...) -- every 402 response advertises both. Send JSON, get JSON.',
+  auth: { type: 'none' },
+  api: { type: 'openapi', url: 'https://api.quantoracle.dev/openapi.json' },
+  logo_url: 'https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/quantoraclelogo.png',
+  contact_email: 'hello@quantoracle.dev',
+  legal_info_url: 'https://quantoracle.dev/terms',
+};
+
+app.get('/.well-known/ai-plugin.json', (c) => c.json(AI_PLUGIN_MANIFEST, 200));
 
 // ── Free endpoints ──────────────────────────────────────────────────────
 
@@ -708,7 +728,50 @@ app.all('/v1/*', async (c, next) => {
 
     const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
     try {
-      return await middleware(c, customNext);
+      const result = await middleware(c, customNext);
+      // If the payment settled successfully (2xx response), record it to backend metrics.
+      const responseStatus = (result as any)?.status ?? c.res?.status;
+      try {
+        if (responseStatus && responseStatus >= 200 && responseStatus < 300 && hasPayment) {
+          const signed = JSON.parse(atob(hasPayment as string));
+          const amt = Number(signed?.accepted?.amount ?? 0) / 1_000_000;
+          const network = signed?.accepted?.network || 'unknown';
+          const payer = signed?.payload?.authorization?.from
+            ?? signed?.payload?.from
+            ?? signed?.payload?.signer
+            ?? null;
+          let txHash: string | null = null;
+          try {
+            const hdr = c.res?.headers;
+            const pr = hdr?.get?.('payment-response') || hdr?.get?.('PAYMENT-RESPONSE');
+            if (pr) {
+              const settle = JSON.parse(atob(pr));
+              txHash = settle?.transaction ?? settle?.transactionHash ?? settle?.tx_hash ?? null;
+            }
+          } catch {}
+          // Fire-and-forget POST to backend /internal/settlement — doesn't block user response
+          c.executionCtx.waitUntil(
+            fetch(`${c.env.BACKEND_URL}/internal/settlement`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Key': (c.env as any).INTERNAL_SETTLEMENT_KEY || '',
+              },
+              body: JSON.stringify({
+                endpoint: path,
+                amount_usdc: amt,
+                network,
+                tx_hash: txHash,
+                payer,
+                source: c.req.header('X-Source') || 'x402',
+              }),
+            }).catch((e) => console.log('[settle] record err: ' + e.message))
+          );
+        }
+      } catch (e: any) {
+        console.log('[settle] post-settle hook error: ' + e.message);
+      }
+      return result;
     } catch (e: any) {
       console.log('[pay] middleware error: ' + e.message + ' cause=' + (e.cause?.message || String(e.cause || '')));
       return c.json({ error: 'payment_verify_failed', detail: e.message, cause: e.cause?.message || String(e.cause || '') }, 402);

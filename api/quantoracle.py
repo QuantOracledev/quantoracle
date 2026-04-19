@@ -110,6 +110,23 @@ def _init_db():
         conn.execute("ALTER TABLE calls ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_calls_source ON calls(source)")
         conn.commit()
+    # Settlements table — x402 on-chain payments that actually cleared
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS settlements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts TEXT NOT NULL,
+            date TEXT NOT NULL,
+            endpoint TEXT NOT NULL,
+            amount_usdc REAL NOT NULL,
+            network TEXT NOT NULL,
+            tx_hash TEXT,
+            payer TEXT,
+            source TEXT NOT NULL DEFAULT 'unknown'
+        );
+        CREATE INDEX IF NOT EXISTS idx_settle_date ON settlements(date);
+        CREATE INDEX IF NOT EXISTS idx_settle_network ON settlements(network);
+        CREATE INDEX IF NOT EXISTS idx_settle_tx ON settlements(tx_hash);
+    """)
     conn.close()
 
 _init_db()
@@ -3283,9 +3300,36 @@ async def metrics():
             "SELECT COUNT(*), COUNT(DISTINCT ip) FROM calls WHERE date=? AND ip NOT IN ('127.0.0.1','unknown','localhost')",
             (today,)
         ).fetchone()
+        # Settlements (real x402 payments that cleared)
+        settle_all = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(amount_usdc),0) FROM settlements"
+        ).fetchone()
+        settle_today = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(amount_usdc),0) FROM settlements WHERE date=?", (today,)
+        ).fetchone()
+        settle_by_network = dict(conn.execute(
+            "SELECT network, COUNT(*) FROM settlements GROUP BY network ORDER BY COUNT(*) DESC"
+        ).fetchall())
+        recent_settlements = [
+            {"ts": r[0], "endpoint": r[1], "amount_usdc": r[2], "network": r[3], "tx_hash": r[4]}
+            for r in conn.execute(
+                "SELECT ts, endpoint, amount_usdc, network, tx_hash FROM settlements ORDER BY id DESC LIMIT 10"
+            ).fetchall()
+        ]
         conn.close()
         return {
-            "calls": total[0], "by_endpoint": by_ep, "revenue": round(total[1], 4),
+            "calls": total[0], "by_endpoint": by_ep,
+            "hypothetical_revenue": round(total[1], 4),
+            "settled_revenue": round(settle_all[1], 4),
+            "settlement_count": settle_all[0],
+            "settlements": {
+                "all_time_count": settle_all[0],
+                "all_time_usdc": round(settle_all[1], 4),
+                "today_count": settle_today[0],
+                "today_usdc": round(settle_today[1], 4),
+                "by_network": settle_by_network,
+                "recent": recent_settlements,
+            },
             "first_call": first[0], "uptime": str(datetime.now(timezone.utc) - _boot),
             "today": {
                 "date": today, "calls": t_total, "unique_ips": t_ips,
@@ -3296,9 +3340,40 @@ async def metrics():
             "all_time": {"unique_ips": all_ips, "days_tracked": all_days},
             "by_source": by_source_all,
             "daily_history": daily,
+            "note": "hypothetical_revenue = calls * price. settled_revenue = actual x402 USDC settlements recorded.",
         }
     except Exception as e:
         return {"error": "metrics_unavailable", "detail": str(e)}
+
+
+# ── Settlement recording endpoint (internal — called by Worker) ──────────
+class SettlementIn(BaseModel):
+    endpoint: str = Field(..., description="Path like /v1/risk/full-analysis")
+    amount_usdc: float = Field(..., gt=0, description="USDC amount settled")
+    network: str = Field(..., description="Network identifier, e.g. eip155:8453 or solana:...")
+    tx_hash: Optional[str] = Field(None, description="On-chain transaction hash")
+    payer: Optional[str] = Field(None, description="Payer address")
+    source: Optional[str] = Field("x402", description="Traffic source tag")
+
+@app.post("/internal/settlement", include_in_schema=False)
+async def record_settlement(req: SettlementIn, x_internal_key: Optional[str] = Header(None)):
+    """Worker calls this after a successful x402 settlement so metrics reflect real revenue."""
+    # Gate: only accept from Worker with the internal shared secret
+    expected = os.environ.get("INTERNAL_SETTLEMENT_KEY")
+    if expected and x_internal_key != expected:
+        raise HTTPException(401, "Invalid internal key")
+    now = datetime.now(timezone.utc)
+    try:
+        conn = _get_db()
+        conn.execute(
+            "INSERT INTO settlements (ts, date, endpoint, amount_usdc, network, tx_hash, payer, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (now.isoformat(), now.strftime("%Y-%m-%d"), req.endpoint, req.amount_usdc, req.network, req.tx_hash, req.payer, req.source or "x402"),
+        )
+        conn.commit()
+        conn.close()
+        return {"ok": True, "ts": now.isoformat()}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 @app.get("/tools")
 async def tools():
