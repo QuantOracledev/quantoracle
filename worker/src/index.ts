@@ -153,37 +153,142 @@ async function getResourceServer(env: Env) {
   return rs;
 }
 
-app.get('/.well-known/x402', (c) => {
+// ── CDP Bazaar discovery: outputSchema generation ──────────────────────
+// Coinbase's x402 Bazaar (api.cdp.coinbase.com/platform/v2/x402/discovery/resources)
+// indexes resources whose 402 responses advertise an `outputSchema` with
+// `discoverable: true`. Bazaar is the largest x402 directory (~15k resources)
+// so inclusion is high-value.
+//
+// We derive the schema for each endpoint from the backend's OpenAPI spec,
+// cached at the Worker-instance level so it's a single fetch on cold start.
+let _cachedOpenApi: any = null;
+const _cachedSchemas = new Map<string, any>();
+const FETCHING_OPENAPI: { promise: Promise<any> | null } = { promise: null };
+
+async function loadOpenApi(env: Env): Promise<any> {
+  if (_cachedOpenApi) return _cachedOpenApi;
+  if (FETCHING_OPENAPI.promise) return FETCHING_OPENAPI.promise;
+  FETCHING_OPENAPI.promise = (async () => {
+    try {
+      const r = await fetch(`${env.BACKEND_URL}/openapi.json`);
+      if (!r.ok) return null;
+      _cachedOpenApi = await r.json();
+      return _cachedOpenApi;
+    } catch { return null; }
+    finally { FETCHING_OPENAPI.promise = null; }
+  })();
+  return FETCHING_OPENAPI.promise;
+}
+
+function resolveRef(spec: any, ref: string): any {
+  if (!ref || !ref.startsWith('#/')) return null;
+  const parts = ref.slice(2).split('/');
+  let cur = spec;
+  for (const p of parts) {
+    if (!cur) return null;
+    cur = cur[p];
+  }
+  return cur;
+}
+
+function fieldTypeFromSchema(s: any, spec: any): string {
+  if (!s) return 'string';
+  if (s.$ref) {
+    const r = resolveRef(spec, s.$ref);
+    return r?.type || 'object';
+  }
+  if (s.type) {
+    if (s.type === 'array') return 'array';
+    return s.type;
+  }
+  if (s.anyOf || s.oneOf) {
+    const opts = (s.anyOf || s.oneOf).filter((x: any) => x.type && x.type !== 'null');
+    if (opts.length) return opts[0].type;
+  }
+  return 'string';
+}
+
+async function getOutputSchema(path: string, env: Env): Promise<any | null> {
+  if (_cachedSchemas.has(path)) return _cachedSchemas.get(path);
+  const spec = await loadOpenApi(env);
+  if (!spec) return null;
+
+  const ep = spec.paths?.[path]?.post;
+  if (!ep) return null;
+
+  const reqBody = ep.requestBody?.content?.['application/json']?.schema;
+  let bodySchema: any = reqBody;
+  if (reqBody?.$ref) bodySchema = resolveRef(spec, reqBody.$ref) || {};
+
+  const props = bodySchema?.properties || {};
+  const required = new Set(bodySchema?.required || []);
+  const bodyFields: Record<string, any> = {};
+  for (const [name, def] of Object.entries(props)) {
+    const d: any = def;
+    const desc = d.description || d.title || '';
+    bodyFields[name] = {
+      type: fieldTypeFromSchema(d, spec),
+      description: typeof desc === 'string' ? desc.slice(0, 200) : '',
+      required: required.has(name),
+    };
+  }
+
+  const summary: string = ep.summary || ep.description || `QuantOracle ${path.replace('/v1/', '')}`;
+  const schema = {
+    input: {
+      discoverable: true,
+      method: 'POST',
+      type: 'http',
+      bodyFields,
+    },
+    output: {
+      response: {
+        type: 'object',
+        description: typeof summary === 'string' ? summary.slice(0, 200) : '',
+      },
+    },
+  };
+  _cachedSchemas.set(path, schema);
+  return schema;
+}
+
+app.get('/.well-known/x402', async (c) => {
   const wallet = c.env.WALLET_ADDRESS;
   const solanaWallet = c.env.SOLANA_WALLET_ADDRESS;
-  const resources = Object.entries(PRICES).map(([path, price]) => {
+  // Preload OpenAPI once so parallel schema lookups are cheap
+  await loadOpenApi(c.env);
+  const resources = await Promise.all(Object.entries(PRICES).map(async ([path, price]) => {
     const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
+    const outputSchema = await getOutputSchema(path, c.env);
+    const baseAccept: any = {
+      scheme: 'exact',
+      network: 'eip155:8453',
+      amount: atomicUsdc,
+      asset: USDC_BASE,
+      payTo: wallet,
+      maxTimeoutSeconds: 30,
+      extra: { name: 'USD Coin', version: '2' },
+    };
+    const solAccept: any = solanaWallet ? {
+      scheme: 'exact',
+      network: SOLANA_MAINNET,
+      amount: atomicUsdc,
+      asset: USDC_SOLANA,
+      payTo: solanaWallet,
+      maxTimeoutSeconds: 30,
+    } : null;
+    if (outputSchema) {
+      baseAccept.outputSchema = outputSchema;
+      if (solAccept) solAccept.outputSchema = outputSchema;
+    }
     return {
       url: `https://api.quantoracle.dev${path}`,
       method: 'POST',
       description: `QuantOracle: ${path.replace('/v1/', '')}`,
       mimeType: 'application/json',
-      accepts: [
-        {
-          scheme: 'exact',
-          network: 'eip155:8453',
-          amount: atomicUsdc,
-          asset: USDC_BASE,
-          payTo: wallet,
-          maxTimeoutSeconds: 30,
-          extra: { name: 'USD Coin', version: '2' },
-        },
-        ...(solanaWallet ? [{
-          scheme: 'exact',
-          network: SOLANA_MAINNET,
-          amount: atomicUsdc,
-          asset: USDC_SOLANA,
-          payTo: solanaWallet,
-          maxTimeoutSeconds: 30,
-        }] : []),
-      ],
+      accepts: [baseAccept, ...(solAccept ? [solAccept] : [])],
     };
-  });
+  }));
 
   const discovery = {
     x402Version: 2,
@@ -505,6 +610,7 @@ app.post('/v1/batch', async (c, next) => {
 
   if (hasPayment) {
     const resourceServer = await getResourceServer(c.env);
+    const batchOutputSchema = await getOutputSchema('/v1/batch', c.env);
 
     const batchAccepts: any[] = [
       {
@@ -512,6 +618,7 @@ app.post('/v1/batch', async (c, next) => {
         network: 'eip155:8453' as const,
         payTo: wallet,
         price: `$${totalPrice.toFixed(4)}`,
+        ...(batchOutputSchema ? { outputSchema: batchOutputSchema } : {}),
       },
     ];
     if (c.env.SOLANA_WALLET_ADDRESS) {
@@ -520,6 +627,7 @@ app.post('/v1/batch', async (c, next) => {
         network: SOLANA_MAINNET,
         payTo: c.env.SOLANA_WALLET_ADDRESS,
         price: `$${totalPrice.toFixed(4)}`,
+        ...(batchOutputSchema ? { outputSchema: batchOutputSchema } : {}),
       });
     }
 
@@ -541,6 +649,30 @@ app.post('/v1/batch', async (c, next) => {
 
   if (batchCount >= 1) {
     // Return 402 with dynamic price
+    const batchOutputSchema = await getOutputSchema('/v1/batch', c.env);
+    const baseAcc: any = {
+      scheme: 'exact',
+      network: 'eip155:8453',
+      amount: String(Math.round(totalPrice * 1_000_000)),
+      asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      payTo: wallet,
+      maxTimeoutSeconds: 30,
+      extra: { name: 'USD Coin', version: '2' },
+    };
+    if (batchOutputSchema) baseAcc.outputSchema = batchOutputSchema;
+    const accepts: any[] = [baseAcc];
+    if (c.env.SOLANA_WALLET_ADDRESS) {
+      const sol: any = {
+        scheme: 'exact',
+        network: SOLANA_MAINNET,
+        amount: String(Math.round(totalPrice * 1_000_000)),
+        asset: USDC_SOLANA,
+        payTo: c.env.SOLANA_WALLET_ADDRESS,
+        maxTimeoutSeconds: 30,
+      };
+      if (batchOutputSchema) sol.outputSchema = batchOutputSchema;
+      accepts.push(sol);
+    }
     const paymentRequired = {
       x402Version: 2,
       error: 'Payment required',
@@ -549,15 +681,7 @@ app.post('/v1/batch', async (c, next) => {
         description: 'QuantOracle: batch computation',
         mimeType: 'application/json',
       },
-      accepts: [{
-        scheme: 'exact',
-        network: 'eip155:8453',
-        amount: String(Math.round(totalPrice * 1_000_000)),
-        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        payTo: wallet,
-        maxTimeoutSeconds: 30,
-          extra: { name: "USD Coin", version: "2" },
-        }],
+      accepts,
     };
     return c.json(paymentRequired, 402, {
       'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
@@ -620,7 +744,8 @@ app.all('/v1/*', async (c, next) => {
     const isEmpty = !bodyText || bodyText.trim() === '' || bodyText.trim() === '{}';
     if (isEmpty) {
       const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
-      const accepts: any[] = [{
+      const outputSchema = await getOutputSchema(path, c.env);
+      const baseAcc: any = {
         scheme: 'exact',
         network: 'eip155:8453',
         amount: atomicUsdc,
@@ -628,16 +753,20 @@ app.all('/v1/*', async (c, next) => {
         payTo: wallet,
         maxTimeoutSeconds: 30,
         extra: { name: 'USD Coin', version: '2' },
-      }];
+      };
+      if (outputSchema) baseAcc.outputSchema = outputSchema;
+      const accepts: any[] = [baseAcc];
       if (c.env.SOLANA_WALLET_ADDRESS) {
-        accepts.push({
+        const sol: any = {
           scheme: 'exact',
           network: SOLANA_MAINNET,
           amount: atomicUsdc,
           asset: USDC_SOLANA,
           payTo: c.env.SOLANA_WALLET_ADDRESS,
           maxTimeoutSeconds: 30,
-        });
+        };
+        if (outputSchema) sol.outputSchema = outputSchema;
+        accepts.push(sol);
       }
       const paymentRequired = {
         x402Version: 2,
@@ -680,6 +809,8 @@ app.all('/v1/*', async (c, next) => {
 
   if (shouldPaymentGate) {
     const resourceServer = await getResourceServer(c.env);
+    const outputSchema = await getOutputSchema(path, c.env);
+    console.log('[bazaar] path=' + path + ' outputSchema=' + (outputSchema ? Object.keys(outputSchema.input.bodyFields).length + ' fields' : 'null'));
 
     const accepts: any[] = [
       {
@@ -687,6 +818,7 @@ app.all('/v1/*', async (c, next) => {
         network: 'eip155:8453' as const,
         payTo: wallet,
         price,
+        ...(outputSchema ? { outputSchema } : {}),
       },
     ];
     if (c.env.SOLANA_WALLET_ADDRESS) {
@@ -695,6 +827,7 @@ app.all('/v1/*', async (c, next) => {
         network: SOLANA_MAINNET,
         payTo: c.env.SOLANA_WALLET_ADDRESS,
         price,
+        ...(outputSchema ? { outputSchema } : {}),
       });
     }
 
@@ -732,9 +865,41 @@ app.all('/v1/*', async (c, next) => {
 
     const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
     try {
-      const result = await middleware(c, customNext);
-      // If the payment settled successfully (2xx response), record it to backend metrics.
+      let result = await middleware(c, customNext);
       const responseStatus = (result as any)?.status ?? c.res?.status;
+
+      // If middleware returned a 402, re-inject outputSchema into the
+      // PAYMENT-REQUIRED header + body. @x402/hono strips unknown fields
+      // from routes config, so we patch the response here so the CDP Bazaar
+      // can catalog the endpoint.
+      if (responseStatus === 402 && outputSchema) {
+        try {
+          const origResp: any = (result as any)?.headers ? result : c.res;
+          const h = origResp?.headers;
+          const prHdr = h?.get?.('payment-required') || h?.get?.('PAYMENT-REQUIRED');
+          console.log('[outputSchema] 402 patch: hasHeader=' + !!prHdr);
+          if (prHdr) {
+            const decoded = JSON.parse(atob(prHdr));
+            if (Array.isArray(decoded?.accepts)) {
+              decoded.accepts = decoded.accepts.map((a: any) => ({ ...a, outputSchema }));
+              const newHdr = btoa(JSON.stringify(decoded));
+              const newHeaders = new Headers();
+              // Copy all original headers
+              h.forEach((v: string, k: string) => newHeaders.set(k, v));
+              newHeaders.set('payment-required', newHdr);
+              newHeaders.set('PAYMENT-REQUIRED', newHdr);
+              // Early-return the patched response directly — avoid middleware result confusion
+              return new Response(JSON.stringify(decoded), {
+                status: 402,
+                headers: newHeaders,
+              });
+            }
+          }
+        } catch (e: any) {
+          console.log('[outputSchema] patch err: ' + e.message);
+        }
+      }
+
       try {
         if (responseStatus && responseStatus >= 200 && responseStatus < 300 && hasPayment) {
           const signed = JSON.parse(atob(hasPayment as string));
@@ -790,7 +955,8 @@ app.all('/v1/*', async (c, next) => {
     if (count >= limit) {
       // Free tier exhausted — return x402 payment required
       const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
-      const accepts: any[] = [{
+      const outputSchema = await getOutputSchema(path, c.env);
+      const baseAcc: any = {
         scheme: 'exact',
         network: 'eip155:8453',
         amount: atomicUsdc,
@@ -798,16 +964,20 @@ app.all('/v1/*', async (c, next) => {
         payTo: wallet,
         maxTimeoutSeconds: 30,
         extra: { name: 'USD Coin', version: '2' },
-      }];
+      };
+      if (outputSchema) baseAcc.outputSchema = outputSchema;
+      const accepts: any[] = [baseAcc];
       if (c.env.SOLANA_WALLET_ADDRESS) {
-        accepts.push({
+        const sol: any = {
           scheme: 'exact',
           network: SOLANA_MAINNET,
           amount: atomicUsdc,
           asset: USDC_SOLANA,
           payTo: c.env.SOLANA_WALLET_ADDRESS,
           maxTimeoutSeconds: 30,
-        });
+        };
+        if (outputSchema) sol.outputSchema = outputSchema;
+        accepts.push(sol);
       }
       const paymentRequired = {
         x402Version: 2,
