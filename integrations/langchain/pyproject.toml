@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "langchain-quantoracle"
-version = "0.1.0"
-description = "63 deterministic quant computation tools for LangChain agents"
+version = "0.2.0"
+description = "63 deterministic quant calculators + 10 composite workflows for LangChain agents. x402 USDC payments on Base or Solana."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
