@@ -230,6 +230,48 @@ function deepResolveSchema(spec: any, obj: any, visited: Set<string> = new Set()
   return out;
 }
 
+// Synthesize a minimum valid JSON value that satisfies a JSON Schema. The CDP
+// Bazaar facilitator validates `info` against `schema` before cataloging
+// (spec: coinbase/x402 specs/extensions/bazaar.md line 319). If info.input.body
+// is `{}` but the schema has `required` fields, validation fails silently and
+// the resource is NOT cataloged — this was our exact bug.
+function synthesizeFromSchema(s: any): any {
+  if (!s || typeof s !== 'object') return null;
+  if (s.default !== undefined) return s.default;
+  if (Array.isArray(s.enum) && s.enum.length > 0) return s.enum[0];
+  if (s.const !== undefined) return s.const;
+  if (s.anyOf || s.oneOf) {
+    const opts = (s.anyOf || s.oneOf).filter((x: any) => x?.type !== 'null');
+    return opts.length ? synthesizeFromSchema(opts[0]) : null;
+  }
+  const t = Array.isArray(s.type) ? s.type.find((x: string) => x !== 'null') : s.type;
+  switch (t) {
+    case 'string': return s.format === 'date-time' ? '2025-01-01T00:00:00Z' : 'x';
+    case 'number':
+    case 'integer': {
+      const min = s.exclusiveMinimum !== undefined ? s.exclusiveMinimum + 1 : (s.minimum ?? 1);
+      return t === 'integer' ? Math.max(1, Math.ceil(min)) : Math.max(0.01, min);
+    }
+    case 'boolean': return false;
+    case 'array': {
+      const minItems = s.minItems ?? 1;
+      const out: any[] = [];
+      for (let i = 0; i < minItems; i++) out.push(synthesizeFromSchema(s.items) ?? 0);
+      return out;
+    }
+    case 'object':
+    default: {
+      const out: any = {};
+      const props = s.properties || {};
+      const required = s.required || [];
+      for (const name of required) {
+        if (props[name]) out[name] = synthesizeFromSchema(props[name]);
+      }
+      return out;
+    }
+  }
+}
+
 // Build a Bazaar DiscoveryExtension for a given endpoint by converting our
 // OpenAPI schema into the JSON Schema format the extension expects. Cached per
 // path because building the resolved schemas isn't free.
@@ -242,9 +284,13 @@ async function buildBazaarExt(path: string, env: Env): Promise<Record<string, an
   if (!ep) return null;
 
   let inputSchema: any = null;
+  let inputExample: any = null;
   const reqBody = ep.requestBody?.content?.['application/json']?.schema;
   if (reqBody) {
     inputSchema = deepResolveSchema(spec, reqBody);
+    // Generate a minimal valid example so info.input.body validates against
+    // the schema. Required for Bazaar cataloging.
+    inputExample = synthesizeFromSchema(inputSchema);
   }
 
   let outputSchemaDef: any = null;
@@ -260,6 +306,7 @@ async function buildBazaarExt(path: string, env: Env): Promise<Record<string, an
       bodyType: 'json',
       method: 'POST',
       ...(inputSchema ? { inputSchema } : {}),
+      ...(inputExample ? { input: inputExample } : {}),
       ...(outputSchemaDef ? { output: { schema: outputSchemaDef } } : {}),
     });
     _cachedBazaarExt.set(path, ext);
