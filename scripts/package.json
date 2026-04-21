@@ -1,0 +1,14 @@
+{
+  "name": "quantoracle-seed",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node seed.mjs"
+  },
+  "dependencies": {
+    "@x402/fetch": "^2.10.0",
+    "@x402/evm": "^2.9.0",
+    "viem": "^2.47.0"
+  }
+}

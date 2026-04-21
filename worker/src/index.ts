@@ -5,6 +5,7 @@ import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { ExactSvmScheme } from '@x402/svm/exact/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 import { createFacilitatorConfig } from '@coinbase/x402';
+import { declareDiscoveryExtension, bazaarResourceServerExtension } from '@x402/extensions/bazaar';
 
 interface Env {
   BACKEND_URL: string;
@@ -147,7 +148,8 @@ async function getResourceServer(env: Env) {
   const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
   const rs = new x402ResourceServer(facilitatorClient)
     .register('eip155:8453', new ExactEvmScheme())
-    .register(SOLANA_MAINNET, new ExactSvmScheme());
+    .register(SOLANA_MAINNET, new ExactSvmScheme())
+    .registerExtension(bazaarResourceServerExtension);
   await rs.initialize();
   _cachedResourceServer = rs;
   return rs;
@@ -206,6 +208,76 @@ function fieldTypeFromSchema(s: any, spec: any): string {
     if (opts.length) return opts[0].type;
   }
   return 'string';
+}
+
+// Fully resolve $refs in an OpenAPI schema object so we can embed it as a
+// standalone JSON Schema inside the bazaar extension. The CDP Bazaar has no
+// access to our `#/components/schemas/...` refs, so refs must be inlined.
+function deepResolveSchema(spec: any, obj: any, visited: Set<string> = new Set()): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(x => deepResolveSchema(spec, x, visited));
+  if (obj.$ref && typeof obj.$ref === 'string') {
+    if (visited.has(obj.$ref)) return {};
+    const next = resolveRef(spec, obj.$ref);
+    const v = new Set(visited);
+    v.add(obj.$ref);
+    return deepResolveSchema(spec, next, v);
+  }
+  const out: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = deepResolveSchema(spec, v, visited);
+  }
+  return out;
+}
+
+// Build a Bazaar DiscoveryExtension for a given endpoint by converting our
+// OpenAPI schema into the JSON Schema format the extension expects. Cached per
+// path because building the resolved schemas isn't free.
+const _cachedBazaarExt = new Map<string, any>();
+async function buildBazaarExt(path: string, env: Env): Promise<Record<string, any> | null> {
+  if (_cachedBazaarExt.has(path)) return _cachedBazaarExt.get(path);
+  const spec = await loadOpenApi(env);
+  if (!spec) return null;
+  const ep = spec.paths?.[path]?.post;
+  if (!ep) return null;
+
+  let inputSchema: any = null;
+  const reqBody = ep.requestBody?.content?.['application/json']?.schema;
+  if (reqBody) {
+    inputSchema = deepResolveSchema(spec, reqBody);
+  }
+
+  let outputSchemaDef: any = null;
+  const respContent =
+    ep.responses?.['200']?.content?.['application/json']?.schema ||
+    ep.responses?.['201']?.content?.['application/json']?.schema;
+  if (respContent) {
+    outputSchemaDef = deepResolveSchema(spec, respContent);
+  }
+
+  try {
+    const ext = declareDiscoveryExtension({
+      bodyType: 'json',
+      method: 'POST',
+      ...(inputSchema ? { inputSchema } : {}),
+      ...(outputSchemaDef ? { output: { schema: outputSchemaDef } } : {}),
+    });
+    _cachedBazaarExt.set(path, ext);
+    return ext;
+  } catch (e: any) {
+    console.log('[bazaar] buildBazaarExt err path=' + path + ' msg=' + e.message);
+    return null;
+  }
+}
+
+// Attach the CDP Bazaar extension to a manual 402 payment-required object.
+// Mirrors what the x402 middleware does automatically for middleware-gated
+// routes, so probes/manual 402s advertise the same extensions.bazaar as
+// middleware-generated 402s — single source of truth on what Bazaar sees.
+async function attachBazaarExt(paymentRequired: any, path: string, env: Env): Promise<any> {
+  const ext = await buildBazaarExt(path, env);
+  if (ext) paymentRequired.extensions = ext;
+  return paymentRequired;
 }
 
 async function getOutputSchema(path: string, env: Env): Promise<any | null> {
@@ -562,6 +634,7 @@ app.post('/v1/batch', async (c, next) => {
         return a;
       })(),
     };
+    await attachBazaarExt(paymentRequired, '/v1/batch', c.env);
     return c.json(paymentRequired, 402, {
       'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
     });
@@ -607,10 +680,16 @@ app.post('/v1/batch', async (c, next) => {
   }
 
   const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment');
+  const forcePayment = c.req.header('X-Force-Pay') === '1' || c.req.header('X-Force-Pay') === 'true';
 
-  if (hasPayment) {
+  // Free tier: 1 free batch ever per IP (trial) — consumed before the middleware branch below
+  const batchKey = `batch-trial:${ip}`;
+  const batchCount = parseInt((await c.env.RATE_LIMITS.get(batchKey)) || '0');
+
+  // Route through middleware if: payment already attached, free trial exhausted, or explicit force-pay
+  if (hasPayment || batchCount >= 1 || forcePayment) {
     const resourceServer = await getResourceServer(c.env);
-    const batchOutputSchema = await getOutputSchema('/v1/batch', c.env);
+    const batchBazaarExt = await buildBazaarExt('/v1/batch', c.env);
 
     const batchAccepts: any[] = [
       {
@@ -618,7 +697,6 @@ app.post('/v1/batch', async (c, next) => {
         network: 'eip155:8453' as const,
         payTo: wallet,
         price: `$${totalPrice.toFixed(4)}`,
-        ...(batchOutputSchema ? { outputSchema: batchOutputSchema } : {}),
       },
     ];
     if (c.env.SOLANA_WALLET_ADDRESS) {
@@ -627,65 +705,40 @@ app.post('/v1/batch', async (c, next) => {
         network: SOLANA_MAINNET,
         payTo: c.env.SOLANA_WALLET_ADDRESS,
         price: `$${totalPrice.toFixed(4)}`,
-        ...(batchOutputSchema ? { outputSchema: batchOutputSchema } : {}),
       });
     }
 
-    const routes = {
+    const routes: any = {
       'POST /v1/batch': {
         accepts: batchAccepts,
         description: 'QuantOracle: batch computation',
         mimeType: 'application/json',
+        ...(batchBazaarExt ? { extensions: batchBazaarExt } : {}),
       },
+    };
+
+    // Custom next: after payment verification, proxy to backend and set c.res
+    const customNext = async () => {
+      const resp = await fetch(`${c.env.BACKEND_URL}/v1/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-For': ip, 'X-Real-IP': ip, 'CF-Connecting-IP': ip,
+          'User-Agent': c.req.header('User-Agent') || '',
+          'X-Source': c.req.header('X-Source') || '',
+          'X-MCP-Client': c.req.header('X-MCP-Client') || '',
+        },
+        body: rawBody,
+      });
+      const data = await resp.json();
+      c.res = new Response(JSON.stringify(data), {
+        status: resp.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     };
 
     const middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
-    return middleware(c, next);
-  }
-
-  // Free tier: 1 free batch ever per IP (trial)
-  const batchKey = `batch-trial:${ip}`;
-  const batchCount = parseInt((await c.env.RATE_LIMITS.get(batchKey)) || '0');
-
-  if (batchCount >= 1) {
-    // Return 402 with dynamic price
-    const batchOutputSchema = await getOutputSchema('/v1/batch', c.env);
-    const baseAcc: any = {
-      scheme: 'exact',
-      network: 'eip155:8453',
-      amount: String(Math.round(totalPrice * 1_000_000)),
-      asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-      payTo: wallet,
-      maxTimeoutSeconds: 30,
-      extra: { name: 'USD Coin', version: '2' },
-    };
-    if (batchOutputSchema) baseAcc.outputSchema = batchOutputSchema;
-    const accepts: any[] = [baseAcc];
-    if (c.env.SOLANA_WALLET_ADDRESS) {
-      const sol: any = {
-        scheme: 'exact',
-        network: SOLANA_MAINNET,
-        amount: String(Math.round(totalPrice * 1_000_000)),
-        asset: USDC_SOLANA,
-        payTo: c.env.SOLANA_WALLET_ADDRESS,
-        maxTimeoutSeconds: 30,
-      };
-      if (batchOutputSchema) sol.outputSchema = batchOutputSchema;
-      accepts.push(sol);
-    }
-    const paymentRequired = {
-      x402Version: 2,
-      error: 'Payment required',
-      resource: {
-        url: 'https://api.quantoracle.dev/v1/batch',
-        description: 'QuantOracle: batch computation',
-        mimeType: 'application/json',
-      },
-      accepts,
-    };
-    return c.json(paymentRequired, 402, {
-      'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
-    });
+    return middleware(c, customNext);
   }
 
   // Free batch trial — mark as used (no expiry)
@@ -778,6 +831,7 @@ app.all('/v1/*', async (c, next) => {
         },
         accepts,
       };
+      await attachBazaarExt(paymentRequired, path, c.env);
       return c.json(paymentRequired, 402, {
         'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
       });
@@ -803,14 +857,19 @@ app.all('/v1/*', async (c, next) => {
   // Check if this request has an x402 payment signature
   const hasPayment = c.req.header('PAYMENT-SIGNATURE') || c.req.header('X-Payment') || c.req.header('x-payment');
 
-  // For paid endpoints (PAID_ONLY always, or free-tier exhausted) — run through payment middleware
-  // so the 402 response format and verification use the same payment requirements
-  const shouldPaymentGate = (PAID_ONLY.has(path) && price) || (hasPayment && price);
+  // X-Force-Pay: opt-in header to bypass free tier. Used for CDP Bazaar
+  // seeding — a caller that wants payment to go through (so the facilitator
+  // sees the bazaar extension and catalogs the resource) sends this header.
+  const forcePayment = c.req.header('X-Force-Pay') === '1' || c.req.header('X-Force-Pay') === 'true';
+
+  // For paid endpoints (PAID_ONLY always, or free-tier exhausted, or explicit opt-in) — run through
+  // payment middleware so the 402 response format and verification use the same payment requirements
+  const shouldPaymentGate = (PAID_ONLY.has(path) && price) || (hasPayment && price) || (forcePayment && price);
 
   if (shouldPaymentGate) {
     const resourceServer = await getResourceServer(c.env);
-    const outputSchema = await getOutputSchema(path, c.env);
-    console.log('[bazaar] path=' + path + ' outputSchema=' + (outputSchema ? Object.keys(outputSchema.input.bodyFields).length + ' fields' : 'null'));
+    const bazaarExt = await buildBazaarExt(path, c.env);
+    console.log('[bazaar] path=' + path + ' bazaarExt=' + (bazaarExt ? 'declared' : 'null'));
 
     const accepts: any[] = [
       {
@@ -818,7 +877,6 @@ app.all('/v1/*', async (c, next) => {
         network: 'eip155:8453' as const,
         payTo: wallet,
         price,
-        ...(outputSchema ? { outputSchema } : {}),
       },
     ];
     if (c.env.SOLANA_WALLET_ADDRESS) {
@@ -827,15 +885,15 @@ app.all('/v1/*', async (c, next) => {
         network: SOLANA_MAINNET,
         payTo: c.env.SOLANA_WALLET_ADDRESS,
         price,
-        ...(outputSchema ? { outputSchema } : {}),
       });
     }
 
-    const routes = {
+    const routes: any = {
       [`POST ${path}`]: {
         accepts,
         description: `QuantOracle: ${path}`,
         mimeType: 'application/json',
+        ...(bazaarExt ? { extensions: bazaarExt } : {}),
       },
     };
 
@@ -867,38 +925,6 @@ app.all('/v1/*', async (c, next) => {
     try {
       let result = await middleware(c, customNext);
       const responseStatus = (result as any)?.status ?? c.res?.status;
-
-      // If middleware returned a 402, re-inject outputSchema into the
-      // PAYMENT-REQUIRED header + body. @x402/hono strips unknown fields
-      // from routes config, so we patch the response here so the CDP Bazaar
-      // can catalog the endpoint.
-      if (responseStatus === 402 && outputSchema) {
-        try {
-          const origResp: any = (result as any)?.headers ? result : c.res;
-          const h = origResp?.headers;
-          const prHdr = h?.get?.('payment-required') || h?.get?.('PAYMENT-REQUIRED');
-          console.log('[outputSchema] 402 patch: hasHeader=' + !!prHdr);
-          if (prHdr) {
-            const decoded = JSON.parse(atob(prHdr));
-            if (Array.isArray(decoded?.accepts)) {
-              decoded.accepts = decoded.accepts.map((a: any) => ({ ...a, outputSchema }));
-              const newHdr = btoa(JSON.stringify(decoded));
-              const newHeaders = new Headers();
-              // Copy all original headers
-              h.forEach((v: string, k: string) => newHeaders.set(k, v));
-              newHeaders.set('payment-required', newHdr);
-              newHeaders.set('PAYMENT-REQUIRED', newHdr);
-              // Early-return the patched response directly — avoid middleware result confusion
-              return new Response(JSON.stringify(decoded), {
-                status: 402,
-                headers: newHeaders,
-              });
-            }
-          }
-        } catch (e: any) {
-          console.log('[outputSchema] patch err: ' + e.message);
-        }
-      }
 
       try {
         if (responseStatus && responseStatus >= 200 && responseStatus < 300 && hasPayment) {
@@ -989,6 +1015,7 @@ app.all('/v1/*', async (c, next) => {
         },
         accepts,
       };
+      await attachBazaarExt(paymentRequired, path, c.env);
 
       return c.json(paymentRequired, 402, {
         'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
