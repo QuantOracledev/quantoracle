@@ -54,6 +54,12 @@ QuantOracle is designed to be called repeatedly. An agent running a backtest mig
 
 ---
 
+## 📓 LangChain cookbook
+
+Build a 25-line risk-analyst LangChain agent with reproducible quant math:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantOracledev/quantoracle/blob/main/integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb) [`integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb`](./integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb) — runs in 30 sec, $0.001 in OpenAI tokens, free QuantOracle calls.
+
 ## Add QuantOracle to Your Agent
 
 Drop this into your agent's system prompt:
