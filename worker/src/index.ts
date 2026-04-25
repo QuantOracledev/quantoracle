@@ -441,6 +441,106 @@ const AI_PLUGIN_MANIFEST = {
 
 app.get('/.well-known/ai-plugin.json', (c) => c.json(AI_PLUGIN_MANIFEST, 200));
 
+// ── A2A / AGNTCY agent-card.json (agent-to-agent discovery) ─────────────
+// Served at both `/.well-known/agent.json` and `/.well-known/agent-card.json`.
+// Schema follows the Linux Foundation AGNTCY / Google A2A v0.2 AgentCard so
+// agent-discovery crawlers (LangGraph, AGNTCY directory, Microsoft AutoGen,
+// IBM watsonx Orchestrate) can ingest QuantOracle as a callable agent.
+
+function categorize(path: string): string {
+  const seg = path.split('/')[2] || 'misc';
+  return seg.replace(/-/g, '_');
+}
+
+function isComposite(path: string): boolean {
+  return [
+    '/v1/options/spread-scan',
+    '/v1/indicators/regime-classify',
+    '/v1/risk/full-analysis',
+    '/v1/trade/evaluate',
+    '/v1/portfolio/health',
+    '/v1/pairs/signal',
+    '/v1/backtest/strategy',
+    '/v1/portfolio/rebalance-plan',
+    '/v1/options/strategy-optimizer',
+    '/v1/hedging/recommend',
+  ].includes(path);
+}
+
+const COMPOSITE_EXAMPLES: Record<string, string> = {
+  '/v1/risk/full-analysis': 'Compute full risk profile (Sharpe, Sortino, VaR, CVaR, drawdown, Kelly) for a return series in one call.',
+  '/v1/portfolio/rebalance-plan': 'Generate a rebalance plan with trade-cost aware suggestions for a multi-asset portfolio.',
+  '/v1/options/strategy-optimizer': 'Find the highest-expected-value option strategy across spreads, straddles, condors given a market view.',
+  '/v1/hedging/recommend': 'Rank hedge structures (collar, protective put, inverse, partial put) by cost and downside protection.',
+  '/v1/backtest/strategy': 'Run a vectorized backtest with entry/exit rules and return Sharpe, max drawdown, equity curve.',
+  '/v1/trade/evaluate': 'Evaluate a single trade idea — risk, sizing, expected return, breakeven probability.',
+  '/v1/portfolio/health': 'Score a portfolio on diversification, concentration risk, and rebalancing urgency.',
+  '/v1/pairs/signal': 'Detect cointegrated pairs and generate mean-reversion entry/exit signals.',
+  '/v1/options/spread-scan': 'Scan an option chain for highest-EV vertical spreads given vol assumptions.',
+  '/v1/indicators/regime-classify': 'Classify the current market regime (trending up, trending down, mean-reverting, high-vol).',
+};
+
+function buildAgentCard() {
+  const skills = Object.keys(PRICES).map((path) => {
+    const id = path.replace(/^\/v1\//, '').replace(/\//g, '_').replace(/-/g, '_');
+    const name = path.replace(/^\/v1\//, '');
+    const tags = [categorize(path), isComposite(path) ? 'composite' : 'calculator'];
+    const description = isComposite(path)
+      ? (COMPOSITE_EXAMPLES[path] || `Composite quant workflow: ${name}.`)
+      : `Deterministic quant calculator: ${name}. Pure math, no API key for first 1,000 calls/day.`;
+    const skill: any = {
+      id,
+      name,
+      description,
+      tags,
+      inputModes: ['application/json'],
+      outputModes: ['application/json'],
+      endpoint: `https://api.quantoracle.dev${path}`,
+      pricing: { amount: PRICES[path], currency: 'USDC', model: 'per-call' },
+    };
+    if (isComposite(path) && COMPOSITE_EXAMPLES[path]) {
+      skill.examples = [COMPOSITE_EXAMPLES[path]];
+    }
+    return skill;
+  });
+
+  return {
+    schemaVersion: '0.2',
+    name: 'QuantOracle',
+    description:
+      '63 deterministic quant calculators + 10 composite workflows for autonomous financial agents. Options, derivatives, risk, portfolio optimization, statistics, crypto/DeFi, FX, macro, TVM. Pay-per-call USDC on Base or Solana via x402.',
+    url: 'https://api.quantoracle.dev',
+    documentationUrl: 'https://github.com/QuantOracledev/quantoracle',
+    provider: {
+      organization: 'QuantOracle',
+      url: 'https://quantoracle.dev',
+    },
+    version: '2.2.0',
+    capabilities: {
+      streaming: false,
+      pushNotifications: false,
+      stateTransitionHistory: false,
+    },
+    defaultInputModes: ['application/json'],
+    defaultOutputModes: ['application/json'],
+    authentication: {
+      schemes: ['none', 'x402'],
+      details:
+        'Free tier: 1,000 calls/IP/day, no API key. Paid tier: x402 micropayments in USDC on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp).',
+    },
+    skills,
+    discovery: {
+      x402: 'https://api.quantoracle.dev/.well-known/x402',
+      openapi: 'https://api.quantoracle.dev/openapi.json',
+      aiPlugin: 'https://api.quantoracle.dev/.well-known/ai-plugin.json',
+      mcp: 'https://registry.modelcontextprotocol.io/v0/servers?search=quantoracle',
+    },
+  };
+}
+
+app.get('/.well-known/agent.json', (c) => c.json(buildAgentCard(), 200));
+app.get('/.well-known/agent-card.json', (c) => c.json(buildAgentCard(), 200));
+
 // ── Free endpoints ──────────────────────────────────────────────────────
 
 app.get('/health', async (c) => {
