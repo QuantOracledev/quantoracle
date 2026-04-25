@@ -56,9 +56,13 @@ QuantOracle is designed to be called repeatedly. An agent running a backtest mig
 
 ## 📓 LangChain cookbook
 
-Build a 25-line risk-analyst LangChain agent with reproducible quant math:
+Build a 25-line LangChain agent that answers concrete quant questions — *"I'm long $100k of NVDA at $185, how should I hedge?"* — with deterministic, reproducible math:
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantOracledev/quantoracle/blob/main/integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb) [`integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb`](./integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb) — runs in 30 sec, $0.001 in OpenAI tokens, free QuantOracle calls.
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantOracledev/quantoracle/blob/main/integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb) [`integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb`](./integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb)
+
+![QuantOracle × LangChain hedging composite](./integrations/langchain/cookbook/notebook_screenshot.png)
+
+Runs in 30 seconds, ~$0.001 in OpenAI tokens, free for QuantOracle's individual calculators. The hedging-recommend composite shown above is $0.04 in USDC via x402.
 
 ## Add QuantOracle to Your Agent
 

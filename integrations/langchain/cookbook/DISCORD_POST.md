@@ -2,65 +2,67 @@
 
 Paste this into the LangChain Discord (`https://discord.gg/langchain`, channel `#show-and-tell`). Keep it short — Discord posts that exceed a few hundred words underperform.
 
+The recommended share image is `notebook_screenshot.png` (in this same directory) — it shows the agent calling the `hedging_recommend` paid composite for a $100k NVDA position and getting back a ranked table of 4 hedge structures with concrete strikes, costs, and a recommendation.
+
 ---
 
 ## Version A — short and punchy (recommended)
 
 ```
-Built a 25-line LangChain agent that does deterministic quant finance math
-— no Black-Scholes hallucinations, no flaky Sharpe calculations.
+Built a LangChain agent that does deterministic quant finance math.
+LLM for reasoning, API for compute — same input, same output, every run.
 
-The trick: LLM for reasoning, deterministic API for compute. Every call is
-reproducible (same input → same output) and citation-verified against
-Hull/Wilmott/Bailey-Lopez-de-Prado.
+Asked it: "I'm long $100k of NVDA at $185, 30-day vol is 28%, how should
+I hedge for the next month?"
 
-73 endpoints — options pricing + 10 Greeks, VaR/Kelly/Sortino, Monte Carlo,
-GARCH, technical indicators, portfolio optimization, plus 10 composite
-workflows (backtest, hedging, rebalance plans).
+Single tool call → priced 4 hedge structures via Black-Scholes (collar,
+protective put, inverse, partial put), ranked them, recommended the
+collar at $613 (0.61% of position) — half the cost of a protective put
+alone, with concrete strikes. $0.04 in USDC via x402 on Base.
 
-Free tier: 1,000 calls/IP/day, no signup.
-Paid: x402 USDC micropayments on Base or Solana ($0.002–$0.10/call).
+73 endpoints total (calculators + 10 composite workflows). Free
+1,000 calls/IP/day, no signup, no API key.
 
-Notebook: <link to colab notebook once committed>
-PyPI:     pip install langchain-quantoracle
-GitHub:   https://github.com/QuantOracledev/quantoracle
+Cookbook (runs in Colab, ~30 sec): <link>
+PyPI:    pip install langchain-quantoracle
+GitHub:  https://github.com/QuantOracledev/quantoracle
 
-Feedback welcome — especially on which composite workflows you'd want next.
+Feedback welcome — especially on which composite workflows you want next.
 ```
 
-## Version B — agent-output focused (if you want a screenshot pinned at top)
+## Version B — image-first (recommended if you can attach the screenshot)
 
 ```
-Black-Scholes hallucinations were killing my agent's backtests. So I gave
-my LangChain agent a deterministic quant API.
+[attach: notebook_screenshot.png]
 
-Same input → same output, every run. 73 endpoints (calculators + composite
-workflows). Free 1,000 calls/IP/day, no signup.
+Gave my LangChain agent a deterministic quant API. Asked it how to
+hedge a $100k NVDA position; it priced 4 hedge structures via
+Black-Scholes in one tool call and recommended a collar at $613
+(0.61%) — half the cost of a protective put.
 
-[screenshot: agent answering "am I taking too much risk" with a real
-risk_portfolio response and a one-line recommendation]
+Same input → same output, every run. No hallucinated strikes, no
+drifting Greeks. Settled on-chain via x402 ($0.04 in USDC on Base)
+so the result is auditable.
 
-Notebook (runs in Colab, ~30 sec): <link>
+73 endpoints (calculators + 10 composite workflows). Free tier
+1,000 calls/IP/day, no signup.
+
+Cookbook (Colab): <link>
 GitHub: https://github.com/QuantOracledev/quantoracle
-
-Built on x402 (the new agent-payable HTTP standard) — cataloged on CDP
-Bazaar so any Coinbase AgentKit agent can discover it natively.
 ```
 
 ## Posting checklist
 
-1. [ ] Run the notebook locally first to confirm cells execute. Save with outputs visible.
-2. [ ] Push the cookbook directory to `main` so the Colab badge resolves.
-3. [ ] Replace `<link>` with the actual Colab URL: `https://colab.research.google.com/github/QuantOracledev/quantoracle/blob/main/integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb`
-4. [ ] Take one screenshot of the most impressive agent output cell (use Version B if you have a clean one).
-5. [ ] Post in `#show-and-tell` — NOT `#general` (different audience).
-6. [ ] If you have an OpenAI Discord account, also drop in their `#agents` channel.
-7. [ ] Cross-post to r/LangChain (subreddit, takes ~10 sec).
+1. [ ] Confirm `notebook_screenshot.png` and `quantoracle_risk_analyst.ipynb` are both on `main` (so the Colab badge resolves and the screenshot embeds correctly when shared).
+2. [ ] Replace `<link>` with the actual Colab URL: `https://colab.research.google.com/github/QuantOracledev/quantoracle/blob/main/integrations/langchain/cookbook/quantoracle_risk_analyst.ipynb`
+3. [ ] Drag-drop `notebook_screenshot.png` into the Discord composer (Version B only).
+4. [ ] Post in `#show-and-tell` — NOT `#general` (different audience).
+5. [ ] Cross-post to r/LangChain (subreddit, ~10 sec).
 
-## Where else to drop the same notebook
+## Where else to drop the same content
 
-- LangChain Discord `#show-and-tell` (primary)
-- r/LangChain on reddit (low effort, decent reach)
-- LangChain GitHub Discussions → "Show and tell" category
-- `kyrolabs/awesome-langchain` — if not already listed, PR adding `langchain-quantoracle` to the integrations table
-- Hacker News "Show HN" with the notebook as the linked artifact (the notebook is more concrete than a marketing page — HN tends to reward that)
+- **LangChain Discord** `#show-and-tell` (primary)
+- **r/LangChain** on reddit
+- **LangChain GitHub Discussions** → "Show and tell" category
+- **`kyrolabs/awesome-langchain`** — already submitted via PR #323
+- **Hacker News "Show HN"** with the notebook as the linked artifact (HN rewards concrete demos over marketing pages)
