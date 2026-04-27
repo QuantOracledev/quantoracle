@@ -1,6 +1,6 @@
 {
   "name": "quantoracle-mcp",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "mcpName": "io.github.fel123/quantoracle",
   "description": "63 deterministic quant calculators + 10 composite workflows for AI agents via MCP. Options pricing, Greeks, derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, TVM, strategy backtesting, rebalance planning, options strategy optimization, hedging. 1,000 free calls/day. x402 payments on Base or Solana.",
   "type": "module",
@@ -42,8 +42,8 @@
   "license": "MIT",
   "author": "QuantOracle",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "express": "^4.21.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^4.22.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
