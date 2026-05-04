@@ -39,7 +39,7 @@ export const CALCULATORS: CalculatorMeta[] = [
     endpoint: '/v1/options/payoff-diagram',
     searchVolume: '~165K/mo',
     category: 'options',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'crypto-liquidation-calculator',
@@ -48,7 +48,7 @@ export const CALCULATORS: CalculatorMeta[] = [
     endpoint: '/v1/crypto/liquidation-price',
     searchVolume: '~30K/mo',
     category: 'crypto',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'impermanent-loss-calculator',
@@ -57,7 +57,7 @@ export const CALCULATORS: CalculatorMeta[] = [
     endpoint: '/v1/crypto/impermanent-loss',
     searchVolume: '~15K/mo',
     category: 'crypto',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'position-size-calculator',
@@ -93,7 +93,7 @@ export const CALCULATORS: CalculatorMeta[] = [
     endpoint: '/v1/options/implied-vol',
     searchVolume: '~8K/mo',
     category: 'options',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'sharpe-ratio-calculator',
