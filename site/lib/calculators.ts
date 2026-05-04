@@ -23,6 +23,16 @@ export const CALCULATORS: CalculatorMeta[] = [
     status: 'live',
   },
   {
+    slug: 'american-option-calculator',
+    title: 'American Option Pricing Calculator (Binomial Tree)',
+    short:
+      'Price American calls and puts with early exercise and dividend yield via a binomial tree.',
+    endpoint: '/v1/derivatives/binomial-tree',
+    searchVolume: '~5K/mo',
+    category: 'options',
+    status: 'live',
+  },
+  {
     slug: 'options-profit-calculator',
     title: 'Options Profit Calculator',
     short: 'Visualize the payoff diagram and break-even points for any option strategy.',

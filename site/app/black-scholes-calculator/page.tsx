@@ -347,11 +347,17 @@ function Longform() {
       <h3>When Black-Scholes breaks down</h3>
       <p>
         The model assumes constant volatility, but real markets have volatility smiles and skews.
-        It assumes lognormal returns, but real returns have fat tails. It ignores dividends — for
-        dividend-paying stocks, use the Black-Scholes-Merton extension or a binomial tree. For
-        American options (early-exerciseable), use the binomial model instead. For path-dependent
-        exotics (Asian, barrier, lookback), use Monte Carlo or a closed-form exotic pricer — this
-        site&apos;s API has endpoints for all of these.
+        It assumes lognormal returns, but real returns have fat tails. It ignores dividends and
+        American-style early exercise — for either case, use the{' '}
+        <a href="/american-option-calculator" className="text-accent">
+          American Option Calculator
+        </a>
+        , which prices a binomial tree and reports the early-exercise premium directly. For
+        path-dependent exotics (Asian, barrier, lookback), use the dedicated exotic endpoints in{' '}
+        <a href="/api-docs" className="text-accent">
+          the API
+        </a>
+        .
       </p>
 
       <h3>How this calculator works</h3>
