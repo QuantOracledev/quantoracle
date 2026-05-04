@@ -15,6 +15,17 @@ export const metadata: Metadata = {
     'Free, fast quant finance calculators powered by a deterministic, multi-chain API. Black-Scholes, options profit, Kelly, VaR, crypto liquidation, and more.',
   applicationName: 'QuantOracle',
   authors: [{ name: 'QuantOracle' }],
+  // Search engine verification meta tags. Set the matching env var in Vercel
+  // and the corresponding <meta> appears automatically in the <head>.
+  // Easiest path for Google Search Console verification — no redeploy needed
+  // if you set the env var through the Vercel dashboard.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    yandex: process.env.YANDEX_VERIFICATION,
+    other: process.env.BING_VERIFICATION
+      ? { 'msvalidate.01': process.env.BING_VERIFICATION }
+      : undefined,
+  },
   keywords: [
     'quant finance',
     'options calculator',

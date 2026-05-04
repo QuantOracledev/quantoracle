@@ -1,0 +1,9 @@
+When you add your site to Google Search Console, it will give you ONE of these verification methods:
+
+1. HTML file: download the file Google provides (named like google[hash].html), drop it at site/public/google[hash].html, redeploy, click Verify in GSC.
+
+2. HTML tag: a single <meta name="google-site-verification" content="..."> tag. Easiest path: paste it into the env var GOOGLE_SITE_VERIFICATION (already wired into app/layout.tsx — see metadata.verification.google).
+
+3. DNS TXT record: add to Cloudflare DNS as TXT @ "google-site-verification=...". Use this if you don't want to redeploy the site for verification.
+
+Method 2 (HTML tag via env var) is recommended — fastest, no redeploy needed if you set the env var via Vercel dashboard.
