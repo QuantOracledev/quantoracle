@@ -15,6 +15,7 @@
 </p>
 
 <p align="center">
+  <a href="https://quantoracle.dev">Calculators</a> &nbsp;|&nbsp;
   <a href="#cli">CLI</a> &nbsp;|&nbsp;
   <a href="#mcp-server">MCP Server</a> &nbsp;|&nbsp;
   <a href="#x402-payments">x402 Payments</a> &nbsp;|&nbsp;
@@ -22,6 +23,12 @@
   <a href="#full-endpoint-reference">All Endpoints</a> &nbsp;|&nbsp;
   <a href="#integrations">Integrations</a>
 </p>
+
+---
+
+## Try it without writing code
+
+10 free calculators backed by the same API are live at **[quantoracle.dev](https://quantoracle.dev)** — Black-Scholes, options profit, American option (binomial tree), Kelly criterion, position size, Sharpe ratio, Value at Risk, implied volatility, crypto liquidation, impermanent loss. No signup, no API key.
 
 ---
 
