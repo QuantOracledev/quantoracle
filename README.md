@@ -15,7 +15,6 @@
 </p>
 
 <p align="center">
-  <a href="https://quantoracle.dev">quantoracle.dev</a> &nbsp;|&nbsp;
   <a href="#cli">CLI</a> &nbsp;|&nbsp;
   <a href="#mcp-server">MCP Server</a> &nbsp;|&nbsp;
   <a href="#x402-payments">x402 Payments</a> &nbsp;|&nbsp;
