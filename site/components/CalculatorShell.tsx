@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { AdSlot } from './AdSlot';
 import { CALCULATORS, getRelated } from '@/lib/calculators';
 
 interface Props {
@@ -70,6 +71,11 @@ export function CalculatorShell({
         <AffiliateCta calculatorSlug={slug} />
       </div>
 
+      {/* AD SLOT 1 — post-result, highest-CTR position. Renders nothing until
+          NEXT_PUBLIC_ADSENSE_CLIENT is configured; renders a dashed placeholder
+          if NEXT_PUBLIC_AD_SLOTS_VISIBLE=true so you can see the layout. */}
+      <AdSlot slot="POST_RESULT" format="responsive" className="max-w-3xl" />
+
       {/* FAQ */}
       <section className="mt-16 max-w-3xl">
         <h2 className="text-2xl font-semibold mb-4">Frequently asked questions</h2>
@@ -78,7 +84,11 @@ export function CalculatorShell({
 
       {/* Long-form explainer — boosts word count for SEO and serves real users who want depth */}
       {longform && (
-        <section className="mt-16 max-w-3xl prose-soft">{longform}</section>
+        <section className="mt-16 max-w-3xl prose-soft">
+          {longform}
+          {/* AD SLOT 2 — mid-longform. Lower CTR than slot 1 but reaches engaged readers. */}
+          <AdSlot slot="MID_LONGFORM" format="responsive" />
+        </section>
       )}
 
       {/* Related */}
