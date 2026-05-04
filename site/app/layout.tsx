@@ -1,9 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Script from 'next/script';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import './globals.css';
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+// GA4 measurement ID. This is a public value — it lands in every page's
+// HTML — so the hardcoded fallback has no security implication. Override
+// via the env var for preview/staging environments if needed.
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-FPTTKC4T1N';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://quantoracle.dev'),
@@ -149,6 +154,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Calculator results are estimates for educational purposes only. Not investment advice.
           </div>
         </footer>
+        {/* GA4 — uses next/third-parties so the gtag.js loads with the proper
+            afterInteractive strategy and doesn't block first paint. Pageview
+            events fire automatically on route changes (Next.js App Router). */}
+        {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
       </body>
     </html>
   );
