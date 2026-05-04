@@ -62,11 +62,11 @@ export const CALCULATORS: CalculatorMeta[] = [
   {
     slug: 'position-size-calculator',
     title: 'Position Size Calculator',
-    short: 'Size positions consistently using fixed-fractional, ATR, and risk-of-ruin rules.',
+    short: 'Size positions consistently using account size, risk-per-trade, entry, and stop-loss.',
     endpoint: '/v1/risk/position-size',
     searchVolume: '~12K/mo',
     category: 'risk',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'value-at-risk-calculator',
@@ -75,16 +75,16 @@ export const CALCULATORS: CalculatorMeta[] = [
     endpoint: '/v1/risk/var-parametric',
     searchVolume: '~8K/mo',
     category: 'risk',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'kelly-criterion-calculator',
     title: 'Kelly Criterion Calculator',
-    short: 'Find the optimal bet/position size given win rate and win/loss ratio.',
+    short: 'Find the optimal bet/position size given win rate and average win/loss.',
     endpoint: '/v1/risk/kelly',
     searchVolume: '~8K/mo',
     category: 'risk',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'implied-volatility-calculator',
@@ -102,7 +102,7 @@ export const CALCULATORS: CalculatorMeta[] = [
     endpoint: '/v1/stats/sharpe-ratio',
     searchVolume: '~5K/mo',
     category: 'stats',
-    status: 'planned',
+    status: 'live',
   },
   {
     slug: 'hedge-ratio-calculator',
