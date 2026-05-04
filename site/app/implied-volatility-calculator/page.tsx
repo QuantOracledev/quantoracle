@@ -97,7 +97,7 @@ export default async function ImpliedVolPage({
       url: 'https://quantoracle.dev/implied-volatility-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell

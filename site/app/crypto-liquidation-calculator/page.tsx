@@ -98,7 +98,7 @@ export default async function CryptoLiqPage({
       url: 'https://quantoracle.dev/crypto-liquidation-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell

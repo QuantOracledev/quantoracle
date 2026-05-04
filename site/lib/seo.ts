@@ -40,9 +40,14 @@ export function buildMetadata(seo: PageSeo): Metadata {
   };
 }
 
-/** Schema.org FAQPage JSON-LD blob — Google uses this for FAQ rich snippets. */
-export function faqJsonLd(faqs: { question: string; answer: string }[]): string {
-  return JSON.stringify({
+/**
+ * Schema.org FAQPage JSON-LD object — Google uses this for FAQ rich snippets.
+ * Returns the OBJECT (not stringified) so multiple JSON-LD blobs on the same
+ * page can be combined into a single valid JSON array. CalculatorShell does
+ * the JSON.stringify of the array.
+ */
+export function faqJsonLd(faqs: { question: string; answer: string }[]): object {
+  return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: faqs.map((f) => ({
@@ -50,7 +55,7 @@ export function faqJsonLd(faqs: { question: string; answer: string }[]): string 
       name: f.question,
       acceptedAnswer: { '@type': 'Answer', text: f.answer },
     })),
-  });
+  };
 }
 
 /** Schema.org SoftwareApplication JSON-LD for calculator pages. */
@@ -58,8 +63,8 @@ export function calculatorJsonLd(opts: {
   name: string;
   description: string;
   url: string;
-}): string {
-  return JSON.stringify({
+}): object {
+  return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: opts.name,
@@ -68,5 +73,5 @@ export function calculatorJsonLd(opts: {
     applicationCategory: 'FinanceApplication',
     operatingSystem: 'Any',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  });
+  };
 }

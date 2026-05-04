@@ -79,7 +79,7 @@ export default async function KellyPage({
       url: 'https://quantoracle.dev/kelly-criterion-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell

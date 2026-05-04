@@ -112,7 +112,7 @@ export default async function BlackScholesPage({
       url: 'https://quantoracle.dev/black-scholes-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell

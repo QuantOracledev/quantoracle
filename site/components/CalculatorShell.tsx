@@ -15,8 +15,13 @@ interface Props {
   interpretation?: ReactNode;
   /** Hand-written FAQ section (for SEO + user education). */
   faq: ReactNode;
-  /** Inline JSON-LD blob for FAQ + SoftwareApplication schema. */
-  jsonLd: string;
+  /**
+   * Array of Schema.org objects to emit as JSON-LD. CalculatorShell wraps
+   * them in a single `<script type="application/ld+json">` tag as a valid
+   * JSON array. Each object should be a result of faqJsonLd/calculatorJsonLd
+   * from lib/seo.ts.
+   */
+  jsonLd: object[];
   /** Markup for the long-form explainer rendered below the FAQ. */
   longform?: ReactNode;
 }
@@ -107,11 +112,16 @@ export function CalculatorShell({
         </div>
       </section>
 
-      {/* Schema.org JSON-LD */}
+      {/* Schema.org JSON-LD — one tag, one valid JSON array of @graph nodes */}
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: jsonLd }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': jsonLd,
+          }),
+        }}
       />
     </div>
   );

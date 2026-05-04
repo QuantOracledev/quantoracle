@@ -110,7 +110,7 @@ export default async function VarPage({
       url: 'https://quantoracle.dev/value-at-risk-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell

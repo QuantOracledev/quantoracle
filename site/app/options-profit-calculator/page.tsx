@@ -121,7 +121,7 @@ export default async function OptionsProfitPage({
       url: 'https://quantoracle.dev/options-profit-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell

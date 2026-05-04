@@ -83,7 +83,7 @@ export default async function PositionSizePage({
       url: 'https://quantoracle.dev/position-size-calculator',
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
-  ].join('\n');
+  ];
 
   return (
     <CalculatorShell
