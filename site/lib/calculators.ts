@@ -105,13 +105,14 @@ export const CALCULATORS: CalculatorMeta[] = [
     status: 'live',
   },
   {
-    slug: 'hedge-ratio-calculator',
-    title: 'Hedge Calculator',
-    short: 'Get ranked hedge structures (collar, protective put, partial put) for a position.',
-    endpoint: '/v1/hedging/recommend',
-    searchVolume: '~5K/mo',
+    slug: 'monte-carlo-simulation-calculator',
+    title: 'Monte Carlo Simulation Calculator',
+    short:
+      'Simulate thousands of price paths to see the full distribution of portfolio outcomes — mean, median, P5/P95, probability of loss.',
+    endpoint: '/v1/simulate/montecarlo',
+    searchVolume: '~15K/mo',
     category: 'risk',
-    status: 'planned',
+    status: 'live',
   },
 ];
 
