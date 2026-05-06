@@ -109,14 +109,14 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="account_size"
           label="Account size ($)"
           value={inputs.account_size}
-          step="100"
+          step="any"
           min="1"
         />
         <Field
           name="risk_per_trade"
           label="Risk per trade (fraction)"
           value={inputs.risk_per_trade}
-          step="0.001"
+          step="any"
           min="0.0001"
           max="0.5"
           hint="0.02 = 2% of account, the standard retail rule"
@@ -125,14 +125,14 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="entry_price"
           label="Entry price ($)"
           value={inputs.entry_price}
-          step="0.01"
+          step="any"
           min="0.0001"
         />
         <Field
           name="stop_loss"
           label="Stop-loss price ($)"
           value={inputs.stop_loss}
-          step="0.01"
+          step="any"
           min="0.0001"
           hint="Above entry for shorts, below for longs"
         />

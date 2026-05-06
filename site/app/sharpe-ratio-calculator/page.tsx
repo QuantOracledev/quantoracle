@@ -137,7 +137,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="risk_free_rate"
           label="Risk-free rate (annual)"
           value={inputs.risk_free_rate}
-          step="0.001"
+          step="any"
           min="0"
           hint="0.04 = 4% (current 3-month Treasury yield)"
         />
@@ -145,7 +145,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="annualization_factor"
           label="Annualization factor"
           value={inputs.annualization_factor}
-          step="1"
+          step="any"
           min="1"
           hint="252 for daily, 52 for weekly, 12 for monthly"
         />

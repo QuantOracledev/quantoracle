@@ -246,14 +246,14 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="initial_value"
           label="Initial value ($)"
           value={inputs.initial_value}
-          step="1000"
+          step="any"
           min="1"
         />
         <Field
           name="years"
           label="Time horizon (years)"
           value={inputs.years}
-          step="1"
+          step="any"
           min="1"
           max="100"
         />
@@ -261,7 +261,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="annual_return"
           label="Expected annual return"
           value={inputs.annual_return}
-          step="0.005"
+          step="any"
           min="-0.5"
           max="2"
           hint="0.08 = 8% — historical US equity"
@@ -270,7 +270,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="annual_vol"
           label="Annual volatility"
           value={inputs.annual_vol}
-          step="0.005"
+          step="any"
           min="0.001"
           max="2"
           hint="0.18 = 18% — historical US equity"
@@ -279,7 +279,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="contributions"
           label="Annual contribution ($)"
           value={inputs.contributions}
-          step="500"
+          step="any"
           min="0"
           hint="0 if no additions"
         />
@@ -287,7 +287,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="withdrawal_rate"
           label="Annual withdrawal rate"
           value={inputs.withdrawal_rate}
-          step="0.001"
+          step="any"
           min="0"
           max="0.5"
           hint="0.04 = 4% retirement rule"
@@ -296,7 +296,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="simulations"
           label="Simulations"
           value={inputs.simulations}
-          step="100"
+          step="any"
           min="100"
           max="10000"
           hint="1000-2500 typical"
@@ -305,7 +305,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="inflation_rate"
           label="Inflation rate"
           value={inputs.inflation_rate}
-          step="0.001"
+          step="any"
           min="0"
           max="0.5"
           hint="0.03 = 3% (US long-run avg)"

@@ -115,14 +115,14 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="initial_investment"
           label="Initial investment ($)"
           value={inputs.initial_investment}
-          step="100"
+          step="any"
           min="1"
         />
         <Field
           name="initial_price_ratio"
           label="Initial price ratio"
           value={inputs.initial_price_ratio}
-          step="0.0001"
+          step="any"
           min="0.0001"
           hint="Token A / Token B at the time you provided liquidity (1.0 if you don't know)"
         />
@@ -130,7 +130,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="current_price_ratio"
           label="Current price ratio"
           value={inputs.current_price_ratio}
-          step="0.0001"
+          step="any"
           min="0.0001"
           hint="Token A / Token B now. 1.5 = token A appreciated 50% relative to token B"
         />

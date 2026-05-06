@@ -105,7 +105,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="win_rate"
           label="Win rate (probability)"
           value={inputs.win_rate}
-          step="0.01"
+          step="any"
           min="0.01"
           max="0.99"
           hint="0.55 = 55% — fraction of bets you expect to win"
@@ -114,7 +114,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="avg_win"
           label="Average win ($)"
           value={inputs.avg_win}
-          step="0.01"
+          step="any"
           min="0.01"
           hint="Average dollar amount won on winning trades"
         />
@@ -122,7 +122,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="avg_loss"
           label="Average loss ($)"
           value={inputs.avg_loss}
-          step="0.01"
+          step="any"
           min="0.01"
           hint="Enter as a positive number — average dollar amount lost"
         />

@@ -146,12 +146,12 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
       <h2 className="text-lg font-semibold mb-4">Strategy</h2>
 
       <div className="space-y-4 mb-4">
-        <Field name="spot" label="Current spot price ($)" value={inputs.spot} step="0.01" min="0.01" />
+        <Field name="spot" label="Current spot price ($)" value={inputs.spot} step="any" min="0.01" />
         <Field
           name="price_range_pct"
           label="Price range (% from spot)"
           value={inputs.price_range_pct}
-          step="5"
+          step="any"
           min="5"
           max="200"
           hint="40 = ±40% from spot in the diagram"
@@ -212,7 +212,7 @@ function LegRow({ leg, index }: { leg: Leg; index: number }) {
           type="number"
           name="strike"
           defaultValue={leg.strike}
-          step="0.01"
+          step="any"
           min="0.01"
           required
           className="field-input text-xs"
@@ -223,7 +223,7 @@ function LegRow({ leg, index }: { leg: Leg; index: number }) {
           type="number"
           name="premium"
           defaultValue={leg.premium}
-          step="0.01"
+          step="any"
           min="0"
           required
           className="field-input text-xs"
@@ -234,7 +234,7 @@ function LegRow({ leg, index }: { leg: Leg; index: number }) {
           type="number"
           name="quantity"
           defaultValue={leg.quantity}
-          step="1"
+          step="any"
           min="1"
           required
           className="field-input text-xs col-span-2"

@@ -120,10 +120,10 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
     <form method="GET" className="card">
       <h2 className="text-lg font-semibold mb-4">Inputs</h2>
       <div className="grid grid-cols-2 gap-4">
-        <Field name="entry_price" label="Entry price ($)" value={inputs.entry_price} step="0.01" min="0.01" />
-        <Field name="leverage" label="Leverage" value={inputs.leverage} step="0.1" min="1" max="125" hint="e.g. 10 for 10×" />
-        <Field name="collateral" label="Collateral (USD)" value={inputs.collateral} step="1" min="0.01" />
-        <Field name="position_size" label="Position size (USD)" value={inputs.position_size} step="1" min="0.01" hint="collateral × leverage" />
+        <Field name="entry_price" label="Entry price ($)" value={inputs.entry_price} step="any" min="0.01" />
+        <Field name="leverage" label="Leverage" value={inputs.leverage} step="any" min="1" max="125" hint="e.g. 10 for 10×" />
+        <Field name="collateral" label="Collateral (USD)" value={inputs.collateral} step="any" min="0.01" />
+        <Field name="position_size" label="Position size (USD)" value={inputs.position_size} step="any" min="0.01" hint="collateral × leverage" />
         <Select
           name="direction"
           label="Direction"
@@ -137,7 +137,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="maintenance_margin_rate"
           label="Maintenance margin"
           value={inputs.maintenance_margin_rate}
-          step="0.0001"
+          step="any"
           min="0"
           hint="0.005 = 0.5% (typical for majors)"
         />
@@ -145,7 +145,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="funding_accumulated"
           label="Accumulated funding ($)"
           value={inputs.funding_accumulated}
-          step="0.01"
+          step="any"
           hint="Negative if you have paid funding"
         />
       </div>

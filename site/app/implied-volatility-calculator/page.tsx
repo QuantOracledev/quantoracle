@@ -119,13 +119,13 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
     <form method="GET" className="card">
       <h2 className="text-lg font-semibold mb-4">Inputs</h2>
       <div className="grid grid-cols-2 gap-4">
-        <Field name="S" label="Stock price ($)" value={inputs.S} step="0.01" min="0.01" />
-        <Field name="K" label="Strike ($)" value={inputs.K} step="0.01" min="0.01" />
+        <Field name="S" label="Stock price ($)" value={inputs.S} step="any" min="0.01" />
+        <Field name="K" label="Strike ($)" value={inputs.K} step="any" min="0.01" />
         <Field
           name="T"
           label="Time to expiry (years)"
           value={inputs.T}
-          step="0.01"
+          step="any"
           min="0.001"
           hint="0.25 = 3 months"
         />
@@ -133,7 +133,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="r"
           label="Risk-free rate"
           value={inputs.r}
-          step="0.001"
+          step="any"
           min="0"
           hint="0.05 = 5%"
         />
@@ -141,7 +141,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="q"
           label="Dividend yield"
           value={inputs.q}
-          step="0.001"
+          step="any"
           min="0"
           hint="0 = no dividend"
         />
@@ -149,7 +149,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="market_price"
           label="Market price ($)"
           value={inputs.market_price}
-          step="0.01"
+          step="any"
           min="0.001"
           hint="The observed option price you want to back out IV from"
         />

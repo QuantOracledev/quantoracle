@@ -156,7 +156,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="holding_period_days"
           label="Holding period (days)"
           value={inputs.holding_period_days}
-          step="1"
+          step="any"
           min="1"
           hint="1 = 1-day VaR, 10 = Basel regulatory standard"
         />
@@ -164,7 +164,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           name="portfolio_value"
           label="Portfolio value ($)"
           value={inputs.portfolio_value}
-          step="100"
+          step="any"
           min="0"
           hint="Optional — for dollar VaR. Set to 0 to skip."
         />
