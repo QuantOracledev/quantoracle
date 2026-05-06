@@ -45,6 +45,14 @@ interface Inputs {
   simulations: number;
   contributions: number;
   withdrawal_rate: number;
+  /** Annual inflation rate used to convert nominal results to real (today's
+   *  dollars). 0.03 = 3% (long-run US average). Has no effect on the
+   *  simulation itself; only on how results are displayed when view=real. */
+  inflation_rate: number;
+  /** 'nominal' = future dollars at face value (default). 'real' = today's
+   *  purchasing power, deflated by inflation_rate^years. Only the display
+   *  changes; the underlying simulation is the same. */
+  view: 'nominal' | 'real';
 }
 
 const DEFAULTS: Inputs = {
@@ -55,7 +63,61 @@ const DEFAULTS: Inputs = {
   simulations: 1000,
   contributions: 0,
   withdrawal_rate: 0,
+  inflation_rate: 0.03,
+  view: 'nominal',
 };
+
+/** Pre-built scenarios shown as one-click links above the inputs form. */
+const PRESETS: Array<{ name: string; description: string; inputs: Partial<Inputs> }> = [
+  {
+    name: 'Standard 4% Rule',
+    description: '$1M portfolio, 30 years, 4% withdrawal',
+    inputs: {
+      initial_value: 1_000_000,
+      annual_return: 0.07,
+      annual_vol: 0.16,
+      years: 30,
+      contributions: 0,
+      withdrawal_rate: 0.04,
+    },
+  },
+  {
+    name: 'Aggressive Saver',
+    description: '$50K start, $25K/yr added, 25 years to retirement',
+    inputs: {
+      initial_value: 50_000,
+      annual_return: 0.09,
+      annual_vol: 0.18,
+      years: 25,
+      contributions: 25_000,
+      withdrawal_rate: 0,
+    },
+  },
+  {
+    name: 'Crypto Holder',
+    description: '$10K BTC bag, 10 years, hold-only',
+    inputs: {
+      initial_value: 10_000,
+      annual_return: 0.3,
+      annual_vol: 0.7,
+      years: 10,
+      contributions: 0,
+      withdrawal_rate: 0,
+    },
+  },
+  {
+    name: 'Lean FIRE',
+    description: '$500K, 40 years, 3% withdrawal',
+    inputs: {
+      initial_value: 500_000,
+      annual_return: 0.07,
+      annual_vol: 0.16,
+      years: 40,
+      contributions: 0,
+      withdrawal_rate: 0.03,
+    },
+  },
+];
 
 function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs {
   const num = (v: string | string[] | undefined, fallback: number) => {
@@ -64,6 +126,11 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
     const n = Number(s);
     return Number.isFinite(n) ? n : fallback;
   };
+  const view = (() => {
+    const v = sp.view;
+    const s = Array.isArray(v) ? v[0] : v;
+    return s === 'real' ? 'real' : 'nominal';
+  })();
   return {
     initial_value: num(sp.initial_value, DEFAULTS.initial_value),
     annual_return: num(sp.annual_return, DEFAULTS.annual_return),
@@ -75,13 +142,27 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
     ),
     contributions: num(sp.contributions, DEFAULTS.contributions),
     withdrawal_rate: num(sp.withdrawal_rate, DEFAULTS.withdrawal_rate),
+    inflation_rate: num(sp.inflation_rate, DEFAULTS.inflation_rate),
+    view,
   };
 }
 
+/** Converts nominal future dollars to real (today's purchasing power) when
+ *  the user selects 'real' view. No-op when view='nominal'. */
+function deflate(nominal: number, inputs: Inputs): number {
+  if (inputs.view !== 'real') return nominal;
+  return nominal / Math.pow(1 + inputs.inflation_rate, inputs.years);
+}
+
 async function simulate(inputs: Inputs): Promise<McResult | null> {
+  // Strip out view + inflation_rate before calling the API — they're display-
+  // only and not part of the simulation contract.
+  const { view: _v, inflation_rate: _i, ...apiInputs } = inputs;
+  void _v;
+  void _i;
   try {
     return await callQuantOracle<McResult>('/v1/simulate/montecarlo', {
-      ...inputs,
+      ...apiInputs,
     } as unknown as Record<string, unknown>);
   } catch {
     return null;
@@ -111,14 +192,48 @@ export default async function MonteCarloPage({
     <CalculatorShell
       slug="monte-carlo-simulation-calculator"
       title="Monte Carlo Simulation Calculator"
-      subtitle="Run thousands of random price paths and see the full distribution of where your portfolio could end up. Handles contributions, withdrawals, and probability-of-ruin scenarios."
-      inputs={<InputsCard inputs={inputs} />}
+      subtitle="Run thousands of random price paths and see the full distribution of where your portfolio could end up. Handles contributions, withdrawals, sequence-of-returns risk, and inflation-adjusted (real) outcomes."
+      inputs={
+        <div className="space-y-3">
+          <PresetScenarios />
+          <InputsCard inputs={inputs} />
+        </div>
+      }
       results={result ? <ResultsCard inputs={inputs} result={result} /> : <ErrorCard />}
       interpretation={result && <Interpretation inputs={inputs} result={result} />}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
       longform={<Longform />}
     />
+  );
+}
+
+function PresetScenarios() {
+  return (
+    <div className="card">
+      <div className="text-xs uppercase tracking-wide text-slate-400 mb-2 font-semibold">
+        Try a preset
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {PRESETS.map((p) => {
+          const params = new URLSearchParams();
+          for (const [k, v] of Object.entries(p.inputs)) {
+            if (v !== undefined) params.set(k, String(v));
+          }
+          return (
+            <Link
+              key={p.name}
+              href={`?${params.toString()}`}
+              className="rounded-md border border-ink-700 hover:border-accent/50 hover:bg-ink-800/50 transition px-3 py-2 text-xs"
+              prefetch={false}
+            >
+              <div className="font-semibold text-slate-100">{p.name}</div>
+              <div className="text-slate-500 mt-0.5">{p.description}</div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -186,6 +301,25 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           max="10000"
           hint="1000-2500 typical"
         />
+        <Field
+          name="inflation_rate"
+          label="Inflation rate"
+          value={inputs.inflation_rate}
+          step="0.001"
+          min="0"
+          max="0.5"
+          hint="0.03 = 3% (US long-run avg)"
+        />
+        <label className="block">
+          <span className="field-label">View results in</span>
+          <select name="view" defaultValue={inputs.view} className="field-input">
+            <option value="nominal">Nominal (future $)</option>
+            <option value="real">Real (today&apos;s $)</option>
+          </select>
+          <span className="text-xs text-slate-500 mt-1 block">
+            Real adjusts for inflation
+          </span>
+        </label>
       </div>
       <button type="submit" className="btn-primary w-full mt-5">
         Run simulation
@@ -240,27 +374,68 @@ function Money({ v }: { v: number }) {
 }
 
 function ResultsCard({ inputs, result }: { inputs: Inputs; result: McResult }) {
+  // For retirement / withdrawal scenarios, lead with success rate framing
+  // (1 - prob_ruin). For accumulation scenarios, lead with the median outcome.
+  const isWithdrawalScenario = inputs.withdrawal_rate > 0;
+  const successRate = (1 - result.prob_ruin) * 100;
+  const successColor =
+    successRate >= 95
+      ? 'text-chart-profit'
+      : successRate >= 80
+        ? 'text-accent'
+        : successRate >= 60
+          ? 'text-yellow-400'
+          : 'text-chart-loss';
+
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+          showing {inputs.view === 'real' ? "today's dollars" : 'nominal future dollars'}
+        </span>
+      </div>
+
+      {isWithdrawalScenario && (
+        <div className="mb-6 p-4 rounded-md bg-ink-800/40 border border-ink-700/50">
+          <div className="text-xs uppercase tracking-wider text-slate-500 mb-1">
+            Success rate (portfolio survives full horizon)
+          </div>
+          <div className={`font-mono text-4xl tabular-nums ${successColor}`}>
+            {successRate.toFixed(1)}%
+          </div>
+          <div className="text-xs text-slate-500 mt-1">
+            {successRate >= 95
+              ? 'Very safe — your withdrawal plan survives in nearly all simulated futures'
+              : successRate >= 80
+                ? 'Reasonably safe — failures occur in only the worst sequences of returns'
+                : successRate >= 60
+                  ? 'Risky — consider lowering withdrawal rate, working longer, or accepting flexibility'
+                  : 'Likely to fail — withdrawal rate is too high for this return/volatility profile'}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Median outcome</div>
           <div className="font-mono text-2xl tabular-nums text-accent">
-            <Money v={result.terminal.median} />
+            <Money v={deflate(result.terminal.median, inputs)} />
           </div>
         </div>
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Mean outcome</div>
           <div className="font-mono text-2xl tabular-nums text-slate-100">
-            <Money v={result.terminal.mean} />
+            <Money v={deflate(result.terminal.mean, inputs)} />
           </div>
         </div>
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">CAGR (median)</div>
           <div className="font-mono text-2xl tabular-nums text-slate-100">
             {(result.cagr * 100).toFixed(2)}%
+            <span className="text-xs text-slate-500 ml-1">
+              {inputs.view === 'real' ? '(real)' : '(nom)'}
+            </span>
           </div>
         </div>
       </div>
@@ -291,13 +466,14 @@ function ResultsCard({ inputs, result }: { inputs: Inputs; result: McResult }) {
               ['75th', result.terminal.p75, 'text-slate-300'],
               ['95th', result.terminal.p95, 'text-chart-profit'],
             ].map(([label, value, cls]) => {
-              const v = value as number;
-              const ratio = v / inputs.initial_value;
+              const nominal = value as number;
+              const displayed = deflate(nominal, inputs);
+              const ratio = nominal / inputs.initial_value; // ratio is unaffected by deflation
               return (
                 <tr key={label as string} className="border-t border-ink-700/40">
                   <td className="px-3 py-2 text-slate-400">{label}</td>
                   <td className={`px-3 py-2 text-right font-mono ${cls}`}>
-                    <Money v={v} />
+                    <Money v={displayed} />
                   </td>
                   <td className="px-3 py-2 text-right font-mono text-slate-500">
                     {ratio >= 1 ? '+' : ''}
@@ -342,7 +518,12 @@ function ResultsCard({ inputs, result }: { inputs: Inputs; result: McResult }) {
       />
       <div className="mt-2 text-xs text-slate-500">
         Showing {result.sample_paths.length} of {inputs.simulations.toLocaleString()} simulated
-        paths · computed in {result.ms.toFixed(0)} ms.
+        paths · computed in {result.ms.toFixed(0)} ms ·{' '}
+        {inputs.view === 'real' ? (
+          <span>nominal-dollar paths (real-dollar mode applies to summary only)</span>
+        ) : (
+          'nominal future dollars'
+        )}
       </div>
     </div>
   );
@@ -386,6 +567,13 @@ function ErrorCard() {
 function Interpretation({ inputs, result }: { inputs: Inputs; result: McResult }) {
   const ratio = result.terminal.median / inputs.initial_value;
   const lossPct = (result.prob_loss * 100).toFixed(1);
+  const median = deflate(result.terminal.median, inputs);
+  const p5 = deflate(result.terminal.p5, inputs);
+  const p95 = deflate(result.terminal.p95, inputs);
+  const realityNote =
+    inputs.view === 'real'
+      ? ` (in today's purchasing power, deflated by ${(inputs.inflation_rate * 100).toFixed(1)}% inflation)`
+      : '';
   const ruinAlert =
     result.prob_ruin > 0.05 ? (
       <>
@@ -394,19 +582,21 @@ function Interpretation({ inputs, result }: { inputs: Inputs; result: McResult }
           The {(result.prob_ruin * 100).toFixed(1)}% probability of ruin is concerning
         </strong>{' '}
         — at this withdrawal rate, ~1 in {Math.round(1 / result.prob_ruin)} scenarios depletes the
-        portfolio entirely.
+        portfolio entirely. Sequence-of-returns risk: bad early years on a portfolio you&apos;re
+        actively withdrawing from compound much worse than late bad years. To improve the success
+        rate, you can lower the withdrawal rate, work a few more years, or accept dynamic
+        withdrawals (cut spending in down years).
       </>
     ) : null;
   const direction = ratio >= 1 ? 'grows to' : 'shrinks to';
+  const fmt = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   return (
     <p>
       In the median outcome, your ${inputs.initial_value.toLocaleString()} {direction}{' '}
-      <strong>${result.terminal.median.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>{' '}
-      over {inputs.years} years (CAGR {(result.cagr * 100).toFixed(2)}%). But{' '}
+      <strong>{fmt(median)}</strong>
+      {realityNote} over {inputs.years} years (CAGR {(result.cagr * 100).toFixed(2)}%). But{' '}
       <strong>{lossPct}%</strong> of paths end below the starting value, and the worst 5% end at or
-      below ${result.terminal.p5.toLocaleString(undefined, { maximumFractionDigits: 0 })}. The best
-      5% reach ${result.terminal.p95.toLocaleString(undefined, { maximumFractionDigits: 0 })} or
-      higher.{ruinAlert}
+      below {fmt(p5)}. The best 5% reach {fmt(p95)} or higher.{ruinAlert}
     </p>
   );
 }
