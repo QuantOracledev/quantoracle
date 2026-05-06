@@ -145,32 +145,58 @@ function PremiumCta() {
   );
 }
 
+// TradingView affiliate ID. Public value (lives in every link), so safe to
+// commit. The per-page sub-ID is appended by AffiliateCta so the dashboard
+// shows conversion attribution per calculator.
+const TRADINGVIEW_AFF_ID = '166298';
+
+/** Builds an affiliate-tagged TradingView pricing URL with per-page tracking. */
+function tradingViewUrl(calculatorSlug: string): string {
+  const params = new URLSearchParams({
+    aff_id: TRADINGVIEW_AFF_ID,
+    aff_sub: calculatorSlug,
+  });
+  return `https://www.tradingview.com/pricing/?${params.toString()}`;
+}
+
 function AffiliateCta({ calculatorSlug }: { calculatorSlug: string }) {
-  // TODO(monetization): replace href with real tracking links once affiliate
-  // accounts are approved (tastytrade for options, IBKR for general, Coinbase for crypto pages).
-  // Pick the broker by category to maximize relevance + conversion.
   const cat = CALCULATORS.find((c) => c.slug === calculatorSlug)?.category;
-  const isCrypto = cat === 'crypto';
+
+  // Per-category copy. TradingView fits all categories — chartists across
+  // options, crypto, and general quant audiences all use it. When Coinbase /
+  // IBKR / etc. are wired up later, we can swap based on category here.
+  const headline =
+    cat === 'crypto'
+      ? 'Chart and trade crypto with TradingView Pro'
+      : cat === 'options'
+        ? 'Visualize options strategies on TradingView Pro'
+        : 'Backtest and chart with TradingView Pro';
+  const body =
+    cat === 'crypto'
+      ? 'Multi-exchange charts, alerts, and indicators across BTC, ETH, and 100,000+ crypto pairs. Free 30-day Pro trial.'
+      : cat === 'options'
+        ? 'Real-time charts, custom Pine Script indicators, and multi-monitor layouts used by serious options traders. Free 30-day Pro trial.'
+        : 'The chart platform used by 60M+ traders. Custom indicators, multi-timeframe analysis, alerts. Free 30-day Pro trial.';
+
   return (
     <a
-      href="#"
-      className="card border-ink-700 hover:border-accent/40 transition block"
-      // Keep nofollow until the affiliate disclosure flow is in place.
-      rel="nofollow sponsored noopener"
+      href={tradingViewUrl(calculatorSlug)}
+      target="_blank"
+      // FTC-compliant: rel='sponsored' marks this as paid; 'nofollow' tells
+      // search engines not to pass link equity; 'noopener' is security.
+      rel="sponsored nofollow noopener"
+      className="card border-ink-700 hover:border-accent/40 transition block group"
     >
       <div className="flex items-start justify-between mb-2">
         <div className="text-xs uppercase tracking-wider text-slate-400">Sponsored</div>
-        <span className="text-[10px] uppercase tracking-wider bg-ink-800 text-slate-500 px-2 py-0.5 rounded">
-          Placeholder
+        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+          tradingview.com →
         </span>
       </div>
-      <div className="font-semibold mb-1">
-        {isCrypto ? 'Trade with low fees' : 'Trade options commission-free'}
-      </div>
-      <p className="text-sm text-slate-400">
-        {isCrypto
-          ? 'Open a crypto account in under 5 minutes. (Affiliate link — to be wired post-launch.)'
-          : 'Open a brokerage account and trade the strategies you analyze here. (Affiliate link — to be wired post-launch.)'}
+      <div className="font-semibold mb-1 group-hover:text-accent transition">{headline}</div>
+      <p className="text-sm text-slate-400">{body}</p>
+      <p className="mt-2 text-[10px] text-slate-600">
+        QuantOracle earns a commission if you sign up via this link. Doesn&apos;t cost you extra.
       </p>
     </a>
   );
