@@ -96,6 +96,16 @@ export const CALCULATORS: CalculatorMeta[] = [
     status: 'live',
   },
   {
+    slug: 'cagr-calculator',
+    title: 'CAGR Calculator (Compound Annual Growth Rate)',
+    short:
+      'Compute the compound annual growth rate from a starting value, ending value, and time period — plus doubling time and forward projections.',
+    endpoint: '/v1/tvm/cagr',
+    searchVolume: '~30K/mo',
+    category: 'stats',
+    status: 'live',
+  },
+  {
     slug: 'sharpe-ratio-calculator',
     title: 'Sharpe Ratio Calculator',
     short: 'Compute the Sharpe ratio of a returns series with a configurable risk-free rate.',
