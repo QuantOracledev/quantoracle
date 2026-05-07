@@ -79,10 +79,14 @@ export default function ApiDocsPage() {
           — your client wallet pays automatically when you exceed the free tier.
         </li>
         <li>
-          <strong>High-volume / enterprise:</strong> need flat-rate billing, an API key, an SLA,
-          or a higher rate limit? Email{' '}
-          <a href="mailto:hello@quantoracle.dev" className="text-accent">
-            hello@quantoracle.dev
+          <strong>High-volume / enterprise:</strong> for flat-rate billing, an API key, an SLA, or
+          a higher rate limit, open an issue at{' '}
+          <a
+            href="https://github.com/QuantOracledev/quantoracle/issues/new"
+            rel="noopener"
+            className="text-accent"
+          >
+            github.com/QuantOracledev/quantoracle
           </a>{' '}
           with your expected volume and we&apos;ll size a plan.
         </li>

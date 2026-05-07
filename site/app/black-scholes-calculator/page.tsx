@@ -214,9 +214,16 @@ function Field({
 
 function ResultsCard({ inputs, call, put }: { inputs: Inputs; call: OptionPrice; put: OptionPrice }) {
   const data = buildPayoff(inputs.K, call.price, put.price);
+  const days = Math.round(inputs.T * 365);
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          ${inputs.S} spot · ${inputs.K} strike · {days}d · {(inputs.sigma * 100).toFixed(1)}% IV ·{' '}
+          {(inputs.r * 100).toFixed(1)}% r
+        </span>
+      </div>
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Call price</div>

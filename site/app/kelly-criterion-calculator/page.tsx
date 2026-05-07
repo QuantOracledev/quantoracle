@@ -177,7 +177,13 @@ function ResultsCard({ inputs, result }: { inputs: Inputs; result: KellyResult }
   const fullPct = result.full_kelly * 100;
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          {(inputs.win_rate * 100).toFixed(1)}% win rate · ${inputs.avg_win} avg win · $
+          {inputs.avg_loss} avg loss
+        </span>
+      </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         <KellyBox label="Full Kelly" value={result.full_kelly} highlight={result.recommended === 'FULL_KELLY'} />

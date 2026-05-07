@@ -223,7 +223,14 @@ function Select({
 function ResultsCard({ inputs, result }: { inputs: Inputs; result: LiquidationResult }) {
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          {inputs.direction} {inputs.leverage}× · $
+          {inputs.entry_price.toLocaleString()} entry · ${inputs.collateral.toLocaleString()}{' '}
+          collateral · {(inputs.maintenance_margin_rate * 100).toFixed(2)}% mm
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>

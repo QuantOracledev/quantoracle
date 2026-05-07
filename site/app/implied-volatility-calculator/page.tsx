@@ -105,7 +105,7 @@ export default async function ImpliedVolPage({
       title="Implied Volatility Calculator"
       subtitle="Solve for the IV that makes Black-Scholes match a market option price. Newton-Raphson under the hood, 6-decimal precision, typically converges in 3-5 iterations."
       inputs={<InputsCard inputs={inputs} />}
-      results={result ? <ResultsCard result={result} /> : <ErrorCard />}
+      results={result ? <ResultsCard inputs={inputs} result={result} /> : <ErrorCard />}
       interpretation={result && <Interpretation inputs={inputs} result={result} />}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
@@ -231,11 +231,18 @@ function Select({
   );
 }
 
-function ResultsCard({ result }: { result: IvResult }) {
+function ResultsCard({ inputs, result }: { inputs: Inputs; result: IvResult }) {
   const fitError = Math.abs(result.model_price - result.market_price);
+  const days = Math.round(inputs.T * 365);
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          {inputs.type} · ${inputs.S} spot · ${inputs.K} strike · {days}d · ${inputs.market_price}{' '}
+          mkt price
+        </span>
+      </div>
 
       <div className="mb-6">
         <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">

@@ -185,9 +185,17 @@ function Field({
 
 function ResultsCard({ inputs, result }: { inputs: Inputs; result: PositionResult }) {
   const overAccount = result.value > inputs.account_size;
+  const direction = inputs.entry_price > inputs.stop_loss ? 'long' : 'short';
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          {direction} · ${inputs.account_size.toLocaleString()} account ·{' '}
+          {(inputs.risk_per_trade * 100).toFixed(2)}% risk · ${inputs.entry_price} entry · $
+          {inputs.stop_loss} stop
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>

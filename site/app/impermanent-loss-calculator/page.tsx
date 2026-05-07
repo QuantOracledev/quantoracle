@@ -97,7 +97,7 @@ export default async function ImpermanentLossPage({
       title="Impermanent Loss Calculator"
       subtitle="Quantify the cost of providing liquidity to an AMM pool versus simply holding the two tokens. Returns IL percentage, dollar amount, and the fee APY needed to break even."
       inputs={<InputsCard inputs={inputs} />}
-      results={result ? <ResultsCard result={result} /> : <ErrorCard />}
+      results={result ? <ResultsCard inputs={inputs} result={result} /> : <ErrorCard />}
       interpretation={result && <Interpretation inputs={inputs} result={result} />}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
@@ -212,10 +212,17 @@ function Select({
   );
 }
 
-function ResultsCard({ result }: { result: IlResult }) {
+function ResultsCard({ inputs, result }: { inputs: Inputs; result: IlResult }) {
+  const ratioChange = inputs.current_price_ratio / inputs.initial_price_ratio;
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          {inputs.amm_type === 'v3' ? 'Uniswap v3' : 'Uniswap v2'} · $
+          {inputs.initial_investment.toLocaleString()} initial · ratio {ratioChange.toFixed(2)}×
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>

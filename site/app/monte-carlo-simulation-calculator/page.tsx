@@ -389,11 +389,19 @@ function ResultsCard({ inputs, result }: { inputs: Inputs; result: McResult }) {
 
   return (
     <div className="card">
-      <div className="flex items-baseline justify-between mb-4">
+      <div className="flex items-baseline justify-between mb-2 gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">Results</h2>
         <span className="text-[10px] uppercase tracking-wider text-slate-500">
           showing {inputs.view === 'real' ? "today's dollars" : 'nominal future dollars'}
         </span>
+      </div>
+      <div className="text-xs text-slate-500 mb-4">
+        ${inputs.initial_value.toLocaleString()} · {inputs.years}y ·{' '}
+        {(inputs.annual_return * 100).toFixed(1)}% return ·{' '}
+        {(inputs.annual_vol * 100).toFixed(1)}% vol
+        {inputs.contributions > 0 && ` · +$${inputs.contributions.toLocaleString()}/yr`}
+        {inputs.withdrawal_rate > 0 &&
+          ` · -${(inputs.withdrawal_rate * 100).toFixed(1)}%/yr withdrawal`}
       </div>
 
       {isWithdrawalScenario && (

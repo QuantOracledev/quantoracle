@@ -262,9 +262,16 @@ function Select({
 
 function ResultsCard({ inputs, result }: { inputs: Inputs; result: BinomialResult }) {
   const eepPct = result.bs_price > 0 ? (result.early_exercise_premium / result.bs_price) * 100 : 0;
+  const days = Math.round(inputs.T * 365);
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4">Results</h2>
+      <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">Results</h2>
+        <span className="text-xs text-slate-500">
+          {inputs.exercise} {inputs.option_type} · ${inputs.S} spot · ${inputs.K} strike · {days}d ·{' '}
+          {(inputs.sigma * 100).toFixed(1)}% IV · {(inputs.q * 100).toFixed(1)}% div
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
         <div>
