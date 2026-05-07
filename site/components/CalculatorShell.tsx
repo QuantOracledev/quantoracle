@@ -70,9 +70,12 @@ export function CalculatorShell({
         </div>
       </div>
 
-      {/* Affiliate / premium CTA strip — replace placeholders with real tracking links once approved */}
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        <PremiumCta />
+      {/* Affiliate CTA — single full-width slot. The 'premium tier' placeholder
+          card was removed because it advertised a product that doesn't exist
+          yet, which was a trust-eroding 'coming soon' dead pixel. Add it back
+          (or replace with email-capture for the waitlist) when the premium
+          product is real. */}
+      <div className="mt-8">
         <AffiliateCta calculatorSlug={slug} />
       </div>
 
@@ -123,24 +126,6 @@ export function CalculatorShell({
           }),
         }}
       />
-    </div>
-  );
-}
-
-function PremiumCta() {
-  return (
-    <div className="card border-accent/30 bg-gradient-to-br from-ink-900 to-ink-800">
-      <div className="flex items-start justify-between mb-2">
-        <div className="text-xs uppercase tracking-wider text-accent">Premium</div>
-        <span className="text-[10px] uppercase tracking-wider bg-ink-800 text-slate-500 px-2 py-0.5 rounded">
-          Coming soon
-        </span>
-      </div>
-      <div className="font-semibold mb-1">Save and revisit your analyses</div>
-      <p className="text-sm text-slate-400">
-        Track positions over time, get IV-crush alerts, run multi-leg strategies. $9/mo when it
-        ships.
-      </p>
     </div>
   );
 }

@@ -79,12 +79,12 @@ export default function ApiDocsPage() {
           — your client wallet pays automatically when you exceed the free tier.
         </li>
         <li>
-          <strong>Coming soon — flat-rate API key tier:</strong> $49–$499/mo for credit-card
-          customers who want predictable billing instead of per-call USDC settlement. Drop a note in{' '}
-          <a href="https://github.com/QuantOracledev/quantoracle/issues" rel="noopener">
-            GitHub issues
+          <strong>High-volume / enterprise:</strong> need flat-rate billing, an API key, an SLA,
+          or a higher rate limit? Email{' '}
+          <a href="mailto:hello@quantoracle.dev" className="text-accent">
+            hello@quantoracle.dev
           </a>{' '}
-          if you&apos;d be interested.
+          with your expected volume and we&apos;ll size a plan.
         </li>
       </ul>
 
