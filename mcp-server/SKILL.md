@@ -15,6 +15,8 @@ metadata:
 
 63 deterministic quant calculators + 10 composite workflows for AI agents. Every tool accepts JSON and returns JSON. Same inputs always produce same outputs. Paid via x402 micropayments in USDC on Base or Solana.
 
+> **Browser-friendly calculators:** the same math engine is exposed at **[quantoracle.dev](https://quantoracle.dev)** as 12 free interactive calculators (Black-Scholes, Monte Carlo, Kelly, VaR, crypto liquidation, impermanent loss, CAGR, etc.). Useful for spot-checking the API's outputs without writing code.
+
 ## Install
 
 ```bash

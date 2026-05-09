@@ -2,6 +2,8 @@
 
 QuantOracle plugin for [elizaOS](https://github.com/elizaOS/eliza) — 63 deterministic quant finance calculators + 10 composite workflows. Black-Scholes pricing with Greeks, risk metrics, Monte Carlo, strategy backtests, rebalance planning, hedging recommendations, and more.
 
+> **Try without code:** the same engine powers free interactive calculators at **[quantoracle.dev](https://quantoracle.dev)** — useful for verifying outputs before wiring into an Eliza agent.
+
 ## Install
 
 ```bash

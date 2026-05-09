@@ -1,8 +1,21 @@
+Metadata-Version: 2.4
+Name: langchain-quantoracle
+Version: 0.2.0
+Summary: 63 deterministic quant calculators + 10 composite workflows for LangChain agents. x402 USDC payments on Base or Solana.
+License-Expression: MIT
+Project-URL: Homepage, https://quantoracle.dev
+Project-URL: Repository, https://github.com/QuantOracledev/quantoracle
+Project-URL: Documentation, https://api.quantoracle.dev/docs
+Keywords: langchain,quantitative-finance,options,risk,portfolio,agent,tools
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: langchain-core>=0.2.0
+Requires-Dist: requests>=2.28.0
+Requires-Dist: pydantic>=2.0.0
+
 # langchain-quantoracle
 
 63 deterministic quant calculators + 10 composite workflows for LangChain agents. Options pricing, risk metrics, portfolio optimization, technical indicators, statistics, crypto/DeFi, FX/macro, strategy backtesting, rebalance planning, options strategy selection, hedging recommendations, and more.
-
-> **Try the calculators in your browser:** the same engine powers 12 free interactive calculators at **[quantoracle.dev](https://quantoracle.dev)** — Black-Scholes, options profit, Monte Carlo, Kelly, Value at Risk, crypto liquidation, impermanent loss, CAGR, Sharpe, and more. Useful for quickly verifying outputs before wiring the API into an agent.
 
 ## Install
 

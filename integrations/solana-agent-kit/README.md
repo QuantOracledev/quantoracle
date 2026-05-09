@@ -2,6 +2,8 @@
 
 Deterministic quantitative finance tools for agents built with [Solana Agent Kit](https://github.com/sendaifun/solana-agent-kit).
 
+> **Browser preview:** explore the same math via 12 free interactive calculators at **[quantoracle.dev](https://quantoracle.dev)** — including the [crypto liquidation](https://quantoracle.dev/crypto-liquidation-calculator) and [impermanent loss](https://quantoracle.dev/impermanent-loss-calculator) calculators that pair naturally with Solana DeFi agents.
+
 ## What this provides
 
 11 high-value quant finance actions for Solana Agent Kit agents:

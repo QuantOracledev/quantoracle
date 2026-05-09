@@ -28,7 +28,20 @@
 
 ## Try it without writing code
 
-10 free calculators backed by the same API are live at **[quantoracle.dev](https://quantoracle.dev)** — Black-Scholes, options profit, American option (binomial tree), Kelly criterion, position size, Sharpe ratio, Value at Risk, implied volatility, crypto liquidation, impermanent loss. No signup, no API key.
+**12 free interactive calculators** backed by the same API are live at **[quantoracle.dev](https://quantoracle.dev)** — no signup, no API key:
+
+- [Black-Scholes Option Pricing](https://quantoracle.dev/black-scholes-calculator) — call/put price + full Greeks
+- [American Option (Binomial Tree)](https://quantoracle.dev/american-option-calculator) — early exercise + dividends
+- [Options Profit Calculator](https://quantoracle.dev/options-profit-calculator) — multi-leg payoff diagrams
+- [Implied Volatility](https://quantoracle.dev/implied-volatility-calculator) — Newton-Raphson IV solver
+- [Monte Carlo Simulation](https://quantoracle.dev/monte-carlo-simulation-calculator) — portfolio + retirement scenarios
+- [Kelly Criterion](https://quantoracle.dev/kelly-criterion-calculator) — full / half / quarter-Kelly sizing
+- [Position Size](https://quantoracle.dev/position-size-calculator) — fixed-fractional risk
+- [Value at Risk (VaR)](https://quantoracle.dev/value-at-risk-calculator) — parametric VaR + CVaR
+- [Sharpe Ratio](https://quantoracle.dev/sharpe-ratio-calculator) — with 95% confidence interval
+- [CAGR](https://quantoracle.dev/cagr-calculator) — compound annual growth rate + projections
+- [Crypto Liquidation Price](https://quantoracle.dev/crypto-liquidation-calculator) — long/short, any leverage
+- [Impermanent Loss](https://quantoracle.dev/impermanent-loss-calculator) — Uniswap v2 + v3
 
 ---
 
