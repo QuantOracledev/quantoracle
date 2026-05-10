@@ -1,12 +1,36 @@
 ---
 name: quantoracle
-description: 63 deterministic quantitative finance calculators + 10 composite workflows via MCP. Options pricing, Greeks, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, FX/macro, TVM, strategy backtesting, rebalance planning, options strategy selection, hedging. Paid via x402 on Base or Solana.
-version: 2.4.0
+description: 63 deterministic quantitative finance calculators + 10 composite workflows via MCP. Options pricing, Greeks, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, FX/macro, TVM, strategy backtesting, rebalance planning, options strategy selection, hedging. 1,000 free calls/IP/day; paid composites $0.04-$0.10 USDC via x402 on Base or Solana.
+version: 2.4.1
 metadata:
   openclaw:
     requires:
       bins:
         - node
+      # The package itself does not require any credentials. The free tier
+      # (1,000 calls/IP/day) covers all 73 calculator endpoints with no signup
+      # or API key. The 10 composite endpoints are paid-only via x402; the
+      # package returns a 402 error when a composite is called without an
+      # x402-capable wallet, so no surprise charges or implicit signin.
+      credentials: none
+      # Optional: if the host environment provides an x402-capable wallet
+      # (e.g. AgentKit's CDP wallet), paid endpoints will settle automatically.
+      # Without this capability, paid endpoints return 402 cleanly.
+      capabilities:
+        - x402_wallet  # optional, only needed for paid composites
+    payments:
+      protocol: x402
+      networks:
+        - eip155:8453   # Base mainnet
+        - solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp  # Solana mainnet
+      free_tier:
+        limit_per_ip_per_day: 1000
+        endpoints: calculator-tier (63 endpoints, $0.002-$0.015 each if paid)
+      paid_tier:
+        endpoints: composite-only (10 endpoints, $0.04-$0.10 each)
+        currency: USDC
+        spending_model: per-call (no subscription, no auto-renewal)
+        default_behavior: returns 402 if no wallet wired; never spends without explicit wallet capability
     emoji: "\U0001F4CA"
     homepage: https://github.com/QuantOracledev/quantoracle
 ---
