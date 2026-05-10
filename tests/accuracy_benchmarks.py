@@ -1803,16 +1803,18 @@ check(
     citation="Standard annuity FV formula: PMT × ((1+r)^n - 1)/r = 1000 × ((1.08)^10-1)/0.08 = $14,486.56",
 )
 
-# IRR: CF = [-1000, 300, 400, 500, 200] → IRR ≈ 15.09% (textbook example)
+# IRR: CF = [-1000, 300, 400, 500, 200] → IRR = 15.3221%
+# Verified independently with scipy.optimize.brentq: NPV at 15.3221% = -2e-13 ≈ 0.
+# The earlier benchmark of 15.09% was incorrect; tightened tolerance now catches the actual root.
 check(
     name="IRR: standard cash flow series",
     endpoint="/v1/tvm/irr",
     category="TVM",
     payload={"cash_flows": [-1000, 300, 400, 500, 200]},
     field_path="irr_pct",
-    expected=15.09,
-    tol=0.5,
-    citation="Numerical solution: NPV(-1000,300,400,500,200)=0 at r≈15.09%. Verified via bisection.",
+    expected=15.3221,
+    tol=0.01,
+    citation="Numerical: NPV(-1000,300,400,500,200)=0 at r=15.3221%. Verified via scipy.optimize.brentq, NPV at IRR ≈ 0.",
 )
 
 # NPV: CF = [-1000, 400, 400, 400] at 10%
