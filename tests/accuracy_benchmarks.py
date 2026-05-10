@@ -1131,7 +1131,7 @@ check(
     field_path="hedge_ratio",
     expected=2.0,
     tol=0.05,
-    citation="Engle-Granger (1987): OLS regression of y=α+β*x gives β≈2 for y≈2x. JASA 55(391), 251-276.",
+    citation="Engle-Granger (1987): OLS regression of y=α+β*x gives β≈2 for y≈2x. Econometrica 55(2), 251-276.",
 )
 
 # GARCH forecast: persistence (alpha+beta) must be < 1 for stationarity
@@ -1211,7 +1211,7 @@ check(
     field_path="retracement_levels.23.6%",
     expected=176.4,
     tol=0.01,
-    citation="Fibonacci sequence ratio: 0.236 ≈ 1-0.764 ≈ φ^-4. Level = 200-0.236*100 = 176.4.",
+    citation="Fibonacci sequence ratio: 0.236 = φ^-3 = 1/4.236 ≈ 0.2361. Level = 200-0.236*100 = 176.4.",
 )
 
 # ATR: uniform bars (high-low=2, close gaps=0) → ATR=2
@@ -1269,7 +1269,7 @@ check(
     field_path="impermanent_loss_pct",
     expected=-5.719,
     tol=0.05,
-    citation="Uniswap v2 IL formula: IL = 2√r/(1+r)−1. r=2: 2√2/3−1 = −5.72%. Adams et al. (2021) Uniswap v3 whitepaper §3",
+    citation="Uniswap v2 IL formula: IL = 2√r/(1+r)−1. r=2: 2√2/3−1 = −5.72%. Derives from constant-product invariant x*y=k (Adams, Zinsmeister, Robinson — Uniswap v2 Core, March 2020).",
 )
 
 check(
@@ -1291,7 +1291,7 @@ check(
     field_path="impermanent_loss_pct",
     expected=-5.719,
     tol=0.10,
-    citation="Uniswap v2 IL is symmetric: IL(r) = IL(1/r). r=0.5 → same 5.72% IL as r=2. Adams et al. §3",
+    citation="Uniswap v2 IL is symmetric: IL(r) = IL(1/r). r=0.5 → same 5.72% IL as r=2. Derives from constant-product invariant x*y=k (Adams, Zinsmeister, Robinson — Uniswap v2 Core, March 2020).",
 )
 
 # APY/APR: APR=12% daily compounding → APY = (1+0.12/365)^365 - 1 ≈ 12.747%
