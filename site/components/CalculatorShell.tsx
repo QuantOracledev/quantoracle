@@ -170,17 +170,24 @@ function AffiliateCta({ calculatorSlug }: { calculatorSlug: string }) {
       // FTC-compliant: rel='sponsored' marks this as paid; 'nofollow' tells
       // search engines not to pass link equity; 'noopener' is security.
       rel="sponsored nofollow noopener"
-      className="card border-ink-700 hover:border-accent/40 transition block group"
+      // Visually differentiated from content cards: accent-tinted background,
+      // accent border, and a left-edge stripe so users immediately register
+      // this as an ad slot rather than mistaking it for editorial content.
+      className="block group rounded-lg border border-accent/30 bg-accent/[0.04] border-l-4 border-l-accent p-5 hover:border-accent/60 hover:bg-accent/[0.07] transition"
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="text-xs uppercase tracking-wider text-slate-400">Sponsored</div>
-        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+        <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 border border-accent/30 rounded px-2 py-0.5">
+          Sponsored
+        </span>
+        <span className="text-[10px] uppercase tracking-wider text-slate-400 group-hover:text-accent transition">
           tradingview.com →
         </span>
       </div>
-      <div className="font-semibold mb-1 group-hover:text-accent transition">{headline}</div>
-      <p className="text-sm text-slate-400">{body}</p>
-      <p className="mt-2 text-[10px] text-slate-600">
+      <div className="font-semibold text-slate-100 mb-1 group-hover:text-accent transition">
+        {headline}
+      </div>
+      <p className="text-sm text-slate-300">{body}</p>
+      <p className="mt-2 text-[10px] text-slate-500">
         QuantOracle earns a commission if you sign up via this link. Doesn&apos;t cost you extra.
       </p>
     </a>
