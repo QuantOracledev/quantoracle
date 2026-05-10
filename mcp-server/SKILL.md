@@ -1,7 +1,7 @@
 ---
 name: quantoracle
 description: 63 deterministic quantitative finance calculators + 10 composite workflows via MCP. Options pricing, Greeks, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, FX/macro, TVM, strategy backtesting, rebalance planning, options strategy selection, hedging. Paid via x402 on Base or Solana.
-version: 2.3.0
+version: 2.4.0
 metadata:
   openclaw:
     requires:
