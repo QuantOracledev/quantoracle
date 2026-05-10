@@ -200,9 +200,9 @@ check(
     category="Health",
     payload=None,
     field_path="tools",
-    expected=63,
+    expected=73,
     tol=0,
-    citation="QuantOracle API spec: 63 registered tools",
+    citation="QuantOracle API spec: 63 calculators + 10 composites = 73 registered tools",
     method="GET",
 )
 
