@@ -2,9 +2,6 @@ import Link from 'next/link';
 import { CALCULATORS } from '@/lib/calculators';
 
 export default function HomePage() {
-  const live = CALCULATORS.filter((c) => c.status === 'live');
-  const planned = CALCULATORS.filter((c) => c.status === 'planned');
-
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
       {/* Hero */}
@@ -29,10 +26,7 @@ export default function HomePage() {
 
       {/* Calculators index */}
       <section id="calculators" className="pb-16 scroll-mt-16">
-        <h2 className="text-2xl font-semibold mb-1">Calculators</h2>
-        <p className="text-sm text-slate-400 mb-6">
-          {live.length} live, {planned.length} coming soon.
-        </p>
+        <h2 className="text-2xl font-semibold mb-6">Calculators</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {CALCULATORS.map((c) => {
             const isLive = c.status === 'live';
