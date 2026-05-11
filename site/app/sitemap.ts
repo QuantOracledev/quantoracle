@@ -3,6 +3,11 @@ import { CALCULATORS } from '@/lib/calculators';
 
 const BASE = 'https://quantoracle.dev';
 
+/** Add comparison/explainer articles here as they're published. */
+const COMPARE_ARTICLES = [
+  'sharpe-vs-sortino-vs-calmar',
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   return [
@@ -13,6 +18,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.9,
+    })),
+    { url: `${BASE}/compare`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    ...COMPARE_ARTICLES.map((slug) => ({
+      url: `${BASE}/compare/${slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
     })),
   ];
 }
