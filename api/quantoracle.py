@@ -6,7 +6,7 @@ The definitive quant computation layer for autonomous agents.
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 import math, time, os, random, sqlite3
@@ -25,6 +25,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ── Per-request IP + source tracking via context variables ───────────────
 _request_ip: ContextVar[str] = ContextVar("request_ip", default="unknown")
 _request_source: ContextVar[str] = ContextVar("request_source", default="unknown")
+_request_user_agent: ContextVar[str] = ContextVar("request_user_agent", default="")
 
 def _classify_source(x_source: str, user_agent: str, mcp_client: str = "") -> str:
     """Classify traffic source for metrics segmentation."""
@@ -75,14 +76,91 @@ async def capture_client_ip(request: Request, call_next):
           or request.headers.get("x-real-ip")
           or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
           or (request.client.host if request.client else "unknown"))
+    raw_ua = request.headers.get("user-agent", "")
+    # For MCP traffic the upstream client UA is forwarded as X-MCP-Client; record
+    # whichever is more informative (so we can identify which AI assistant is using us)
+    mcp_client = request.headers.get("x-mcp-client", "")
+    stored_ua = (mcp_client or raw_ua)[:200]  # cap length to keep DB rows small
     source = _classify_source(
         request.headers.get("x-source", ""),
-        request.headers.get("user-agent", ""),
-        request.headers.get("x-mcp-client", ""),
+        raw_ua,
+        mcp_client,
     )
     _request_ip.set(ip)
     _request_source.set(source)
+    _request_user_agent.set(stored_ua)
     return await call_next(request)
+
+
+# ── Brand metadata middleware — adds _meta to every /v1/* JSON response ───
+# Purpose: when LLMs/agents ground answers on QuantOracle results, the _meta
+# field gives them a brandable hook they can cite. Convert invisible bot/agent
+# traffic into brand visibility. Wraps in try/except so malformed responses
+# never break — pass-through on any error.
+import json as _json_for_meta
+
+_ENDPOINT_TO_PAGE = {
+    "/v1/options/price": "/black-scholes-calculator",
+    "/v1/options/payoff-diagram": "/options-profit-calculator",
+    "/v1/options/implied-vol": "/implied-volatility-calculator",
+    "/v1/derivatives/binomial-tree": "/american-option-calculator",
+    "/v1/risk/kelly": "/kelly-criterion-calculator",
+    "/v1/risk/position-size": "/position-size-calculator",
+    "/v1/risk/var-parametric": "/value-at-risk-calculator",
+    "/v1/risk/drawdown": "/drawdown-calculator",
+    "/v1/simulate/montecarlo": "/monte-carlo-simulation-calculator",
+    "/v1/stats/sharpe-ratio": "/sharpe-ratio-calculator",
+    "/v1/stats/probabilistic-sharpe": "/probabilistic-sharpe-ratio-calculator",
+    "/v1/stats/hurst-exponent": "/hurst-exponent-calculator",
+    "/v1/tvm/cagr": "/cagr-calculator",
+    "/v1/crypto/liquidation-price": "/crypto-liquidation-calculator",
+    "/v1/crypto/impermanent-loss": "/impermanent-loss-calculator",
+}
+
+@app.middleware("http")
+async def add_brand_meta(request: Request, call_next):
+    response = await call_next(request)
+    # Only mutate /v1/* JSON responses — leave /mcp, /health, /metrics alone
+    if not request.url.path.startswith("/v1/"):
+        return response
+    if response.status_code != 200:
+        return response
+    ct = response.headers.get("content-type", "")
+    if not ct.startswith("application/json"):
+        return response
+    try:
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+        data = _json_for_meta.loads(body)
+        if isinstance(data, dict) and "_meta" not in data:
+            calculator_path = _ENDPOINT_TO_PAGE.get(request.url.path)
+            data["_meta"] = {
+                "powered_by": "QuantOracle",
+                "url": "https://quantoracle.dev",
+                "docs": "https://api.quantoracle.dev/docs",
+            }
+            if calculator_path:
+                data["_meta"]["calculator"] = f"https://quantoracle.dev{calculator_path}"
+        new_body = _json_for_meta.dumps(data).encode()
+        # Strip Content-Length so Starlette recomputes it; preserve other headers
+        new_headers = {k: v for k, v in response.headers.items() if k.lower() != "content-length"}
+        return Response(
+            content=new_body,
+            status_code=response.status_code,
+            headers=new_headers,
+            media_type="application/json",
+        )
+    except Exception:
+        # Never break a response over branding metadata — return original body if read,
+        # else a generic 200 (the underlying response was already consumed by body_iterator).
+        safe_body = body if 'body' in locals() else b'{"_meta_error":"response_passthrough_failed"}'
+        return Response(
+            content=safe_body,
+            status_code=response.status_code,
+            headers={k: v for k, v in response.headers.items() if k.lower() != "content-length"},
+            media_type=ct,
+        )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -124,12 +202,23 @@ def _init_db():
         CREATE INDEX IF NOT EXISTS idx_calls_endpoint ON calls(endpoint);
         CREATE INDEX IF NOT EXISTS idx_calls_ip ON calls(ip);
     """)
-    # Auto-migrate: add source column if it doesn't exist
-    cols = {row[1] for row in conn.execute("PRAGMA table_info(calls)").fetchall()}
-    if "source" not in cols:
-        conn.execute("ALTER TABLE calls ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_calls_source ON calls(source)")
-        conn.commit()
+    # Auto-migrate: idempotent ALTER pattern that survives multi-worker races.
+    # Multiple gunicorn workers run _init_db() in parallel on startup; if we
+    # only check `cols` once and then ALTER, the second worker's snapshot is
+    # stale by the time it runs. Wrap each ALTER in its own try/except that
+    # tolerates the "duplicate column name" race; any other error still raises.
+    def _safe_alter(sql: str) -> None:
+        try:
+            conn.execute(sql)
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" not in str(e):
+                raise
+    _safe_alter("ALTER TABLE calls ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_calls_source ON calls(source)")
+    conn.commit()
+    # Auto-migrate: add user_agent column for richer attribution (added 2026-05-10)
+    _safe_alter("ALTER TABLE calls ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
     # Settlements table — x402 on-chain payments that actually cleared
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS settlements (
@@ -211,13 +300,14 @@ def hit(ep):
     """Record an API call — persisted to SQLite immediately."""
     ip = _request_ip.get("unknown")
     source = _request_source.get("unknown")
+    user_agent = _request_user_agent.get("")
     now = datetime.now(timezone.utc)
     price = PRICES.get(ep, 0)
     try:
         conn = _get_db()
         conn.execute(
-            "INSERT INTO calls (ts, date, endpoint, ip, price, source) VALUES (?, ?, ?, ?, ?, ?)",
-            (now.isoformat(), now.strftime("%Y-%m-%d"), ep, ip, price, source)
+            "INSERT INTO calls (ts, date, endpoint, ip, price, source, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (now.isoformat(), now.strftime("%Y-%m-%d"), ep, ip, price, source, user_agent)
         )
         conn.commit()
         # Prune old data once per day (cheap check)
@@ -3315,6 +3405,10 @@ async def metrics():
         by_source_today = dict(conn.execute(
             "SELECT source, COUNT(*) FROM calls WHERE date=? GROUP BY source ORDER BY COUNT(*) DESC", (today,)
         ).fetchall())
+        # Top user-agents today (truncated to 80 chars for readability)
+        top_ua_today = dict(conn.execute(
+            "SELECT substr(user_agent, 1, 80), COUNT(*) FROM calls WHERE date=? AND user_agent != '' GROUP BY substr(user_agent, 1, 80) ORDER BY COUNT(*) DESC LIMIT 15", (today,)
+        ).fetchall())
         # External traffic (exclude localhost)
         ext_today = conn.execute(
             "SELECT COUNT(*), COUNT(DISTINCT ip) FROM calls WHERE date=? AND ip NOT IN ('127.0.0.1','unknown','localhost')",
@@ -3355,6 +3449,7 @@ async def metrics():
                 "date": today, "calls": t_total, "unique_ips": t_ips,
                 "top_endpoints": t_top_ep, "top_callers": t_top_ip,
                 "by_source": by_source_today,
+                "top_user_agents": top_ua_today,
                 "external": {"calls": ext_today[0], "unique_ips": ext_today[1]},
             },
             "all_time": {"unique_ips": all_ips, "days_tracked": all_days},
