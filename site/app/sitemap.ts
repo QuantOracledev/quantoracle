@@ -6,6 +6,10 @@ const BASE = 'https://quantoracle.dev';
 /** Add comparison/explainer articles here as they're published. */
 const COMPARE_ARTICLES = [
   'sharpe-vs-sortino-vs-calmar',
+  'kelly-vs-fixed-fractional-vs-optimal-f',
+  'var-vs-cvar-vs-max-drawdown',
+  'black-scholes-vs-binomial-vs-monte-carlo',
+  'hurst-vs-autocorrelation-vs-variance-ratio',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

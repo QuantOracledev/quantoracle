@@ -16,6 +16,30 @@ const articles = [
     blurb:
       'Three risk-adjusted return metrics, three different things they measure. Which one to use when, and what good values look like.',
   },
+  {
+    slug: 'kelly-vs-fixed-fractional-vs-optimal-f',
+    title: 'Kelly vs Fixed Fractional vs Optimal-f',
+    blurb:
+      'Three position sizing methods with wildly different aggressiveness. Why most people should use fixed-fractional, and the half-Kelly trick.',
+  },
+  {
+    slug: 'var-vs-cvar-vs-max-drawdown',
+    title: 'VaR vs CVaR vs Max Drawdown',
+    blurb:
+      'Three downside risk metrics with very different blind spots. Where VaR lies, why CVaR fixes it, and why allocators care about drawdown most.',
+  },
+  {
+    slug: 'black-scholes-vs-binomial-vs-monte-carlo',
+    title: 'Black-Scholes vs Binomial vs Monte Carlo',
+    blurb:
+      'Three option pricing methods, three different jobs. When closed-form is right, when binomial wins on early exercise, and when Monte Carlo is the only choice.',
+  },
+  {
+    slug: 'hurst-vs-autocorrelation-vs-variance-ratio',
+    title: 'Hurst vs Autocorrelation vs Variance Ratio',
+    blurb:
+      'Three tests for detecting trend or mean-reversion. One-number summary, lag-by-lag, formal hypothesis test. When to use each.',
+  },
 ];
 
 export default function ComparePage() {
