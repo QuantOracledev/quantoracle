@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Faq } from '@/components/FAQ';
+import { AffiliateCta } from '@/components/AffiliateCta';
 import { buildMetadata, faqJsonLd } from '@/lib/seo';
 import { faqs } from './faqs';
 
@@ -412,6 +413,10 @@ export default function Page() {
           </li>
         </ul>
       </article>
+
+      <div className="mt-12">
+        <AffiliateCta subId="compare-hurst-vs-autocorrelation-vs-variance-ratio" category="compare" />
+      </div>
 
       <section className="mt-16">
         <h2 className="text-2xl font-semibold mb-4">Frequently asked questions</h2>

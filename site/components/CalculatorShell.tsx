@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { AdSlot } from './AdSlot';
-import { CALCULATORS, getRelated } from '@/lib/calculators';
+import { AffiliateCta } from './AffiliateCta';
+import { getRelated } from '@/lib/calculators';
 
 interface Props {
   slug: string;
@@ -76,7 +77,7 @@ export function CalculatorShell({
           (or replace with email-capture for the waitlist) when the premium
           product is real. */}
       <div className="mt-8">
-        <AffiliateCta calculatorSlug={slug} />
+        <AffiliateCta subId={slug} />
       </div>
 
       {/* AD SLOT 1 — post-result, highest-CTR position. Renders nothing until
@@ -130,66 +131,5 @@ export function CalculatorShell({
   );
 }
 
-// TradingView affiliate ID. Public value (lives in every link), so safe to
-// commit. The per-page sub-ID is appended by AffiliateCta so the dashboard
-// shows conversion attribution per calculator.
-const TRADINGVIEW_AFF_ID = '166298';
-
-/** Builds an affiliate-tagged TradingView pricing URL with per-page tracking. */
-function tradingViewUrl(calculatorSlug: string): string {
-  const params = new URLSearchParams({
-    aff_id: TRADINGVIEW_AFF_ID,
-    aff_sub: calculatorSlug,
-  });
-  return `https://www.tradingview.com/pricing/?${params.toString()}`;
-}
-
-function AffiliateCta({ calculatorSlug }: { calculatorSlug: string }) {
-  const cat = CALCULATORS.find((c) => c.slug === calculatorSlug)?.category;
-
-  // Per-category copy. TradingView fits all categories — chartists across
-  // options, crypto, and general quant audiences all use it. When Coinbase /
-  // IBKR / etc. are wired up later, we can swap based on category here.
-  const headline =
-    cat === 'crypto'
-      ? 'Chart and trade crypto with TradingView Pro'
-      : cat === 'options'
-        ? 'Visualize options strategies on TradingView Pro'
-        : 'Backtest and chart with TradingView Pro';
-  const body =
-    cat === 'crypto'
-      ? 'Multi-exchange charts, alerts, and indicators across BTC, ETH, and 100,000+ crypto pairs. Free 30-day Pro trial.'
-      : cat === 'options'
-        ? 'Real-time charts, custom Pine Script indicators, and multi-monitor layouts used by serious options traders. Free 30-day Pro trial.'
-        : 'The chart platform used by 60M+ traders. Custom indicators, multi-timeframe analysis, alerts. Free 30-day Pro trial.';
-
-  return (
-    <a
-      href={tradingViewUrl(calculatorSlug)}
-      target="_blank"
-      // FTC-compliant: rel='sponsored' marks this as paid; 'nofollow' tells
-      // search engines not to pass link equity; 'noopener' is security.
-      rel="sponsored nofollow noopener"
-      // Visually differentiated from content cards: accent-tinted background,
-      // accent border, and a left-edge stripe so users immediately register
-      // this as an ad slot rather than mistaking it for editorial content.
-      className="block group rounded-lg border border-accent/30 bg-accent/[0.04] border-l-4 border-l-accent p-5 hover:border-accent/60 hover:bg-accent/[0.07] transition"
-    >
-      <div className="flex items-start justify-between mb-2">
-        <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 border border-accent/30 rounded px-2 py-0.5">
-          Sponsored
-        </span>
-        <span className="text-[10px] uppercase tracking-wider text-slate-400 group-hover:text-accent transition">
-          tradingview.com →
-        </span>
-      </div>
-      <div className="font-semibold text-slate-100 mb-1 group-hover:text-accent transition">
-        {headline}
-      </div>
-      <p className="text-sm text-slate-300">{body}</p>
-      <p className="mt-2 text-[10px] text-slate-500">
-        QuantOracle earns a commission if you sign up via this link. Doesn&apos;t cost you extra.
-      </p>
-    </a>
-  );
-}
+// AffiliateCta was extracted to components/AffiliateCta.tsx so compare/* pages
+// (which don't use CalculatorShell) can render the same sponsored slot.

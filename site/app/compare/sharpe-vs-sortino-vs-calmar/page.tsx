@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Faq } from '@/components/FAQ';
+import { AffiliateCta } from '@/components/AffiliateCta';
 import { buildMetadata, faqJsonLd } from '@/lib/seo';
 import { faqs } from './faqs';
 
@@ -454,6 +455,12 @@ export default function Page() {
           </li>
         </ul>
       </article>
+
+      {/* Sponsored slot — single placement at article end so editorial flow
+          isn't broken. Per-article aff_sub for conversion tracking. */}
+      <div className="mt-12">
+        <AffiliateCta subId="compare-sharpe-vs-sortino-vs-calmar" category="compare" />
+      </div>
 
       {/* FAQ */}
       <section className="mt-16">

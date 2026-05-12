@@ -29,10 +29,10 @@ const articles = [
       'Three downside risk metrics with very different blind spots. Where VaR lies, why CVaR fixes it, and why allocators care about drawdown most.',
   },
   {
-    slug: 'black-scholes-vs-binomial-vs-monte-carlo',
-    title: 'Black-Scholes vs Binomial vs Monte Carlo',
+    slug: 'black-scholes-vs-binomial',
+    title: 'Black-Scholes vs Binomial Tree',
     blurb:
-      'Three option pricing methods, three different jobs. When closed-form is right, when binomial wins on early exercise, and when Monte Carlo is the only choice.',
+      'Two canonical option pricing methods. When the closed-form formula is right, when binomial trees beat it on early exercise, and how many tree steps you actually need.',
   },
   {
     slug: 'hurst-vs-autocorrelation-vs-variance-ratio',

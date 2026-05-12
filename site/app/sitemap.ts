@@ -8,7 +8,7 @@ const COMPARE_ARTICLES = [
   'sharpe-vs-sortino-vs-calmar',
   'kelly-vs-fixed-fractional-vs-optimal-f',
   'var-vs-cvar-vs-max-drawdown',
-  'black-scholes-vs-binomial-vs-monte-carlo',
+  'black-scholes-vs-binomial',
   'hurst-vs-autocorrelation-vs-variance-ratio',
 ];
 
