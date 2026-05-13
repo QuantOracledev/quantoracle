@@ -175,8 +175,17 @@ export default async function MonteCarloPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  // Skip the API call on the bare-URL landing (i.e., the user just clicked
+  // the link from the homepage). The simulation runs ~1000 paths through 20
+  // years of GBM plus network round-trip, which makes the click-to-reveal
+  // delay 1-3 seconds on a cold serverless instance. Render the form +
+  // presets instantly; only run the simulation when the user explicitly
+  // submits (which adds query params to the URL). This trades 0 latency for
+  // 1 explicit "Run simulation" click — which is the right UX here because
+  // results depend on YOUR portfolio inputs, not abstract defaults.
+  const hasUserParams = Object.keys(sp).length > 0;
   const inputs = parseInputs(sp);
-  const result = await simulate(inputs);
+  const result = hasUserParams ? await simulate(inputs) : null;
 
   const jsonLd = [
     calculatorJsonLd({
@@ -187,6 +196,12 @@ export default async function MonteCarloPage({
     }),
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
   ];
+
+  const resultsNode = !hasUserParams
+    ? <EmptyState />
+    : result
+      ? <ResultsCard inputs={inputs} result={result} />
+      : <ErrorCard />;
 
   return (
     <CalculatorShell
@@ -199,12 +214,31 @@ export default async function MonteCarloPage({
           <InputsCard inputs={inputs} />
         </div>
       }
-      results={result ? <ResultsCard inputs={inputs} result={result} /> : <ErrorCard />}
-      interpretation={result && <Interpretation inputs={inputs} result={result} />}
+      results={resultsNode}
+      interpretation={hasUserParams && result ? <Interpretation inputs={inputs} result={result} /> : undefined}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
       longform={<Longform />}
     />
+  );
+}
+
+/** Shown on the bare-URL initial visit (no query params). Tells the user
+ *  what to do without making them wait for a server-side simulation. */
+function EmptyState() {
+  return (
+    <div className="card border-accent/20">
+      <h2 className="text-lg font-semibold mb-2">Ready to simulate</h2>
+      <p className="text-sm text-slate-300 leading-relaxed mb-3">
+        Pick a preset above for a one-click scenario, or set your own inputs and click{' '}
+        <strong className="text-accent">Run simulation</strong>. Each simulation runs 1,000+ random
+        price paths (~1 second) and returns the full distribution of where your portfolio could
+        end up — median, percentiles, probability of loss, and probability of ruin.
+      </p>
+      <p className="text-xs text-slate-500">
+        Free, no signup. Powered by the QuantOracle <code>/v1/simulate/montecarlo</code> endpoint.
+      </p>
+    </div>
   );
 }
 
