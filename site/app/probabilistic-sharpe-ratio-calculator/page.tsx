@@ -94,8 +94,13 @@ export default async function PSRPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  // Skip API call on bare-URL landing — PSR computation (skewness, kurtosis,
+  // and CDF evaluation across the return series) plus network round-trip
+  // pushed cold-fetch to ~8s before this fix. Now page renders instantly;
+  // user clicks Calculate to compute.
+  const hasUserParams = Object.keys(sp).length > 0;
   const inputs = parseInputs(sp);
-  const result = await calc(inputs);
+  const result = hasUserParams ? await calc(inputs) : null;
 
   const jsonLd = [
     calculatorJsonLd({
@@ -107,18 +112,46 @@ export default async function PSRPage({
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
   ];
 
+  const resultsNode = !hasUserParams
+    ? <EmptyState />
+    : result
+      ? <ResultsCard result={result} />
+      : <ErrorCard />;
+
   return (
     <CalculatorShell
       slug="probabilistic-sharpe-ratio-calculator"
       title="Probabilistic Sharpe Ratio Calculator"
       subtitle="The Sharpe ratio adjusted for sample size, skewness, and kurtosis. Tells you the probability that your strategy's Sharpe is real edge — not sampling noise. Lopez de Prado, 2012."
       inputs={<InputsCard inputs={inputs} />}
-      results={result ? <ResultsCard result={result} /> : <ErrorCard />}
-      interpretation={result && <Interpretation result={result} />}
+      results={resultsNode}
+      interpretation={hasUserParams && result ? <Interpretation result={result} /> : undefined}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
       longform={<Longform />}
     />
+  );
+}
+
+/** Shown on the bare-URL initial visit. Defers the PSR computation until
+ *  the user clicks Calculate, eliminating the cold-fetch delay. */
+function EmptyState() {
+  return (
+    <div className="card border-accent/20">
+      <h2 className="text-lg font-semibold mb-2">
+        Ready to test your Sharpe ratio significance
+      </h2>
+      <p className="text-sm text-slate-300 leading-relaxed mb-3">
+        Paste your return series (or use the 30-point sample already loaded), set the benchmark
+        Sharpe you want to test against, and click <strong className="text-accent">Calculate</strong>.
+        The PSR adjusts your raw Sharpe for sample size, skewness, and kurtosis — telling you the
+        probability that your strategy&apos;s edge is real and not just sampling noise.
+      </p>
+      <p className="text-xs text-slate-500">
+        PSR &gt; 0.95 → 95% confident edge is real · 0.5-0.95 → suggestive, need more data ·
+        &lt; 0.5 → likely noise
+      </p>
+    </div>
   );
 }
 

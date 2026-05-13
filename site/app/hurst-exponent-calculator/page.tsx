@@ -97,8 +97,12 @@ export default async function HurstPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  // Skip API call on bare-URL landing — R/S analysis on the default 100-point
+  // sample plus network round-trip pushed cold-fetch to ~8s before this fix.
+  // Now page renders instantly; user clicks Calculate to compute.
+  const hasUserParams = Object.keys(sp).length > 0;
   const inputs = parseInputs(sp);
-  const result = await calc(inputs);
+  const result = hasUserParams ? await calc(inputs) : null;
 
   const jsonLd = [
     calculatorJsonLd({
@@ -110,18 +114,43 @@ export default async function HurstPage({
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
   ];
 
+  const resultsNode = !hasUserParams
+    ? <EmptyState />
+    : result
+      ? <ResultsCard result={result} />
+      : <ErrorCard />;
+
   return (
     <CalculatorShell
       slug="hurst-exponent-calculator"
       title="Hurst Exponent Calculator"
       subtitle="Classify any price or return series as trending, mean-reverting, or random walk using R/S analysis. Helps you pick momentum vs mean-reversion strategies for the right asset."
       inputs={<InputsCard inputs={inputs} />}
-      results={result ? <ResultsCard result={result} /> : <ErrorCard />}
-      interpretation={result && <Interpretation result={result} />}
+      results={resultsNode}
+      interpretation={hasUserParams && result ? <Interpretation result={result} /> : undefined}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
       longform={<Longform />}
     />
+  );
+}
+
+/** Shown on the bare-URL initial visit. Defers the R/S computation until the
+ *  user clicks Calculate, eliminating the cold-fetch click-to-reveal delay. */
+function EmptyState() {
+  return (
+    <div className="card border-accent/20">
+      <h2 className="text-lg font-semibold mb-2">Ready to classify your time series</h2>
+      <p className="text-sm text-slate-300 leading-relaxed mb-3">
+        Paste your price or return series in the form (or use the 100-point sample already
+        loaded) and click <strong className="text-accent">Calculate</strong>. R/S analysis runs
+        across multiple window sizes and returns the Hurst exponent plus the R² of the log-log
+        fit so you know how reliable the estimate is.
+      </p>
+      <p className="text-xs text-slate-500">
+        H ≈ 0.5 → random walk · H &gt; 0.55 → trending · H &lt; 0.45 → mean-reverting
+      </p>
+    </div>
   );
 }
 

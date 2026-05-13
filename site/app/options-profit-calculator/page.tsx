@@ -110,8 +110,13 @@ export default async function OptionsProfitPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  // Skip API call on bare-URL landing. Multi-leg payoff diagram generates 200
+  // price points across the range, which adds ~1.5s click-to-reveal latency
+  // on cold-start serverless. Now the form (most-trafficked page on the site)
+  // appears instantly; user clicks Calculate to compute the payoff.
+  const hasUserParams = Object.keys(sp).length > 0;
   const inputs = parseInputs(sp);
-  const result = await calc(inputs);
+  const result = hasUserParams ? await calc(inputs) : null;
 
   const jsonLd = [
     calculatorJsonLd({
@@ -123,18 +128,44 @@ export default async function OptionsProfitPage({
     faqJsonLd(faqs.map((f) => ({ question: f.question, answer: f.plainAnswer }))),
   ];
 
+  const resultsNode = !hasUserParams
+    ? <EmptyState />
+    : result
+      ? <ResultsCard inputs={inputs} result={result} />
+      : <ErrorCard />;
+
   return (
     <CalculatorShell
       slug="options-profit-calculator"
       title="Options Profit Calculator"
       subtitle="Build single- and multi-leg option strategies and see the exact profit/loss profile at expiration. Calls, puts, longs, shorts, any number of legs. Break-even points and max profit/loss computed automatically."
       inputs={<InputsCard inputs={inputs} />}
-      results={result ? <ResultsCard inputs={inputs} result={result} /> : <ErrorCard />}
-      interpretation={result && <Interpretation inputs={inputs} result={result} />}
+      results={resultsNode}
+      interpretation={hasUserParams && result ? <Interpretation inputs={inputs} result={result} /> : undefined}
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
       longform={<Longform />}
     />
+  );
+}
+
+/** Shown on bare-URL landing — defers the payoff-diagram computation until
+ *  the user clicks Calculate so the page renders instantly. */
+function EmptyState() {
+  return (
+    <div className="card border-accent/20">
+      <h2 className="text-lg font-semibold mb-2">Ready to build your strategy</h2>
+      <p className="text-sm text-slate-300 leading-relaxed mb-3">
+        Set the spot price, add option legs (calls, puts, long or short), and click{' '}
+        <strong className="text-accent">Calculate</strong>. You&apos;ll see the full payoff
+        diagram at expiration, break-even points, and max profit / max loss for any
+        combination of legs.
+      </p>
+      <p className="text-xs text-slate-500">
+        Default starts with a single long call. Add legs to build verticals, condors, strangles,
+        butterflies, or any custom structure.
+      </p>
+    </div>
   );
 }
 
