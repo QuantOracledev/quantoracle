@@ -50,14 +50,18 @@ export const SimulatePortfolioSchema = z
       .number()
       .positive()
       .describe("Annual volatility as decimal (0.18 = 18%)"),
-    years: z.number().positive().describe("Time horizon in years"),
+    years: z
+      .number()
+      .positive()
+      .max(30)
+      .describe("Time horizon in years (max 30)"),
     simulations: z
       .number()
       .int()
       .min(100)
-      .max(10000)
+      .max(2500)
       .default(1000)
-      .describe("Number of Monte Carlo paths (1000-2500 typical)"),
+      .describe("Number of Monte Carlo paths (100-2500; 1000 default)"),
     contributions: z
       .number()
       .min(0)
@@ -79,8 +83,9 @@ export const AssessPortfolioRiskSchema = z
     returns: z
       .array(z.number())
       .min(30)
+      .max(5000)
       .describe(
-        "Array of historical periodic returns as decimals (0.012 = 1.2%). Daily returns assumed; minimum 30 observations.",
+        "Array of historical periodic returns as decimals (0.012 = 1.2%). Daily returns assumed; 30-5000 observations.",
       ),
     risk_free_rate: z
       .number()

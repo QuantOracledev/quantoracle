@@ -1,0 +1,14 @@
+node_modules
+*.log
+.DS_Store
+tsconfig.json
+tsup.config.ts
+example-agent.ts
+example-agent-solana.ts
+example-chained-workflow.ts
+COMPARISONS.md
+DEVTO_TUTORIAL.md
+src
+*.ts
+!dist/**/*.ts
+!dist/**/*.d.ts

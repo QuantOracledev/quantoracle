@@ -1,0 +1,10 @@
+node_modules
+*.log
+.DS_Store
+tsconfig.json
+tsup.config.ts
+example-agent.ts
+src
+*.ts
+!dist/**/*.ts
+!dist/**/*.d.ts

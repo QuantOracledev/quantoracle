@@ -1,7 +1,7 @@
 {
-  "name": "@quantoracle/agentkit",
+  "name": "@quantoracle/ai-tools",
   "version": "0.1.0",
-  "description": "Deterministic quant finance math for Coinbase AgentKit agents — Black-Scholes, Kelly, Monte Carlo, full risk audit, hedge recommendations. Free tier + x402 micropayments for paid composites.",
+  "description": "Deterministic quant finance tools for the Vercel AI SDK — Black-Scholes, Kelly, Monte Carlo, full risk audit, hedge recommendations. 15 tools across 4 opt-in bundles. Free tier + x402 micropayments for paid composites.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -13,39 +13,42 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "agentkit",
-    "coinbase",
-    "ai-agent",
+    "vercel",
+    "ai-sdk",
+    "ai-tools",
+    "tool-calling",
     "quant-finance",
     "options-pricing",
     "black-scholes",
     "kelly-criterion",
     "monte-carlo",
-    "x402",
-    "deterministic"
+    "risk-analysis",
+    "x402"
   ],
   "author": "QuantOracle <hello@quantoracle.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/QuantOracledev/quantoracle.git",
-    "directory": "integrations/agentkit"
+    "directory": "integrations/vercel-ai"
   },
   "homepage": "https://quantoracle.dev",
   "peerDependencies": {
-    "@coinbase/agentkit": ">=0.5.0 <1.0.0",
+    "ai": ">=3.0.0 <6.0.0",
     "zod": ">=3.22.0 <5.0.0"
   },
   "devDependencies": {
-    "@coinbase/agentkit": "^0.5.0",
-    "@swc/core": "^1.4.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.19.41",
+    "ai": "^4.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "zod": "^3.23.0"

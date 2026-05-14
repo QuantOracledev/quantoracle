@@ -94,7 +94,7 @@ risk-free rate, volatility, option type (call or put).
     try {
       const data = await this.callApi("/v1/options/price", args);
       const ms = (data.ms as number) ?? 0;
-      const greeks = data.greeks ?? {};
+      const greeks = (data.greeks ?? {}) as Record<string, number>;
       return [
         `**${args.option_type.toUpperCase()} on $${args.S} underlying, $${args.K} strike, ${(args.T * 365).toFixed(0)}d to expiry, ${(args.sigma * 100).toFixed(1)}% IV**`,
         ``,
@@ -268,14 +268,17 @@ for statistical significance.
       // The response shape from /v1/risk/full-analysis includes nested objects
       // for sharpe, sortino, drawdown, var, etc. We surface the headline
       // numbers as Markdown.
-      const sharpe = (data.sharpe?.sharpe_ratio as number) ?? 0;
-      const sortino = (data.sortino?.sortino_ratio as number) ?? 0;
-      const calmar = (data.calmar?.calmar_ratio as number) ?? 0;
-      const maxDd = (data.drawdown?.max_drawdown as number) ?? 0;
-      const var95 = (data.var?.var_results?.["95"]?.var_pct as number) ?? 0;
-      const cvar95 = (data.var?.var_results?.["95"]?.cvar_pct as number) ?? 0;
-      const kelly = (data.kelly?.kelly_fraction as number) ?? 0;
-      const hurst = (data.hurst?.hurst_exponent as number) ?? 0;
+      // Cast nested response blocks — the API returns Record<string, unknown>
+      // and TypeScript needs explicit types to traverse the nested keys.
+      const sharpe = ((data.sharpe as Record<string, number>)?.sharpe_ratio as number) ?? 0;
+      const sortino = ((data.sortino as Record<string, number>)?.sortino_ratio as number) ?? 0;
+      const calmar = ((data.calmar as Record<string, number>)?.calmar_ratio as number) ?? 0;
+      const maxDd = ((data.drawdown as Record<string, number>)?.max_drawdown as number) ?? 0;
+      const varBlock = data.var as Record<string, Record<string, Record<string, number>>> | undefined;
+      const var95 = (varBlock?.var_results?.["95"]?.var_pct as number) ?? 0;
+      const cvar95 = (varBlock?.var_results?.["95"]?.cvar_pct as number) ?? 0;
+      const kelly = ((data.kelly as Record<string, number>)?.kelly_fraction as number) ?? 0;
+      const hurst = ((data.hurst as Record<string, number>)?.hurst_exponent as number) ?? 0;
       return [
         `**Risk audit on ${args.returns.length} observations** _(paid via x402, $0.04 USDC)_`,
         ``,

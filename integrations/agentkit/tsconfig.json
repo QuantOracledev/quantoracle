@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "outDir": "./dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": [
+    "index.ts",
+    "quantoracleActionProvider.ts",
+    "schemas.ts",
+    "constants.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "example-agent.ts",
+    "example-agent-solana.ts",
+    "example-chained-workflow.ts"
+  ]
+}
