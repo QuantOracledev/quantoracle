@@ -1,9 +1,33 @@
 import Link from 'next/link';
 import { CALCULATORS } from '@/lib/calculators';
+import { organizationJsonLd } from '@/lib/seo';
+
+// WebSite + SearchAction JSON-LD — tells Google we're a structured site
+// (sometimes shows a sitelinks search box in SERPs).
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'QuantOracle',
+  url: 'https://quantoracle.dev',
+  description:
+    'Free quant finance calculators and a deterministic API for AI agents. 15 calculators, 73 endpoints, 120 verified accuracy benchmarks.',
+};
 
 export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      {/* Organization + WebSite JSON-LD for E-E-A-T at the homepage level */}
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [organizationJsonLd(), websiteJsonLd],
+          }),
+        }}
+      />
+
       {/* Hero */}
       <section className="py-16 sm:py-24 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">

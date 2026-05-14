@@ -2,7 +2,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { AdSlot } from './AdSlot';
 import { AffiliateCta } from './AffiliateCta';
-import { getRelated } from '@/lib/calculators';
+import { getRelated, getCalculator } from '@/lib/calculators';
+import { howToJsonLd, organizationJsonLd } from '@/lib/seo';
 
 interface Props {
   slug: string;
@@ -116,17 +117,33 @@ export function CalculatorShell({
         </div>
       </section>
 
-      {/* Schema.org JSON-LD — one tag, one valid JSON array of @graph nodes */}
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@graph': jsonLd,
-          }),
-        }}
-      />
+      {/* Schema.org JSON-LD — one tag, one valid JSON array of @graph nodes.
+          We always append a generic HowTo (3 steps: enter inputs → calculate →
+          review) and an Organization node for E-E-A-T, on top of whatever the
+          page passed in (typically SoftwareApplication + FAQPage). Auto-derive
+          the calculator name + URL from the slug so the per-page page.tsx
+          doesn't have to duplicate the title. */}
+      {(() => {
+        const calc = getCalculator(slug);
+        const calcUrl = `https://quantoracle.dev/${slug}`;
+        const augmentedJsonLd = [
+          ...jsonLd,
+          howToJsonLd({ name: calc?.title ?? title, url: calcUrl }),
+          organizationJsonLd(),
+        ];
+        return (
+          <script
+            type="application/ld+json"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@graph': augmentedJsonLd,
+              }),
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
