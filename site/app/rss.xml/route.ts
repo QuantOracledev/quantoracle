@@ -56,6 +56,27 @@ const COMPARE_ARTICLES: Article[] = [
       'Three ways to detect whether a time series is trending, mean-reverting, or random walk. Which to use when, how they disagree, and what to do when they conflict.',
     publishedAt: '2026-05-11T00:00:00Z',
   },
+  {
+    slug: 'implied-vol-vs-historical-vol-vs-realized-vol',
+    title: 'Implied vs Historical vs Realized Volatility: Which One Should You Use?',
+    description:
+      'Three volatility metrics that look similar but answer different questions. Implied is forward-looking, historical is close-to-close, realized uses high-frequency intraday data. Decision rule + concrete formulas.',
+    publishedAt: '2026-05-14T00:00:00Z',
+  },
+  {
+    slug: 'american-vs-european-vs-bermudan-options',
+    title: 'American vs European vs Bermudan Options: Which Exercise Style and Why It Matters',
+    description:
+      'Three exercise styles, three different prices for the same parameters. Merton\'s 1973 theorem on early exercise, when the premium is positive, and the pricing methods that handle each style.',
+    publishedAt: '2026-05-14T00:00:00Z',
+  },
+  {
+    slug: 'geometric-vs-arithmetic-vs-time-weighted-returns',
+    title: 'Geometric vs Arithmetic vs Time-Weighted Return: Three Means, Three Answers',
+    description:
+      'One of the most common quant mistakes: using arithmetic mean where geometric belongs. The gap (volatility drag) is real money. CAGR, Sharpe inputs, manager comparison — each demands a different one.',
+    publishedAt: '2026-05-14T00:00:00Z',
+  },
 ];
 
 function escapeXml(s: string): string {

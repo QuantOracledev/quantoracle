@@ -10,6 +10,9 @@ const COMPARE_ARTICLES = [
   'var-vs-cvar-vs-max-drawdown',
   'black-scholes-vs-binomial',
   'hurst-vs-autocorrelation-vs-variance-ratio',
+  'implied-vol-vs-historical-vol-vs-realized-vol',
+  'american-vs-european-vs-bermudan-options',
+  'geometric-vs-arithmetic-vs-time-weighted-returns',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

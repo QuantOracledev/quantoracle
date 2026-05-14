@@ -40,6 +40,24 @@ const articles = [
     blurb:
       'Three tests for detecting trend or mean-reversion. One-number summary, lag-by-lag, formal hypothesis test. When to use each.',
   },
+  {
+    slug: 'implied-vol-vs-historical-vol-vs-realized-vol',
+    title: 'Implied vs Historical vs Realized Volatility',
+    blurb:
+      'Three volatility metrics with the same Greek letter and three different jobs. Pricing options, computing Sharpe, forecasting tomorrow — each demands a different one.',
+  },
+  {
+    slug: 'american-vs-european-vs-bermudan-options',
+    title: 'American vs European vs Bermudan Options',
+    blurb:
+      'Three exercise styles, three different prices. Merton\'s 1973 theorem, the early exercise premium, and when each pricing method actually matters.',
+  },
+  {
+    slug: 'geometric-vs-arithmetic-vs-time-weighted-returns',
+    title: 'Geometric vs Arithmetic vs Time-Weighted Returns',
+    blurb:
+      'Three ways to compute mean return, three different answers. Volatility drag is real money. The gotcha that breaks long-term wealth projections.',
+  },
 ];
 
 export default function ComparePage() {
