@@ -648,8 +648,11 @@ async def t3(req: T3In):
 # TOOL 4: PORTFOLIO RISK — 22 METRICS — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T4In(BaseModel):
-    returns: list[float] = Field(..., min_length=5, max_length=10000, description="Array of periodic portfolio returns (e.g. daily)")
-    benchmark_returns: Optional[list[float]] = Field(None, description="Optional benchmark return series for relative metrics")
+    # Returns cap tightened 2026-05-14 from 10000 to 5000 (~20 years daily
+    # data). Statistical estimators converge well before this — Sharpe stable
+    # at ~250 obs, Hurst stable at ~1000.
+    returns: list[float] = Field(..., min_length=5, max_length=5000, description="Array of periodic portfolio returns (e.g. daily), max 5000")
+    benchmark_returns: Optional[list[float]] = Field(None, max_length=5000, description="Optional benchmark return series for relative metrics")
     risk_free_rate: float = Field(0.05, description="Annual risk-free rate for Sharpe/Sortino calculation")
 
 @app.post("/v1/risk/portfolio", tags=["Risk"], dependencies=auth)
@@ -730,8 +733,13 @@ class T6In(BaseModel):
     initial_value: float = Field(100000, description="Starting portfolio value")
     annual_return: float = Field(0.1, description="Expected annual return (e.g. 0.10 = 10%)")
     annual_vol: float = Field(0.2, description="Annual volatility (e.g. 0.20 = 20%)")
-    years: float = Field(5, gt=0, le=100, description="Simulation horizon in years")
-    simulations: int = Field(1000, ge=1, le=5000, description="Number of Monte Carlo paths")
+    # Caps tightened 2026-05-14 for server-stability under abusive traffic.
+    # Quality impact: P5/P95 tail-percentile CI widens to ~3% from ~2%; median
+    # and mean estimates are indistinguishable. Power users needing higher
+    # precision route through /v1/risk/full-analysis (paid composite) or split
+    # into multiple smaller calls.
+    years: float = Field(5, gt=0, le=30, description="Simulation horizon in years (max 30)")
+    simulations: int = Field(1000, ge=100, le=2500, description="Number of Monte Carlo paths (100-2500; default 1000 matches industry standard)")
     contributions: float = Field(0, description="Periodic contribution amount (per year)")
     withdrawal_rate: float = Field(0, description="Annual withdrawal rate as fraction of portfolio")
 
@@ -1024,7 +1032,9 @@ class T16In(BaseModel):
     q: float = Field(0, description="Continuous dividend yield")
     type: Literal["call", "put"] = Field("call", description="Option type")
     exercise: Literal["american", "european"] = Field("european", description="Exercise style")
-    steps: int = Field(100, ge=1, le=500, description="Number of tree steps (higher = more accurate)")
+    # Cap reduced 2026-05-14 from 500 to 200 — convergence at 200 steps is
+    # below typical option bid/ask spread (~0.1-0.25% error vs 0.05% at 500).
+    steps: int = Field(100, ge=1, le=200, description="Number of tree steps (1-200; default 100 textbook standard)")
 
 @app.post("/v1/derivatives/binomial-tree", tags=["Derivatives"], dependencies=auth)
 async def t16(req: T16In):
@@ -1614,7 +1624,9 @@ async def t25(req: T25In):
 # TOOL 26: HURST EXPONENT — $0.008
 # ══════════════════════════════════════════════════════════════════════════
 class T26In(BaseModel):
-    series: list[float] = Field(..., min_length=20, max_length=10000, description="Time series data")
+    # Series cap tightened 2026-05-14 from 10000 to 5000. R/S analysis
+    # converges by ~1000 obs; 5000 is generous for any real time series.
+    series: list[float] = Field(..., min_length=20, max_length=5000, description="Time series data (max 5000)")
     min_window: int = Field(10, ge=2, description="Minimum R/S window size")
     max_window: Optional[int] = Field(None, description="Maximum R/S window size (defaults to len/2)")
 
@@ -1666,8 +1678,8 @@ async def t26(req: T26In):
 # TOOL 27: GARCH(1,1) FORECAST — $0.015
 # ══════════════════════════════════════════════════════════════════════════
 class T27In(BaseModel):
-    returns: list[float] = Field(..., min_length=30, description="Array of return data")
-    forecast_periods: int = Field(5, description="Number of periods to forecast ahead")
+    returns: list[float] = Field(..., min_length=30, max_length=5000, description="Array of return data (max 5000)")
+    forecast_periods: int = Field(5, ge=1, le=252, description="Number of periods to forecast ahead (max 252)")
     mean_model: Literal["zero", "constant"] = Field("zero", description="Mean model specification")
 
 @app.post("/v1/stats/garch-forecast", tags=["Statistics"], dependencies=auth)
@@ -1723,8 +1735,8 @@ async def t27(req: T27In):
 # TOOL 28: Z-SCORE — $0.002
 # ══════════════════════════════════════════════════════════════════════════
 class T28In(BaseModel):
-    series: list[float] = Field(..., min_length=3, description="Numeric data series")
-    window: Optional[int] = Field(None, description="Rolling window size (null for static z-scores)")
+    series: list[float] = Field(..., min_length=3, max_length=5000, description="Numeric data series (max 5000)")
+    window: Optional[int] = Field(None, ge=2, le=5000, description="Rolling window size (null for static z-scores)")
     threshold: float = Field(2.0, description="Z-score threshold for extreme value detection")
 
 @app.post("/v1/stats/zscore", tags=["Statistics"], dependencies=auth)
@@ -2432,11 +2444,11 @@ async def t44(req: T44In):
 # ══════════════════════════════════════════════════════════════════════════
 class T45In(BaseModel):
     returns: list[float] = Field(
-        ..., min_length=10, description="Array of historical returns")
+        ..., min_length=10, max_length=5000, description="Array of historical returns (max 5000)")
     confidence_levels: list[float] = Field(
-        [0.95, 0.99], description="Confidence levels for VaR calculation")
+        [0.95, 0.99], min_length=1, max_length=5, description="Confidence levels for VaR calculation (max 5 levels)")
     holding_period_days: int = Field(
-        1, description="VaR holding period in days")
+        1, ge=1, le=252, description="VaR holding period in days (1-252)")
     portfolio_value: Optional[float] = Field(
         None, description="Optional portfolio value for dollar VaR")
 
@@ -3304,7 +3316,7 @@ async def t61(req: T61In):
 # ══════════════════════════════════════════════════════════════════════════
 class T62In(BaseModel):
     returns: list[float] = Field(
-        ..., min_length=5, description="Array of periodic returns")
+        ..., min_length=5, max_length=5000, description="Array of periodic returns (max 5000)")
     risk_free_rate: float = Field(
         0.05, description="Annual risk-free rate")
     annualization_factor: int = Field(
@@ -3729,8 +3741,10 @@ async def regime_classify(req: RegimeClassifyIn):
 # COMPOSITE 3: FULL ANALYSIS — $0.04
 # ══════════════════════════════════════════════════════════════════════════
 class FullAnalysisIn(BaseModel):
-    returns: list[float] = Field(..., min_length=10, description="Daily returns series")
-    equity_curve: Optional[list[float]] = Field(None, description="Equity curve (optional, derived from returns if omitted)")
+    # Paid composite endpoint — cap at 5000 still applies. Power users with
+    # longer histories can downsample or call individual endpoints in batch.
+    returns: list[float] = Field(..., min_length=10, max_length=5000, description="Daily returns series (max 5000)")
+    equity_curve: Optional[list[float]] = Field(None, max_length=5000, description="Equity curve (optional, derived from returns if omitted)")
     portfolio_value: float = Field(100000, gt=0, description="Current portfolio value")
     risk_free_rate: float = Field(0.045, description="Annual risk-free rate")
 
