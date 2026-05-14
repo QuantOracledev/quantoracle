@@ -82,76 +82,116 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="flex-1">{children}</main>
         <footer className="border-t border-ink-800 mt-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 text-sm text-slate-400 grid gap-6 sm:grid-cols-3">
-            <div>
+          {/* Main footer nav — 4 columns desktop, 2 tablet, 1 mobile. */}
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 text-sm text-slate-400 grid gap-8 grid-cols-2 lg:grid-cols-4">
+            {/* Brand + tagline */}
+            <div className="col-span-2 lg:col-span-1">
               <div className="font-semibold text-slate-200 mb-2">QuantOracle</div>
-              <div>
-                73 deterministic quant endpoints. Free tier: 1,000 calls/IP/day, no API key.
+              <p className="text-sm leading-relaxed">
+                73 deterministic quant endpoints + 15 free calculators. Free tier: 1,000 calls/IP/day, no API key.
+              </p>
+              <div className="mt-3 flex gap-2 text-xs">
+                <a href="https://github.com/QuantOracledev/quantoracle" rel="noopener" className="px-2 py-0.5 rounded bg-ink-800/60 hover:bg-ink-800 text-slate-300">
+                  ★ GitHub
+                </a>
+                <a href="https://dev.to/quantoracle" rel="noopener" className="px-2 py-0.5 rounded bg-ink-800/60 hover:bg-ink-800 text-slate-300">
+                  dev.to
+                </a>
+                <Link href="/rss.xml" className="px-2 py-0.5 rounded bg-ink-800/60 hover:bg-ink-800 text-slate-300">
+                  RSS
+                </Link>
               </div>
             </div>
+
+            {/* Site navigation */}
             <div>
-              <div className="font-semibold text-slate-200 mb-2">For developers</div>
-              <ul className="space-y-1">
+              <div className="font-semibold text-slate-200 mb-3">Site</div>
+              <ul className="space-y-1.5">
+                <li><Link href="/#calculators" className="hover:text-accent">Calculators</Link></li>
+                <li><Link href="/compare" className="hover:text-accent">Compare</Link></li>
+                <li><Link href="/writing" className="hover:text-accent">Writing</Link></li>
+                <li><Link href="/pricing" className="hover:text-accent">Pricing</Link></li>
+                <li><Link href="/about" className="hover:text-accent">About</Link></li>
+                <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
+              </ul>
+            </div>
+
+            {/* Developer resources */}
+            <div>
+              <div className="font-semibold text-slate-200 mb-3">For developers</div>
+              <ul className="space-y-1.5">
+                <li><Link href="/api-docs" className="hover:text-accent">API docs</Link></li>
                 <li>
-                  <Link href="/api-docs" className="hover:text-accent">
-                    API documentation
-                  </Link>
-                </li>
-                <li>
-                  <a
-                    href="https://api.quantoracle.dev/openapi.json"
-                    rel="noopener"
-                    className="hover:text-accent"
-                  >
+                  <a href="https://api.quantoracle.dev/openapi.json" rel="noopener" className="hover:text-accent">
                     OpenAPI spec
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="https://api.quantoracle.dev/.well-known/agent-card.json"
-                    rel="noopener"
-                    className="hover:text-accent"
-                  >
+                  <a href="https://api.quantoracle.dev/.well-known/x402" rel="noopener" className="hover:text-accent">
+                    x402 discovery
+                  </a>
+                </li>
+                <li>
+                  <a href="https://api.quantoracle.dev/.well-known/agent-card.json" rel="noopener" className="hover:text-accent">
                     A2A AgentCard
+                  </a>
+                </li>
+                <li>
+                  <a href="https://api.quantoracle.dev/metrics" rel="noopener" className="hover:text-accent">
+                    Public metrics
                   </a>
                 </li>
               </ul>
             </div>
+
+            {/* Integrations */}
             <div>
-              <div className="font-semibold text-slate-200 mb-2">Project</div>
-              <ul className="space-y-1">
+              <div className="font-semibold text-slate-200 mb-3">Integrations</div>
+              <ul className="space-y-1.5">
                 <li>
-                  <a
-                    href="https://github.com/QuantOracledev/quantoracle"
-                    rel="noopener"
-                    className="hover:text-accent"
-                  >
-                    GitHub
+                  <a href="https://pypi.org/project/langchain-quantoracle/" rel="noopener" className="hover:text-accent">
+                    LangChain (Python)
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://pypi.org/project/langchain-quantoracle/"
+                    href="https://github.com/QuantOracledev/quantoracle/tree/main/integrations/agentkit"
                     rel="noopener"
                     className="hover:text-accent"
                   >
-                    LangChain integration
+                    Coinbase AgentKit
+                  </a>
+                </li>
+                <li>
+                  <a href="https://www.npmjs.com/package/quantoracle-mcp" rel="noopener" className="hover:text-accent">
+                    MCP server (npm)
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://www.npmjs.com/package/quantoracle-mcp"
+                    href="https://github.com/QuantOracledev/quantoracle/tree/main/integrations"
                     rel="noopener"
                     className="hover:text-accent"
                   >
-                    MCP server
+                    All integrations
                   </a>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 pb-6 text-xs text-slate-500">
-            Calculator results are estimates for educational purposes only. Not investment advice.
+
+          {/* Legal bar */}
+          <div className="border-t border-ink-800/60">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 text-xs text-slate-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="leading-relaxed">
+                Calculator results are estimates for educational purposes only. <strong>Not investment advice.</strong>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <Link href="/privacy" className="hover:text-accent">Privacy</Link>
+                <Link href="/terms" className="hover:text-accent">Terms</Link>
+                <Link href="/affiliate-disclosure" className="hover:text-accent">Disclosure</Link>
+              </div>
+            </div>
           </div>
         </footer>
         {/* GA4 — uses next/third-parties so the gtag.js loads with the proper
