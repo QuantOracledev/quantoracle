@@ -5,13 +5,14 @@ export const metadata = buildMetadata({
   path: '/pricing',
   title: 'Pricing — Free Tier + x402 Micropayments for Agents',
   description:
-    'QuantOracle API pricing: 1,000 free calls per IP per day (no signup, no API key), then $0.002–$0.10 USDC per call via x402 micropayments on Base or Solana. 15 free interactive calculators backed by the same engine.',
+    'QuantOracle API pricing: 1,000 free calls per IP per day (no signup, no API key), then $0.002–$0.10 USDC per call via x402 micropayments on Base or Solana. 10 composite workflows and a /v1/batch endpoint that bundles up to 100 sub-requests into one HTTP call.',
   keywords: [
     'quantoracle pricing',
     'quant api pricing',
     'x402 api pricing',
     'pay per call quant',
     'free quant api',
+    'batch quant api',
   ],
 });
 
@@ -78,9 +79,10 @@ export default function PricingPage() {
       <header className="mb-10">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Pricing</h1>
         <p className="mt-4 text-slate-300 text-lg leading-relaxed">
-          Free for most use cases. Paid composites for agents that need bundled
-          computation, settled per-call via x402 USDC micropayments on Base or Solana — no signup,
-          no API key, no billing system.
+          Free for most use cases. Paid composites for agents that want bundled
+          computation, plus a <code>/v1/batch</code> endpoint that dispatches up to 100
+          sub-requests in one HTTP call. Everything settled per-call via x402 USDC
+          micropayments on Base or Solana — no signup, no API key, no billing system.
         </p>
       </header>
 
@@ -101,8 +103,9 @@ export default function PricingPage() {
           </ul>
           <p className="mt-4 text-xs text-slate-500">
             The free tier covers nearly all human use and most agent use. The paid tiers exist
-            for agents that need higher volume or for the 10 composite endpoints that bundle
-            multiple calculations.
+            for agents that need higher volume, for the 10 composite endpoints that bundle
+            multiple calculations, or for <code>/v1/batch</code> when you want to dispatch
+            many computations in one HTTP call.
           </p>
         </div>
       </section>
@@ -173,6 +176,68 @@ export default function PricingPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* Batch endpoint */}
+      <section className="mb-12">
+        <h2 className="text-xl font-semibold mb-4">Batch endpoint — bundle up to 100 calls</h2>
+        <p className="text-sm text-slate-400 mb-5">
+          <code>/v1/batch</code> accepts a JSON array of up to 100 sub-requests and returns all
+          results in one response. Useful when your agent has already decided what 50+
+          computations to run — multi-asset portfolio audits, option-chain sweeps, scenario
+          analyses — and wants to dispatch them with one HTTP roundtrip and one x402
+          settlement instead of N.
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-4 mb-5">
+          <div className="rounded-lg border border-ink-700/60 p-4">
+            <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Pricing</div>
+            <div className="text-sm text-slate-300 leading-relaxed">
+              Charged as the <strong className="text-slate-100">sum of the component
+              endpoint prices</strong>. A batch of 50 Black-Scholes calls costs the same as
+              50 individual calls — <span className="font-mono text-accent">$0.005 × 50 =
+              $0.25</span>. The savings are latency and settlement overhead, not per-call
+              cost.
+            </div>
+          </div>
+          <div className="rounded-lg border border-ink-700/60 p-4">
+            <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Limits</div>
+            <ul className="text-sm text-slate-300 leading-relaxed space-y-1">
+              <li>• Up to <strong>100 sub-requests</strong> per call</li>
+              <li>• Any mix of calculator + composite endpoints</li>
+              <li>• Single x402 settlement for the entire batch</li>
+              <li>• Returns all results, including per-call status codes</li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="text-sm text-slate-400 mb-3">Example: price an option chain in one call</p>
+        <pre className="bg-ink-800 border border-ink-700 rounded-md p-4 overflow-x-auto text-xs">
+          <code>{`curl -X POST https://api.quantoracle.dev/v1/batch \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "requests": [
+      {"endpoint": "options/price", "params": {"S":100,"K":95,"T":0.25,"r":0.05,"sigma":0.2}},
+      {"endpoint": "options/price", "params": {"S":100,"K":100,"T":0.25,"r":0.05,"sigma":0.2}},
+      {"endpoint": "options/price", "params": {"S":100,"K":105,"T":0.25,"r":0.05,"sigma":0.2}},
+      {"endpoint": "options/price", "params": {"S":100,"K":110,"T":0.25,"r":0.05,"sigma":0.2}}
+    ]
+  }'
+
+# → {"batch_size": 4, "total_price_usdc": 0.02,
+#    "results": [
+#      {"endpoint": "options/price", "status": 200, "data": {"price": 7.71, ...}},
+#      {"endpoint": "options/price", "status": 200, "data": {"price": 4.62, ...}},
+#      ...
+#    ],
+#    "ms": 142}`}</code>
+        </pre>
+
+        <p className="mt-4 text-xs text-slate-500">
+          The <code>total_price_usdc</code> field tells you exactly what was charged. The
+          batch is paid-only (no free tier) since you&apos;re explicitly requesting bulk
+          computation; route through individual free endpoints if you only need a handful.
+        </p>
       </section>
 
       {/* How payment works */}
