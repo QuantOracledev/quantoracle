@@ -56,32 +56,41 @@ export function AffiliateCta({
           : 'The chart platform used by 60M+ traders. Custom indicators, multi-timeframe analysis, alerts. Free 30-day Pro trial.';
 
   return (
-    <a
-      href={tradingViewUrl(subId)}
-      target="_blank"
-      // FTC-compliant: rel='sponsored' marks this as paid; 'nofollow' tells
-      // search engines not to pass link equity; 'noopener' is security.
-      rel="sponsored nofollow noopener"
-      // Visually differentiated from content cards: accent-tinted background,
-      // accent border, and a left-edge stripe so users immediately register
-      // this as an ad slot rather than mistaking it for editorial content.
-      className="block group rounded-lg border border-accent/30 bg-accent/[0.04] border-l-4 border-l-accent p-5 hover:border-accent/60 hover:bg-accent/[0.07] transition"
-    >
-      <div className="flex items-start justify-between mb-2">
-        <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 border border-accent/30 rounded px-2 py-0.5">
-          Sponsored
-        </span>
-        <span className="text-[10px] uppercase tracking-wider text-slate-400 group-hover:text-accent transition">
-          tradingview.com →
-        </span>
-      </div>
-      <div className="font-semibold text-slate-100 mb-1 group-hover:text-accent transition">
-        {headline}
-      </div>
-      <p className="text-sm text-slate-300">{body}</p>
-      <p className="mt-2 text-[10px] text-slate-500">
-        QuantOracle earns a commission if you sign up via this link. Doesn&apos;t cost you extra.
+    <div>
+      <a
+        href={tradingViewUrl(subId)}
+        target="_blank"
+        // FTC-compliant: rel='sponsored' marks this as paid; 'nofollow' tells
+        // search engines not to pass link equity; 'noopener' is security.
+        rel="sponsored nofollow noopener"
+        // Visually differentiated from content cards: accent-tinted background,
+        // accent border, and a left-edge stripe so users immediately register
+        // this as an ad slot rather than mistaking it for editorial content.
+        className="block group rounded-lg border border-accent/30 bg-accent/[0.04] border-l-4 border-l-accent p-5 hover:border-accent/60 hover:bg-accent/[0.07] transition"
+      >
+        <div className="flex items-start justify-between mb-2">
+          <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 border border-accent/30 rounded px-2 py-0.5">
+            Sponsored
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-slate-400 group-hover:text-accent transition">
+            tradingview.com →
+          </span>
+        </div>
+        <div className="font-semibold text-slate-100 mb-1 group-hover:text-accent transition">
+          {headline}
+        </div>
+        <p className="text-sm text-slate-300">{body}</p>
+        <p className="mt-2 text-[10px] text-slate-500">
+          QuantOracle earns a commission if you sign up via this link. Doesn&apos;t cost you extra.
+        </p>
+      </a>
+      {/* Disclosure link sits OUTSIDE the affiliate <a> because nested anchors
+          are invalid HTML. Small text just below the card. */}
+      <p className="mt-1.5 text-[10px] text-slate-500 text-right">
+        <a href="/affiliate-disclosure" className="underline hover:text-slate-300">
+          Full affiliate disclosure
+        </a>
       </p>
-    </a>
+    </div>
   );
 }
