@@ -18,7 +18,7 @@ Deterministic quant finance math for autonomous agents built with [Coinbase Agen
 | `assess_portfolio_risk` | Composite audit: Sharpe, Sortino, Calmar, max DD, VaR, CVaR, Kelly, Hurst | $0.04 USDC via x402 |
 | `recommend_hedge` | Ranked hedge structures (collar, protective put, partial put, inverse) for any position | $0.04 USDC via x402 |
 
-The full QuantOracle API has 73 endpoints; this provider exposes a curated subset. For the long tail (exotic options, FX models, technical indicators, etc.), agents can call the raw API at `https://api.quantoracle.dev/v1/*` directly.
+The full QuantOracle API has 73 endpoints plus a `/v1/batch` endpoint that bundles up to 100 sub-requests into one HTTP call (charged as the sum of the component prices — same per-call cost, one HTTP roundtrip, one x402 settlement). This provider exposes a curated subset. For the long tail (exotic options, FX models, technical indicators) or for bulk computation via batch, agents can call the raw API at `https://api.quantoracle.dev/v1/*` directly.
 
 ## Free tier
 

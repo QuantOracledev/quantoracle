@@ -8,8 +8,11 @@ import { z } from "zod";
  * to the LLM as the parameter documentation in the generated tool spec.
  *
  * Schemas mirror the live FastAPI Pydantic models in api/quantoracle.py
- * exactly. The full API has 73 endpoints; this plugin exposes 15 across
- * 4 bundles (core, options, risk, defi). For full coverage, use the
+ * exactly. The full API has 73 endpoints plus a /v1/batch endpoint that
+ * bundles up to 100 sub-requests into a single HTTP call (charged as the
+ * sum of component prices, one x402 settlement). This plugin exposes 15
+ * individual tools across 4 bundles (core, options, risk, defi). For full
+ * coverage or for bulk computation, use the REST API directly or the
  * QuantOracle MCP server.
  */
 

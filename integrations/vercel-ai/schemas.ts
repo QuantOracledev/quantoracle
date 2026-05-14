@@ -12,10 +12,13 @@ import { z } from "zod";
  * it sees the `.describe()` text on every field as part of the tool
  * description, so those are written for LLM consumption.
  *
- * The full QuantOracle API has 73 endpoints. We expose 15 here. For
- * the long tail, agents can call the REST API directly via fetch, or
- * use the QuantOracle MCP server for full coverage with dynamic
- * tool discovery.
+ * The full QuantOracle API has 73 endpoints plus a /v1/batch endpoint
+ * that bundles up to 100 sub-requests into one HTTP roundtrip (charged
+ * as the sum of the component prices, settled in a single x402
+ * transaction). We expose 15 individual tools here; for the long tail
+ * or for bulk computation, agents can call the REST API directly via
+ * fetch, or use the QuantOracle MCP server for full coverage with
+ * dynamic tool discovery.
  */
 
 // ═══════════════════════════════════════════════════════════════════════

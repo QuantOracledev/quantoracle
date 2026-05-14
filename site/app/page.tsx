@@ -10,7 +10,7 @@ const websiteJsonLd = {
   name: 'QuantOracle',
   url: 'https://quantoracle.dev',
   description:
-    'Free quant finance calculators and a deterministic API for AI agents. 15 calculators, 73 endpoints, 120 verified accuracy benchmarks.',
+    'Free quant finance calculators and a deterministic API for AI agents. 15 calculators, 73 endpoints plus a /batch endpoint for bulk computation, 120 verified accuracy benchmarks.',
 };
 
 export default function HomePage() {

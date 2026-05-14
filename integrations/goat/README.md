@@ -190,10 +190,15 @@ CoinGecko for the current price, then Uniswap to execute — one loop.
 
 This plugin exposes 15 curated tools. The full QuantOracle API has 73
 endpoints (FX/macro, fixed income, technicals, derivatives exotics, TVM,
-etc.). For full coverage:
+etc.) plus a `/v1/batch` endpoint for bulk computation. For full coverage:
 
 - **REST API directly**: every endpoint accepts JSON, returns JSON,
   CORS-enabled. Browse <https://quantoracle.dev/api-docs>.
+- **`/v1/batch` for bulk computation**: wraps up to 100 sub-requests into a
+  single HTTP call. Charged as the sum of the component prices — same
+  per-call cost, one HTTP roundtrip, one x402 settlement. Useful for
+  multi-asset portfolio audits or option-chain sweeps where you know which
+  computations to run up front.
 - **QuantOracle MCP server**: dynamic tool discovery — best for
   general-purpose agents that need full breadth.
 

@@ -398,9 +398,10 @@ const tools = quantoraclePaidTools({
         <p>
           The full QuantOracle API has 73 endpoints — fixed income, FX/macro,
           technical indicators, derivative exotics (barrier/Asian/lookback), TVM,
-          GARCH forecasting, cointegration. We expose 15 in this package because
-          that&apos;s where LLM tool-selection still works well. For broader
-          coverage there are two options:
+          GARCH forecasting, cointegration — plus a <code>/v1/batch</code>{' '}
+          endpoint that bundles up to 100 sub-requests into one HTTP call. We
+          expose 15 in this package because that&apos;s where LLM tool-selection
+          still works well. For broader coverage there are three options:
         </p>
 
         <ul>
@@ -416,6 +417,14 @@ const tools = quantoraclePaidTools({
               quantoracle.dev/api-docs
             </a>
             .
+          </li>
+          <li>
+            <strong>Use <code>/v1/batch</code> for bulk computation</strong>.
+            Charged as the sum of the included sub-request prices — same per-call
+            cost as individual endpoints, but one HTTP roundtrip and one x402
+            settlement instead of N. Useful when your agent has already decided
+            what 50+ computations to run (multi-asset risk audit, option-chain
+            sweep, etc.) and wants to dispatch them in one shot.
           </li>
           <li>
             <strong>Use the QuantOracle MCP server</strong>. Best for

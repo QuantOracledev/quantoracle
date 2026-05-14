@@ -162,10 +162,16 @@ Citation-tested against textbook values. Sub-70ms per call.
 
 This package exposes 15 curated tools across 4 bundles. The full QuantOracle
 API has 73 endpoints (FX/macro, fixed income, technicals, derivatives
-exotics, TVM, etc.). For full coverage:
+exotics, TVM, etc.) plus a `/v1/batch` endpoint for bulk computation. For
+full coverage:
 
 - **REST API directly**: every endpoint accepts JSON, returns JSON,
   CORS-enabled. Browse <https://quantoracle.dev/api-docs>.
+- **`/v1/batch` for bulk computation**: wraps up to 100 sub-requests (any
+  mix of endpoints) into one HTTP call. Charged as the sum of the component
+  endpoint prices — same per-call cost, but one HTTP roundtrip and one x402
+  settlement instead of N. Useful when you've already decided what 50+
+  computations to run and want to dispatch them in one shot.
 - **QuantOracle MCP server**: dynamic tool discovery — the model only sees
   tool definitions for the tools it actually needs per call. Best for
   general-purpose agents that need breadth.

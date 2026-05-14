@@ -3,10 +3,17 @@ import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
   path: '/api-docs',
-  title: 'API for Quant Finance — 73 Endpoints, Free Tier, No Signup',
+  title: 'API for Quant Finance — 73 Endpoints + Batch, Free Tier, No Signup',
   description:
-    '73 deterministic quant finance endpoints (options, derivatives, risk, portfolio, statistics, crypto, FX, macro). Free tier of 1,000 calls/IP/day, no API key, no signup. Pay-per-call x402 micropayments for higher volume.',
-  keywords: ['quant finance API', 'options API', 'risk API', 'portfolio API', 'x402 API'],
+    '73 deterministic quant finance endpoints (options, derivatives, risk, portfolio, statistics, crypto, FX, macro) plus a /batch endpoint that bundles up to 100 calls into a single HTTP roundtrip. Free tier of 1,000 calls/IP/day, no API key. Pay-per-call x402 micropayments for higher volume.',
+  keywords: [
+    'quant finance API',
+    'options API',
+    'risk API',
+    'portfolio API',
+    'x402 API',
+    'batch API',
+  ],
 });
 
 export default function ApiDocsPage() {
@@ -16,12 +23,13 @@ export default function ApiDocsPage() {
         QuantOracle API
       </h1>
       <p className="text-lg text-slate-300 mb-8">
-        73 deterministic quant finance endpoints. The same engine that powers the calculators on
-        this site is available as a JSON API for your own applications.
+        73 deterministic quant finance endpoints plus a <code>/batch</code> endpoint that
+        bundles up to 100 of them in a single HTTP roundtrip. The same engine that powers the
+        calculators on this site is available as a JSON API for your own applications.
       </p>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-8">
-        <Stat label="Endpoints" value="73" />
+        <Stat label="Endpoints" value="73 + batch" />
         <Stat label="Free tier" value="1,000/day" />
         <Stat label="Latency p50" value="~70 ms" />
       </div>
@@ -63,20 +71,34 @@ export default function ApiDocsPage() {
           Composite workflows — backtest, hedging recommendations, full risk analysis,
           rebalance planning
         </li>
+        <li>
+          <strong>Batch</strong> — <code>/v1/batch</code> wraps up to 100 sub-requests
+          (any mix of the above) into a single HTTP call, returning all results in one
+          response. Charged as the sum of the component endpoint prices, but settled in
+          one x402 transaction with one round trip.
+        </li>
       </ul>
 
       <h2>Pricing</h2>
       <ul className="list-disc list-inside text-sm space-y-1 text-slate-300">
         <li>
-          <strong>Free tier:</strong> 1,000 calls per IP per day, no signup, no API key.
+          <strong>Free tier:</strong> 1,000 calls per IP per day across the 63 calculator
+          endpoints, no signup, no API key. Composite workflows and <code>/v1/batch</code>{' '}
+          are paid-only.
         </li>
         <li>
-          <strong>Pay-per-call (x402):</strong> $0.002–$0.10 per call depending on complexity.
-          Settled in USDC on Base or Solana via the{' '}
+          <strong>Pay-per-call (x402):</strong> $0.002–$0.10 per individual endpoint depending
+          on complexity. Settled in USDC on Base or Solana via the{' '}
           <a href="https://github.com/coinbase/x402" rel="noopener">
             x402 protocol
           </a>{' '}
           — your client wallet pays automatically when you exceed the free tier.
+        </li>
+        <li>
+          <strong>Batch:</strong> <code>/v1/batch</code> sums the prices of the included
+          sub-requests. A batch of 50 Black-Scholes calls ($0.005 × 50 = $0.25) costs the same
+          as 50 individual calls, but you save 49 HTTP roundtrips and settle in one x402
+          transaction. Designed for agents that need many computations at once.
         </li>
         <li>
           <strong>High-volume / enterprise:</strong> for flat-rate billing, an API key, an SLA, or
