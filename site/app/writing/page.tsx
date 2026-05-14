@@ -27,10 +27,31 @@ interface Article {
 /**
  * Published articles. Add new entries at the top. The /writing hub gets
  * indexed by Google and provides a discoverability anchor for everything
- * we publish externally — visitors who land on a calculator page can
- * jump to long-form, and vice versa.
+ * we publish — visitors who land on a calculator page can jump to long-form,
+ * and vice versa.
+ *
+ * `venue: 'site'` = native article on quantoracle.dev (internal link).
+ * `venue: 'dev.to'` = external publication (opens in new tab).
  */
 const ARTICLES: Article[] = [
+  {
+    title: 'How to give your Coinbase AgentKit agent reliable quant finance math (in 10 minutes)',
+    description:
+      'Wire 5 deterministic quant tools — Black-Scholes, Kelly, Monte Carlo, plus 2 paid composites via x402 — into a Coinbase AgentKit agent in under 10 minutes. Free tier + Solana variant included.',
+    url: '/writing/agentkit-reliable-quant-finance-math',
+    publishedAt: '2026-05-14',
+    tags: ['agentkit', 'typescript', 'ai', 'coinbase'],
+    venue: 'site',
+  },
+  {
+    title: 'Chaining x402 paid tool calls — a working risk-audit → hedge-recommend demo on Base mainnet',
+    description:
+      'Most x402 demos show one call, one response. The interesting case — and what actually pays for itself — is chaining multiple paid calls in one agent loop. Working code, transcript, and the system-prompt pattern that makes it reliable.',
+    url: '/writing/chaining-x402-paid-tool-calls',
+    publishedAt: '2026-05-14',
+    tags: ['web3', 'ai', 'tutorial', 'typescript'],
+    venue: 'site',
+  },
   {
     title: 'AgentKit vs LangChain vs Direct HTTP: picking the right integration for paid agent APIs',
     description:
@@ -66,41 +87,63 @@ export default function WritingPage() {
         <p className="mt-4 text-slate-300 text-lg leading-relaxed">
           Long-form tutorials and explainers on building AI agents with quant finance APIs.
           Coverage of LangChain, Coinbase AgentKit, x402 payments, MCP, and the integration
-          patterns we&apos;ve found useful in practice. Most posts live on dev.to where they
-          reach the agent-builder audience directly.
+          patterns we&apos;ve found useful in practice. Some pieces live here on the site for
+          full SEO control; others are syndicated to dev.to where they reach the agent-builder
+          audience directly.
         </p>
       </header>
 
       <div className="space-y-4">
-        {ARTICLES.map((a) => (
-          <article
-            key={a.url}
-            className="rounded-lg border border-ink-700/60 p-5 hover:border-accent/40 transition"
-          >
-            <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
-              <time className="text-xs text-slate-500">{a.publishedAt}</time>
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 border border-ink-700 rounded px-2 py-0.5">
-                {a.venue}
-              </span>
-            </div>
+        {ARTICLES.map((a) => {
+          const isExternal = a.venue !== 'site';
+          const titleEl = (
             <h2 className="text-lg font-semibold text-slate-100 mb-2">
-              <a href={a.url} target="_blank" rel="noopener" className="hover:text-accent transition">
-                {a.title} →
-              </a>
-            </h2>
-            <p className="text-sm text-slate-300 mb-3 leading-relaxed">{a.description}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {a.tags.map((t) => (
-                <span
-                  key={t}
-                  className="text-[10px] uppercase tracking-wider bg-ink-800/60 border border-ink-700/40 rounded px-2 py-0.5 text-slate-400"
+              {isExternal ? (
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:text-accent transition"
                 >
-                  {t}
+                  {a.title} ↗
+                </a>
+              ) : (
+                <Link href={a.url} className="hover:text-accent transition">
+                  {a.title} →
+                </Link>
+              )}
+            </h2>
+          );
+          return (
+            <article
+              key={a.url}
+              className="rounded-lg border border-ink-700/60 p-5 hover:border-accent/40 transition"
+            >
+              <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
+                <time className="text-xs text-slate-500">{a.publishedAt}</time>
+                <span className={`text-[10px] uppercase tracking-wider rounded px-2 py-0.5 border ${
+                  a.venue === 'site'
+                    ? 'text-accent border-accent/30 bg-accent/5'
+                    : 'text-slate-500 border-ink-700'
+                }`}>
+                  {a.venue === 'site' ? 'on site' : a.venue}
                 </span>
-              ))}
-            </div>
-          </article>
-        ))}
+              </div>
+              {titleEl}
+              <p className="text-sm text-slate-300 mb-3 leading-relaxed">{a.description}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {a.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="text-[10px] uppercase tracking-wider bg-ink-800/60 border border-ink-700/40 rounded px-2 py-0.5 text-slate-400"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       <section className="mt-12 pt-8 border-t border-ink-700/40">

@@ -18,7 +18,29 @@ interface Article {
   title: string;
   description: string;
   publishedAt: string; // ISO date
+  /** Path prefix — defaults to 'compare' for backward compat. */
+  section?: 'compare' | 'writing';
 }
+
+/** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
+const WRITING_ARTICLES: Article[] = [
+  {
+    slug: 'agentkit-reliable-quant-finance-math',
+    title: 'How to Give Your Coinbase AgentKit Agent Reliable Quant Finance Math (10 Minutes)',
+    description:
+      'Wire 5 deterministic quant tools — Black-Scholes, Kelly, Monte Carlo, plus 2 paid composites via x402 — into a Coinbase AgentKit agent in under 10 minutes. Free tier + Solana variant included.',
+    publishedAt: '2026-05-14T00:00:00Z',
+    section: 'writing',
+  },
+  {
+    slug: 'chaining-x402-paid-tool-calls',
+    title: 'Chaining x402 Paid Tool Calls — A Working Risk-Audit → Hedge-Recommend Demo on Base Mainnet',
+    description:
+      'Most x402 demos show one call, one response. The interesting case is chaining multiple paid calls in one agent loop. Working code, transcript, and the system-prompt pattern that makes it reliable.',
+    publishedAt: '2026-05-14T00:00:00Z',
+    section: 'writing',
+  },
+];
 
 const COMPARE_ARTICLES: Article[] = [
   {
@@ -89,7 +111,8 @@ function escapeXml(s: string): string {
 }
 
 function articleItem(a: Article): string {
-  const url = `${SITE_URL}/compare/${a.slug}`;
+  const section = a.section ?? 'compare';
+  const url = `${SITE_URL}/${section}/${a.slug}`;
   const pubDate = new Date(a.publishedAt).toUTCString();
   return `    <item>
       <title>${escapeXml(a.title)}</title>
@@ -103,7 +126,7 @@ function articleItem(a: Article): string {
 
 export async function GET() {
   // Sort newest first so aggregators see most recent at top
-  const sorted = [...COMPARE_ARTICLES].sort(
+  const sorted = [...WRITING_ARTICLES, ...COMPARE_ARTICLES].sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
 
