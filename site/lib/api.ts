@@ -2,6 +2,8 @@
 // All calculator pages call this from server components so the browser
 // never makes a CORS request and the backend sees a single trusted origin.
 
+import { headers } from 'next/headers';
+
 const API_BASE = process.env.NEXT_PUBLIC_QUANTORACLE_API ?? 'https://api.quantoracle.dev';
 const DEFAULT_TIMEOUT_MS = 8_000;
 
@@ -25,6 +27,19 @@ export async function callQuantOracle<T = unknown>(
   if (!path.startsWith('/v1/')) {
     throw new Error(`Endpoint path must start with /v1/, got: ${path}`);
   }
+  // Forward the original visitor's User-Agent so the API can attribute traffic
+  // correctly. Without this, the API sees "node" (Next.js's fetch UA) on every
+  // SSR request, hiding which agent / browser actually triggered the call.
+  // headers() throws outside a request context (e.g. during build); tolerate
+  // that case silently.
+  let forwardedUA = '';
+  try {
+    const h = await headers();
+    forwardedUA = h.get('user-agent') || '';
+  } catch {
+    // build-time or test context — no forwarded UA available
+  }
+
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), DEFAULT_TIMEOUT_MS);
   try {
@@ -33,6 +48,7 @@ export async function callQuantOracle<T = unknown>(
       headers: {
         'Content-Type': 'application/json',
         'X-Source': 'quantoracle-site',
+        ...(forwardedUA ? { 'X-Forwarded-User-Agent': forwardedUA.slice(0, 250) } : {}),
       },
       body: JSON.stringify(body),
       signal: ctrl.signal,

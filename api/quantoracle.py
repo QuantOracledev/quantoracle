@@ -77,13 +77,20 @@ async def capture_client_ip(request: Request, call_next):
           or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
           or (request.client.host if request.client else "unknown"))
     raw_ua = request.headers.get("user-agent", "")
-    # For MCP traffic the upstream client UA is forwarded as X-MCP-Client; record
-    # whichever is more informative (so we can identify which AI assistant is using us)
+    # For SSR traffic from quantoracle.dev, the original browser/agent UA is
+    # forwarded as X-Forwarded-User-Agent (otherwise the API just sees "node"
+    # from Next.js's server-side fetch).
+    # For MCP traffic, the upstream client UA is forwarded as X-MCP-Client.
+    # Prefer in this order so attribution surfaces the real upstream:
+    #   1. X-Forwarded-User-Agent (real end-user behind SSR proxy)
+    #   2. X-MCP-Client (AI assistant making MCP tool call)
+    #   3. User-Agent (direct caller — usually a node/python client)
+    fwd_ua = request.headers.get("x-forwarded-user-agent", "")
     mcp_client = request.headers.get("x-mcp-client", "")
-    stored_ua = (mcp_client or raw_ua)[:200]  # cap length to keep DB rows small
+    stored_ua = (fwd_ua or mcp_client or raw_ua)[:200]
     source = _classify_source(
         request.headers.get("x-source", ""),
-        raw_ua,
+        fwd_ua or raw_ua,
         mcp_client,
     )
     _request_ip.set(ip)
