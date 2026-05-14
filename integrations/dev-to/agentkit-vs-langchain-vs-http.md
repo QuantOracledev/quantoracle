@@ -1,10 +1,16 @@
 ---
 title: AgentKit vs LangChain vs Direct HTTP — picking the right integration for paid agent APIs
-published: false
+published: true
 description: I built the same agent three ways using a real x402 API. Same question, same answer, three different integration patterns. Here's the honest comparison and the decision rule.
 tags: langchain, agentkit, ai, webdev
 cover_image:
-canonical_url:
+canonical_url: https://dev.to/quantoracle/agentkit-vs-langchain-vs-direct-http-picking-the-right-integration-for-paid-agent-apis-2582
+---
+
+> **📢 Published on dev.to: [Read it there](https://dev.to/quantoracle/agentkit-vs-langchain-vs-direct-http-picking-the-right-integration-for-paid-agent-apis-2582)**
+>
+> This file is the source markdown. The canonical version lives on dev.to so any future republishing should reference back via the `canonical_url`.
+
 ---
 
 When you're plugging an LLM agent into an external API, you have three reasonable patterns: hand-rolled HTTP, AgentKit's action provider model, or LangChain's tool calling. They all work. They produce identical outputs against the same input.

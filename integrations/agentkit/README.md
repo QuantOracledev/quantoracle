@@ -2,6 +2,8 @@
 
 Deterministic quant finance math for autonomous agents built with [Coinbase AgentKit](https://github.com/coinbase/agentkit).
 
+> 📖 **Read the full integration comparison:** [AgentKit vs LangChain vs Direct HTTP — picking the right integration for paid agent APIs](https://dev.to/quantoracle/agentkit-vs-langchain-vs-direct-http-picking-the-right-integration-for-paid-agent-apis-2582) (dev.to, May 2026)
+
 > **Why this exists:** AI agents trying to compute Black-Scholes prices, Kelly fractions, or Monte Carlo simulations in-context drift. The numbers are wrong, the Greeks are hallucinated, and the agent can't tell. QuantOracle is grounded math: same inputs, same outputs, every time. Free tier covers calculator endpoints; paid composites (full risk audit, hedge recommendations) settle automatically via your AgentKit wallet using x402 micropayments on Base or Solana.
 
 ## What this provides
