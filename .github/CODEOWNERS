@@ -1,0 +1,35 @@
+# CODEOWNERS — auto-request review on changes to high-risk files
+#
+# Primary purpose: protect against supply-chain attacks where a malicious
+# PR adds a backdoored dependency. Any change to a dependency manifest now
+# requires owner review before it can be merged.
+#
+# Combined with branch protection requiring PR + review (Settings → Branches),
+# this prevents any unreviewed change to these paths from landing on main.
+
+# Default ownership — anything not matched below
+*                       @fel123
+
+# Dependency manifests (the supply-chain attack surface)
+**/package.json         @fel123
+**/package-lock.json    @fel123
+**/pnpm-lock.yaml       @fel123
+**/yarn.lock            @fel123
+**/requirements.txt     @fel123
+**/pyproject.toml       @fel123
+**/setup.py             @fel123
+**/Pipfile              @fel123
+**/Pipfile.lock         @fel123
+
+# Deployment and infrastructure
+/deploy/                @fel123
+/.github/               @fel123
+/worker/wrangler.toml   @fel123
+
+# API surface (security-sensitive runtime configuration)
+/api/quantoracle.py     @fel123
+
+# MCP server and discovery descriptors
+/mcp-server/            @fel123
+/glama.json             @fel123
+/smithery.yaml          @fel123
