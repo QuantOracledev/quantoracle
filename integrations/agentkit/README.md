@@ -75,7 +75,12 @@ const agentkit = await AgentKit.from({
 //   assess_portfolio_risk, recommend_hedge
 ```
 
-A complete runnable example is at [`example-agent.ts`](./example-agent.ts).
+A complete runnable example is at [`example-agent.ts`](./example-agent.ts). Additional examples:
+
+- [`example-agent-solana.ts`](./example-agent-solana.ts) — Same agent but routes x402 payments through a Solana mainnet wallet (SPL USDC) instead of Base. Useful for agents already operating in the Solana ecosystem.
+- [`example-chained-workflow.ts`](./example-chained-workflow.ts) — Scripted demo showing the natural `assess_portfolio_risk` → `recommend_hedge` chained workflow. Pre-baked prompts walk the agent through risk audit → hedge analysis → final recommendation. Spends ~$0.08 USDC per run on real x402 settlements.
+
+For a side-by-side comparison of integration patterns (direct HTTP vs AgentKit vs LangChain Python), see [`COMPARISONS.md`](./COMPARISONS.md).
 
 ## Example agent prompts
 
