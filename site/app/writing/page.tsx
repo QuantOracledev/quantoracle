@@ -35,6 +35,15 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title: 'Add reliable quant finance math to your Vercel AI SDK agent in 5 minutes',
+    description:
+      'Wire 15 deterministic quant tools — Black-Scholes, Kelly, Monte Carlo, VaR, Sharpe, impermanent loss, liquidation price — into a Vercel AI SDK agent with a single import. Free tier for most tools, x402 USDC for paid composites. Works with generateText, streamText, and useChat.',
+    url: '/writing/vercel-ai-sdk-quant-tools',
+    publishedAt: '2026-05-14',
+    tags: ['vercel', 'ai-sdk', 'typescript', 'tutorial'],
+    venue: 'site',
+  },
+  {
     title: 'How to give your Coinbase AgentKit agent reliable quant finance math (in 10 minutes)',
     description:
       'Wire 5 deterministic quant tools — Black-Scholes, Kelly, Monte Carlo, plus 2 paid composites via x402 — into a Coinbase AgentKit agent in under 10 minutes. Free tier + Solana variant included.',

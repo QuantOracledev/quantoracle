@@ -25,6 +25,14 @@ interface Article {
 /** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
 const WRITING_ARTICLES: Article[] = [
   {
+    slug: 'vercel-ai-sdk-quant-tools',
+    title: 'Add Reliable Quant Finance Math to Your Vercel AI SDK Agent in 5 Minutes',
+    description:
+      'Wire 15 deterministic quant tools — Black-Scholes, Kelly, Monte Carlo, VaR, Sharpe, impermanent loss, liquidation price — into a Vercel AI SDK agent with a single import. Works with generateText, streamText, and useChat.',
+    publishedAt: '2026-05-14T12:00:00Z',
+    section: 'writing',
+  },
+  {
     slug: 'agentkit-reliable-quant-finance-math',
     title: 'How to Give Your Coinbase AgentKit Agent Reliable Quant Finance Math (10 Minutes)',
     description:

@@ -75,7 +75,8 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
     r: num(sp.r, DEFAULTS.r),
     sigma: num(sp.sigma, DEFAULTS.sigma),
     q: num(sp.q, DEFAULTS.q),
-    steps: Math.min(500, Math.max(10, Math.round(num(sp.steps, DEFAULTS.steps)))),
+    // Clamp matches API cap (T16In steps le=200, tightened 2026-05-14).
+    steps: Math.min(200, Math.max(10, Math.round(num(sp.steps, DEFAULTS.steps)))),
     option_type: opt(sp.option_type, DEFAULTS.option_type),
     exercise: ex(sp.exercise, DEFAULTS.exercise),
   };
@@ -189,7 +190,8 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           value={inputs.steps}
           step="any"
           min="10"
-          hint="50-200 typical"
+          max="200"
+          hint="100 default, 200 max"
         />
       </div>
       <button type="submit" className="btn-primary w-full mt-5">
@@ -209,6 +211,7 @@ function Field({
   value,
   step,
   min,
+  max,
   hint,
 }: {
   name: string;
@@ -216,6 +219,7 @@ function Field({
   value: number;
   step: string;
   min?: string;
+  max?: string;
   hint?: string;
 }) {
   return (
@@ -227,6 +231,7 @@ function Field({
         defaultValue={value}
         step={step}
         min={min}
+        max={max}
         required
         className="field-input"
       />

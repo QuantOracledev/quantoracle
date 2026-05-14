@@ -107,12 +107,12 @@ const PRESETS: Array<{ name: string; description: string; inputs: Partial<Inputs
   },
   {
     name: 'Lean FIRE',
-    description: '$500K, 40 years, 3% withdrawal',
+    description: '$500K, 30 years, 3% withdrawal',
     inputs: {
       initial_value: 500_000,
       annual_return: 0.07,
       annual_vol: 0.16,
-      years: 40,
+      years: 30,
       contributions: 0,
       withdrawal_rate: 0.03,
     },
@@ -135,9 +135,10 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
     initial_value: num(sp.initial_value, DEFAULTS.initial_value),
     annual_return: num(sp.annual_return, DEFAULTS.annual_return),
     annual_vol: num(sp.annual_vol, DEFAULTS.annual_vol),
-    years: Math.max(1, Math.round(num(sp.years, DEFAULTS.years))),
+    // Clamps must match the API's Pydantic bounds: years le=30, simulations le=2500.
+    years: Math.min(30, Math.max(1, Math.round(num(sp.years, DEFAULTS.years)))),
     simulations: Math.min(
-      10000,
+      2500,
       Math.max(100, Math.round(num(sp.simulations, DEFAULTS.simulations))),
     ),
     contributions: num(sp.contributions, DEFAULTS.contributions),
@@ -289,7 +290,7 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           value={inputs.years}
           step="any"
           min="1"
-          max="100"
+          max="30"
         />
         <Field
           name="annual_return"
@@ -332,8 +333,8 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           value={inputs.simulations}
           step="any"
           min="100"
-          max="10000"
-          hint="1000-2500 typical"
+          max="2500"
+          hint="1000 default, 2500 max"
         />
         <Field
           name="inflation_rate"

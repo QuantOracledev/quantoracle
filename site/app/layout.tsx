@@ -144,18 +144,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </ul>
             </div>
 
-            {/* Integrations */}
+            {/* Integrations — ordered by audience size: Vercel AI SDK first
+                (broadest TS AI dev audience), then onchain agent toolkits,
+                then the Python LangChain and Eliza packages. */}
             <div>
               <div className="font-semibold text-slate-200 mb-3">Integrations</div>
               <ul className="space-y-1.5">
                 <li>
-                  <a href="https://pypi.org/project/langchain-quantoracle/" rel="noopener" className="hover:text-accent">
-                    LangChain (Python)
+                  <a
+                    href="https://www.npmjs.com/package/@quantoracle/ai-tools"
+                    rel="noopener"
+                    className="hover:text-accent"
+                  >
+                    Vercel AI SDK
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://github.com/QuantOracledev/quantoracle/tree/main/integrations/agentkit"
+                    href="https://www.npmjs.com/package/@quantoracle/agentkit"
                     rel="noopener"
                     className="hover:text-accent"
                   >
@@ -163,8 +169,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </a>
                 </li>
                 <li>
+                  <a
+                    href="https://www.npmjs.com/package/@quantoracle/goat-plugin"
+                    rel="noopener"
+                    className="hover:text-accent"
+                  >
+                    GOAT SDK
+                  </a>
+                </li>
+                <li>
+                  <a href="https://pypi.org/project/langchain-quantoracle/" rel="noopener" className="hover:text-accent">
+                    LangChain (Python)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://www.npmjs.com/package/@quantoracle/plugin-quantoracle"
+                    rel="noopener"
+                    className="hover:text-accent"
+                  >
+                    elizaOS
+                  </a>
+                </li>
+                <li>
                   <a href="https://www.npmjs.com/package/quantoracle-mcp" rel="noopener" className="hover:text-accent">
-                    MCP server (npm)
+                    MCP server
                   </a>
                 </li>
                 <li>

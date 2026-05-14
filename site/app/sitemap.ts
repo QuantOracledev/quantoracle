@@ -37,6 +37,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/writing`, lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${BASE}/writing/agentkit-reliable-quant-finance-math`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/writing/chaining-x402-paid-tool-calls`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE}/writing/vercel-ai-sdk-quant-tools`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/affiliate-disclosure`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
