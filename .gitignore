@@ -1,8 +1,64 @@
+# ── Standard build / dependency artifacts ────────────────────────
 node_modules/
 __pycache__/
 *.pyc
-.env
-.wrangler/
 dist/
+.wrangler/
+
+# ── Python virtual environments ──────────────────────────────────
 venv/
 .venv/
+
+# ── Secrets and tokens (NEVER COMMIT) ────────────────────────────
+# Generic env files
+.env
+.env.*
+!.env.example
+
+# MCP registry submission tokens (GitHub PAT + registry JWT)
+mcp-server/.mcpregistry_*
+
+# Defensive catch-alls for common secret file naming patterns
+*.token
+*_token
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+service-account*.json
+
+# ── Local state / runtime artifacts ──────────────────────────────
+# SQLite databases (metrics, rate limit state)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Agent/IDE tooling state (Claude Code, Playwright MCP, etc.)
+.claude/
+.playwright-mcp/
+.cursor/
+
+# OS-level junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Local working directories (sibling git clones, archives) ─────
+# These shouldn't live inside the main repo tree, but if they do
+# (e.g. cloned an awesome-list fork for offline reference),
+# don't accidentally commit them.
+Awesome-GPTs/
+awesome-langchain/
+awesome-mcp-servers/
+awesome-quant/
+clawhub-bundle/
+clawhub-bundle.zip
+
+# ── Generated outputs / benchmark dumps ──────────────────────────
+bench_output.txt
+examples/backtest_output.txt
+examples/tearsheet_carbon.png
+api/metrics.db
+tools_response.json
