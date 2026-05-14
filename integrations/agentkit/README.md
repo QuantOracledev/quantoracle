@@ -89,7 +89,7 @@ Try these in your AgentKit chat:
 
 ## Try without code
 
-12 free interactive calculators backed by the same engine are at **[quantoracle.dev](https://quantoracle.dev)** — useful for verifying outputs before wiring the action provider into your agent.
+15 free interactive calculators backed by the same engine are at **[quantoracle.dev](https://quantoracle.dev)** — useful for verifying outputs before wiring the action provider into your agent.
 
 ## Why deterministic finance math matters for agents
 

@@ -25,7 +25,7 @@
   },
   "homepage": "https://quantoracle.dev",
   "peerDependencies": {
-    "@coinbase/agentkit": "^0.5.0",
-    "zod": "^3.22.0"
+    "@coinbase/agentkit": ">=0.5.0 <1.0.0",
+    "zod": ">=3.22.0 <5.0.0"
   }
 }
