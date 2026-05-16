@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { AdSlot } from './AdSlot';
 import { AffiliateCta } from './AffiliateCta';
 import { getRelated, getCalculator } from '@/lib/calculators';
+import { getCrossLinks } from '@/lib/calculator-cross-links';
 import { howToJsonLd, organizationJsonLd } from '@/lib/seo';
 
 interface Props {
@@ -40,6 +41,7 @@ export function CalculatorShell({
   longform,
 }: Props) {
   const related = getRelated(slug, 3);
+  const { compare: compareLinks, writing: writingLinks } = getCrossLinks(slug);
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
@@ -101,8 +103,63 @@ export function CalculatorShell({
         </section>
       )}
 
+      {/* Compare — head-to-head explainers covering the same concept.
+          Surfaced here because GA4 (May 2026) shows /compare/* articles
+          get 100% engagement rate when found but were getting near-zero
+          discovery surface. Calculator pages have 4-10 min engaged
+          sessions — exactly the captive audience that benefits most. */}
+      {compareLinks.length > 0 && (
+        <section className="mt-16">
+          <h2 className="text-xl font-semibold mb-1">Compare approaches</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Head-to-head breakdowns of how this method compares to alternatives — when each one
+            is right and when each one lies.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {compareLinks.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/compare/${c.slug}`}
+                className="card hover:border-accent/40 transition"
+              >
+                <div className="text-xs uppercase tracking-wide text-accent mb-1">Compare</div>
+                <div className="font-semibold text-sm mb-1">{c.title}</div>
+                <div className="text-xs text-slate-400">{c.what}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Build with this — tutorials on wiring this endpoint into an
+          AI agent. Same GA4 motivation: tutorials had 0 organic traffic
+          in 30 days because nothing linked to them. Calc-page audiences
+          are exactly the developer reader who'd integrate this. */}
+      {writingLinks.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-xl font-semibold mb-1">Build this into your agent</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            The same calculation, exposed as a deterministic tool for AI agents — tutorials on
+            wiring it up via the QuantOracle API.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {writingLinks.map((w) => (
+              <Link
+                key={w.slug}
+                href={`/writing/${w.slug}`}
+                className="card hover:border-accent/40 transition"
+              >
+                <div className="text-xs uppercase tracking-wide text-accent mb-1">Tutorial</div>
+                <div className="font-semibold text-sm mb-1">{w.title}</div>
+                <div className="text-xs text-slate-400">{w.what}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Related */}
-      <section className="mt-16">
+      <section className="mt-12">
         <h2 className="text-xl font-semibold mb-4">Related calculators</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {related.map((c) => (

@@ -1,5 +1,17 @@
 import Link from 'next/link';
 import { CALCULATORS } from '@/lib/calculators';
+
+/**
+ * Calculators featured above the full grid. Ranked by 30-day engagement-
+ * time data from GA4 (May 2026): these three pages account for the bulk
+ * of total on-site reading time and each has 83-100% engagement rates.
+ * Update from time to time as the data shifts.
+ */
+const FEATURED_SLUGS = [
+  'black-scholes-calculator',
+  'american-option-calculator',
+  'monte-carlo-simulation-calculator',
+] as const;
 import { organizationJsonLd } from '@/lib/seo';
 
 // WebSite + SearchAction JSON-LD — tells Google we're a structured site
@@ -48,9 +60,46 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Calculators index */}
+      {/* Featured calculators — surfaced based on GA4 (May 2026) showing
+          these three pages drive 4-10 minute engaged sessions, 83-100%
+          engagement rates, and the bulk of total on-site engagement time.
+          Treating all 15 calculators equally in a flat grid was burying
+          the wins — this row makes them the front door. */}
+      <section className="pb-8">
+        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+          <h2 className="text-xl font-semibold">Most-used calculators</h2>
+          <span className="text-xs text-slate-500">
+            Each gets multi-minute engaged sessions — start here if you&apos;re new.
+          </span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {FEATURED_SLUGS.map((slug) => {
+            const c = CALCULATORS.find((x) => x.slug === slug);
+            if (!c) return null;
+            return (
+              <Link
+                key={c.slug}
+                href={`/${c.slug}`}
+                className="card hover:border-accent/40 transition border-accent/20 bg-accent/[0.03]"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs uppercase tracking-wide text-accent">{c.category}</span>
+                  <span className="text-[10px] uppercase tracking-wider bg-accent/15 text-accent px-2 py-0.5 rounded">
+                    Featured
+                  </span>
+                </div>
+                <h3 className="text-base font-semibold mb-1 leading-snug">{c.title}</h3>
+                <p className="text-sm text-slate-300 mb-3">{c.short}</p>
+                <div className="text-xs text-slate-500 font-mono">{c.endpoint}</div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Calculators index — full grid (incl. the featured three). */}
       <section id="calculators" className="pb-16 scroll-mt-16">
-        <h2 className="text-2xl font-semibold mb-6">Calculators</h2>
+        <h2 className="text-2xl font-semibold mb-6">All calculators</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {CALCULATORS.map((c) => {
             const isLive = c.status === 'live';
