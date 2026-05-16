@@ -13,6 +13,8 @@ const COMPARE_ARTICLES = [
   'implied-vol-vs-historical-vol-vs-realized-vol',
   'american-vs-european-vs-bermudan-options',
   'geometric-vs-arithmetic-vs-time-weighted-returns',
+  'black-scholes-vs-monte-carlo',
+  'sharpe-vs-information-ratio-vs-treynor',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -38,6 +40,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/writing/agentkit-reliable-quant-finance-math`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/writing/chaining-x402-paid-tool-calls`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/writing/vercel-ai-sdk-quant-tools`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE}/writing/agent-framework-comparison-2026`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/affiliate-disclosure`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },

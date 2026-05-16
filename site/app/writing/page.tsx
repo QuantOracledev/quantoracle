@@ -35,6 +35,16 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title:
+      'AgentKit vs GOAT vs Vercel AI SDK vs LangChain vs elizaOS: which agent framework for quant tools?',
+    description:
+      'Five agent frameworks, one quant API, real code in each. The honest comparison with decision tables, code samples, performance numbers, and the migration paths between them.',
+    url: '/writing/agent-framework-comparison-2026',
+    publishedAt: '2026-05-15',
+    tags: ['agentkit', 'langchain', 'vercel', 'goat', 'eliza', 'comparison'],
+    venue: 'site',
+  },
+  {
     title: 'Add reliable quant finance math to your Vercel AI SDK agent in 5 minutes',
     description:
       'Wire 15 deterministic quant tools — Black-Scholes, Kelly, Monte Carlo, VaR, Sharpe, impermanent loss, liquidation price — into a Vercel AI SDK agent with a single import. Free tier for most tools, x402 USDC for paid composites. Works with generateText, streamText, and useChat.',

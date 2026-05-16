@@ -47,6 +47,14 @@ const COMPARE_TITLES = {
     title: 'Black-Scholes vs Binomial Tree',
     what: 'When the closed-form formula is right vs when binomial wins on early exercise.',
   },
+  'black-scholes-vs-monte-carlo': {
+    title: 'Black-Scholes vs Monte Carlo',
+    what: 'Closed-form speed vs simulation generality — when each is right.',
+  },
+  'sharpe-vs-information-ratio-vs-treynor': {
+    title: 'Sharpe vs Information Ratio vs Treynor',
+    what: 'Three risk-adjusted return metrics, three different questions.',
+  },
   'geometric-vs-arithmetic-vs-time-weighted-returns': {
     title: 'Geometric vs Arithmetic vs Time-Weighted Return',
     what: 'Three means, three answers — and one common mistake.',
@@ -86,6 +94,10 @@ const WRITING_TITLES = {
     title: 'Chain paid tool calls in an agent loop',
     what: 'Multi-step demo: risk audit → hedge recommendation, settled in USDC via x402.',
   },
+  'agent-framework-comparison-2026': {
+    title: "Choosing an agent framework — the comparison",
+    what: 'AgentKit vs GOAT vs Vercel AI SDK vs LangChain vs elizaOS, with decision tables and migration paths.',
+  },
 } as const;
 
 function mkCompare(slug: keyof typeof COMPARE_TITLES) {
@@ -100,9 +112,14 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
   'black-scholes-calculator': {
     compare: [
       mkCompare('black-scholes-vs-binomial'),
+      mkCompare('black-scholes-vs-monte-carlo'),
       mkCompare('implied-vol-vs-historical-vol-vs-realized-vol'),
     ],
-    writing: [mkWriting('vercel-ai-sdk-quant-tools'), mkWriting('agentkit-reliable-quant-finance-math')],
+    writing: [
+      mkWriting('vercel-ai-sdk-quant-tools'),
+      mkWriting('agentkit-reliable-quant-finance-math'),
+      mkWriting('agent-framework-comparison-2026'),
+    ],
   },
   'american-option-calculator': {
     compare: [
@@ -112,10 +129,11 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
     writing: [mkWriting('vercel-ai-sdk-quant-tools')],
   },
   'monte-carlo-simulation-calculator': {
-    compare: [],
+    compare: [mkCompare('black-scholes-vs-monte-carlo')],
     writing: [
       mkWriting('vercel-ai-sdk-quant-tools'),
       mkWriting('agentkit-reliable-quant-finance-math'),
+      mkWriting('agent-framework-comparison-2026'),
     ],
   },
   'implied-volatility-calculator': {
@@ -149,11 +167,17 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
     writing: [],
   },
   'probabilistic-sharpe-ratio-calculator': {
-    compare: [mkCompare('sharpe-vs-sortino-vs-calmar')],
+    compare: [
+      mkCompare('sharpe-vs-sortino-vs-calmar'),
+      mkCompare('sharpe-vs-information-ratio-vs-treynor'),
+    ],
     writing: [],
   },
   'sharpe-ratio-calculator': {
-    compare: [mkCompare('sharpe-vs-sortino-vs-calmar')],
+    compare: [
+      mkCompare('sharpe-vs-sortino-vs-calmar'),
+      mkCompare('sharpe-vs-information-ratio-vs-treynor'),
+    ],
     writing: [mkWriting('agentkit-reliable-quant-finance-math')],
   },
   'cagr-calculator': {

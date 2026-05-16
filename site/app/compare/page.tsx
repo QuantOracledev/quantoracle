@@ -11,6 +11,18 @@ export const metadata = buildMetadata({
 
 const articles = [
   {
+    slug: 'black-scholes-vs-monte-carlo',
+    title: 'Black-Scholes vs Monte Carlo',
+    blurb:
+      'Two option pricing methods, two different jobs. Closed-form speed vs simulation generality. Where each is right, where each lies, and how to combine them.',
+  },
+  {
+    slug: 'sharpe-vs-information-ratio-vs-treynor',
+    title: 'Sharpe vs Information Ratio vs Treynor',
+    blurb:
+      'Three risk-adjusted return metrics that look similar but ask different questions. Total vol vs tracking error vs beta — which is right for what audience.',
+  },
+  {
     slug: 'sharpe-vs-sortino-vs-calmar',
     title: 'Sharpe vs Sortino vs Calmar',
     blurb:

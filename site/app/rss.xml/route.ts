@@ -25,6 +25,15 @@ interface Article {
 /** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
 const WRITING_ARTICLES: Article[] = [
   {
+    slug: 'agent-framework-comparison-2026',
+    title:
+      'AgentKit vs GOAT vs Vercel AI SDK vs LangChain vs elizaOS: Which Agent Framework for Quant Tools?',
+    description:
+      'Five agent frameworks, one quant API, real code in each. Decision tables, code samples, performance numbers, and migration paths between them. The honest comparison covering AgentKit, GOAT, Vercel AI SDK, LangChain, and elizaOS.',
+    publishedAt: '2026-05-15T16:00:00Z',
+    section: 'writing',
+  },
+  {
     slug: 'vercel-ai-sdk-quant-tools',
     title: 'Add Reliable Quant Finance Math to Your Vercel AI SDK Agent in 5 Minutes',
     description:
@@ -51,6 +60,20 @@ const WRITING_ARTICLES: Article[] = [
 ];
 
 const COMPARE_ARTICLES: Article[] = [
+  {
+    slug: 'black-scholes-vs-monte-carlo',
+    title: 'Black-Scholes vs Monte Carlo: Which Option Pricing Method Should You Use?',
+    description:
+      'Two option pricing approaches, two different jobs. Closed-form Black-Scholes is microseconds-fast but only handles vanilla European payoffs. Monte Carlo handles anything you can simulate but pays the variance tax. Decision rule, convergence, Greeks, and the American / path-dependent / multi-asset edge cases.',
+    publishedAt: '2026-05-15T16:00:00Z',
+  },
+  {
+    slug: 'sharpe-vs-information-ratio-vs-treynor',
+    title: 'Sharpe vs Information Ratio vs Treynor: Three Risk-Adjusted Return Metrics',
+    description:
+      'Three numbers that all claim to measure risk-adjusted return, three different questions. Sharpe scales by total volatility. Information Ratio scales benchmark-relative return by tracking error. Treynor scales by beta. When each is right and what good values look like.',
+    publishedAt: '2026-05-15T16:00:00Z',
+  },
   {
     slug: 'sharpe-vs-sortino-vs-calmar',
     title: 'Sharpe vs Sortino vs Calmar: Which Risk-Adjusted Return Metric Should You Use?',
