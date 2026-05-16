@@ -66,12 +66,7 @@ export default function HomePage() {
           Treating all 15 calculators equally in a flat grid was burying
           the wins — this row makes them the front door. */}
       <section className="pb-8">
-        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
-          <h2 className="text-xl font-semibold">Most-used calculators</h2>
-          <span className="text-xs text-slate-500">
-            Each gets multi-minute engaged sessions — start here if you&apos;re new.
-          </span>
-        </div>
+        <h2 className="text-xl font-semibold mb-4">Most-used calculators</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           {FEATURED_SLUGS.map((slug) => {
             const c = CALCULATORS.find((x) => x.slug === slug);
