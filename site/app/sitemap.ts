@@ -15,6 +15,7 @@ const COMPARE_ARTICLES = [
   'geometric-vs-arithmetic-vs-time-weighted-returns',
   'black-scholes-vs-monte-carlo',
   'sharpe-vs-information-ratio-vs-treynor',
+  'z-score-vs-bollinger-bands-vs-rsi',
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -55,6 +55,10 @@ const COMPARE_TITLES = {
     title: 'Sharpe vs Information Ratio vs Treynor',
     what: 'Three risk-adjusted return metrics, three different questions.',
   },
+  'z-score-vs-bollinger-bands-vs-rsi': {
+    title: 'Z-Score vs Bollinger Bands vs RSI',
+    what: 'Three mean-reversion indicators compared — which to use for pairs trading vs single-asset.',
+  },
   'geometric-vs-arithmetic-vs-time-weighted-returns': {
     title: 'Geometric vs Arithmetic vs Time-Weighted Return',
     what: 'Three means, three answers — and one common mistake.',
@@ -152,7 +156,10 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
     writing: [mkWriting('agentkit-reliable-quant-finance-math')],
   },
   'value-at-risk-calculator': {
-    compare: [mkCompare('var-vs-cvar-vs-max-drawdown')],
+    compare: [
+      mkCompare('var-vs-cvar-vs-max-drawdown'),
+      mkCompare('z-score-vs-bollinger-bands-vs-rsi'),
+    ],
     writing: [
       mkWriting('agentkit-reliable-quant-finance-math'),
       mkWriting('chaining-x402-paid-tool-calls'),
@@ -163,7 +170,10 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
     writing: [],
   },
   'hurst-exponent-calculator': {
-    compare: [mkCompare('hurst-vs-autocorrelation-vs-variance-ratio')],
+    compare: [
+      mkCompare('hurst-vs-autocorrelation-vs-variance-ratio'),
+      mkCompare('z-score-vs-bollinger-bands-vs-rsi'),
+    ],
     writing: [],
   },
   'probabilistic-sharpe-ratio-calculator': {

@@ -6,9 +6,9 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/compare/black-scholes-vs-binomial',
-  title: 'Black-Scholes vs Binomial Tree: Which Option Pricing Method?',
+  title: 'Black-Scholes vs Binomial Tree: Pricing American vs European Options',
   description:
-    'The two canonical option pricing methods compared. When closed-form Black-Scholes is right, when binomial trees beat it on American options, and how many tree steps you actually need.',
+    'Closed-form Black-Scholes vs Cox-Ross-Rubinstein binomial tree. When BS is exact (European options under its assumptions), when binomial wins on early exercise (American puts, dividend-paying stocks), and how many tree steps you actually need for production accuracy.',
   keywords: [
     'black scholes vs binomial',
     'binomial tree option pricing',

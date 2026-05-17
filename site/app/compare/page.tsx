@@ -11,6 +11,12 @@ export const metadata = buildMetadata({
 
 const articles = [
   {
+    slug: 'z-score-vs-bollinger-bands-vs-rsi',
+    title: 'Z-Score vs Bollinger Bands vs RSI',
+    blurb:
+      'Three mean-reversion indicators that all measure "how far from the mean" — and produce different signals. When each is right for pairs trading vs single-asset, and how to combine them.',
+  },
+  {
     slug: 'black-scholes-vs-monte-carlo',
     title: 'Black-Scholes vs Monte Carlo',
     blurb:

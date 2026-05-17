@@ -7,15 +7,20 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/value-at-risk-calculator',
-  title: 'Value at Risk (VaR) Calculator — Parametric VaR + CVaR',
+  title: 'VaR Calculator — Free Parametric VaR + CVaR (Expected Shortfall)',
   description:
-    'Free Value at Risk calculator. Paste a return series, choose confidence levels and holding period — get parametric VaR and CVaR (Expected Shortfall), plus skew and kurtosis to gauge tail risk.',
+    'Free parametric Value at Risk (VaR) and CVaR / Expected Shortfall calculator. Paste a return series, pick confidence levels (95%, 99%) and holding period — get VaR, CVaR, plus skewness and kurtosis to gauge fat-tail risk. Same parametric VaR formula institutional risk teams use.',
   keywords: [
-    'value at risk calculator',
     'var calculator',
     'cvar calculator',
-    'expected shortfall',
+    'value at risk calculator',
     'parametric var',
+    'parametric var formula',
+    'parametric var calculator',
+    'expected shortfall calculator',
+    'conditional var calculator',
+    'tail risk calculator',
+    'kurtosis calculator',
   ],
 });
 

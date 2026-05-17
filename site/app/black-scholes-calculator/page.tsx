@@ -7,11 +7,16 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/black-scholes-calculator',
-  title: 'Black-Scholes Option Pricing Calculator (Free, with Greeks)',
+  title: 'Black-Scholes Calculator — Free Option Pricing with Greeks, Dividends, Delta',
   description:
-    'Free Black-Scholes calculator for European calls and puts. Returns price, full Greeks (delta, gamma, vega, theta, rho), break-even, and probability ITM in under 70 ms.',
+    'Free Black-Scholes formula calculator for European calls and puts. Returns the option price, full Greeks (delta, gamma, vega, theta, rho), break-even, and probability ITM in under 70 ms. Supports continuous dividend yield. Same engine that prices for AI agents — deterministic, citation-tested.',
   keywords: [
     'black scholes calculator',
+    'black and scholes calculator',
+    'black scholes formula calculator',
+    'black scholes model calculator',
+    'black scholes calculator with dividends',
+    'black scholes delta calculator',
     'option pricing calculator',
     'option greeks calculator',
     'european option calculator',

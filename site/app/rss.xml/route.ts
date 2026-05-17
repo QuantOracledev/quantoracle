@@ -61,6 +61,13 @@ const WRITING_ARTICLES: Article[] = [
 
 const COMPARE_ARTICLES: Article[] = [
   {
+    slug: 'z-score-vs-bollinger-bands-vs-rsi',
+    title: 'Z-Score vs Bollinger Bands vs RSI: Which Mean Reversion Indicator?',
+    description:
+      'Three mean-reversion indicators that all measure "how far from the mean" — and produce different signals. Z-score is the statistical one. Bollinger Bands are the chart overlay. RSI is the bounded oscillator. When each lies, when they disagree, and which is right for pairs trading vs single-asset.',
+    publishedAt: '2026-05-17T14:00:00Z',
+  },
+  {
     slug: 'black-scholes-vs-monte-carlo',
     title: 'Black-Scholes vs Monte Carlo: Which Option Pricing Method Should You Use?',
     description:

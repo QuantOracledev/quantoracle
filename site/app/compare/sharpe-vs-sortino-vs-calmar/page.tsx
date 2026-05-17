@@ -6,9 +6,9 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/compare/sharpe-vs-sortino-vs-calmar',
-  title: 'Sharpe vs Sortino vs Calmar: Which Risk-Adjusted Return Metric Should You Use?',
+  title: 'Sharpe vs Sortino vs Calmar Ratio: When Each Lies and Which One Allocators Use',
   description:
-    'Side-by-side comparison of the three most-used risk-adjusted return metrics. Formulas, when each one lies, what good values look like, and which one allocators actually use to decide.',
+    'Three risk-adjusted return ratios that all claim to measure the same thing — and the one allocators actually use to compare managers. Formulas, when each one mis-prices, what good values look like (Sharpe 1.0 vs 2.0), and the half-Sharpe trick.',
   keywords: [
     'sharpe vs sortino',
     'sharpe vs calmar',
