@@ -28,6 +28,9 @@ mcp-server/.mcpregistry_*
 secrets.json
 service-account*.json
 
+# Local secrets directory (OAuth client JSONs, ADC overrides, etc.)
+.secrets/
+
 # ── Local state / runtime artifacts ──────────────────────────────
 # SQLite databases (metrics, rate limit state)
 *.db

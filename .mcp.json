@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/2025-06-18/schema.json",
+  "//": "Project-scoped MCP server config. Loaded by Claude Code when sessions start in D:/Quantcalc. Each entry under mcpServers becomes a tool source in the Claude tool list.",
+  "mcpServers": {
+    "ga4": {
+      "//": "Official Google Analytics MCP server (googleanalytics/google-analytics-mcp on GitHub). Installed via pip into the project venv. Exposes 7 tools: get_account_summaries, get_property_details, list_google_ads_links, run_report, run_funnel_report, get_custom_dimensions_and_metrics, run_realtime_report.",
+      "command": "D:\\Quantcalc\\venv\\Scripts\\analytics-mcp.exe",
+      "args": [],
+      "env": {
+        "//": "GOOGLE_APPLICATION_CREDENTIALS is auto-discovered from gcloud ADC (~/AppData/Roaming/gcloud/application_default_credentials.json on Windows). Run 'gcloud auth application-default login' before first use — see SETUP-GA4-MCP.md.",
+        "GOOGLE_PROJECT_ID": "quantoracle-analytics"
+      }
+    },
+    "gsc": {
+      "//": "Custom Google Search Console MCP wrapper (mcp-gsc/server.py). ~150 lines, lives in this repo so we own the auth-handling code rather than trusting a third-party package. Exposes: list_sites, top_queries, top_pages, query_search, inspect_url. Uses the same ADC credentials as the ga4 server; webmasters.readonly scope must be granted (re-run gcloud auth application-default login with that scope if missing).",
+      "command": "D:\\Quantcalc\\venv\\Scripts\\python.exe",
+      "args": ["D:\\Quantcalc\\mcp-gsc\\server.py"]
+    }
+  }
+}
