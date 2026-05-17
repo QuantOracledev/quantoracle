@@ -29,6 +29,12 @@ import subprocess
 import requests
 from datetime import date, timedelta
 
+# Force UTF-8 stdout on Windows — otherwise ⚠ (⚠) crashes the run.
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 # Make the GSC MCP module importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'mcp-gsc'))
 from server import top_queries, top_pages, query_search, inspect_url, list_sites

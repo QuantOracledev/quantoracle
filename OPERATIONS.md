@@ -3,8 +3,30 @@
 > Internal COO working document. Updated each session. The first thing Claude
 > reads when starting a fresh operating session.
 
-**Last updated:** 2026-05-17  
+**Last updated:** 2026-05-17 (afternoon — post Dependabot triage + GSC weekly sweep)  
 **Updated by:** Claude (COO)
+
+**Current 13 URLs needing manual Google Search Console submission** (paste into URL Inspection):
+
+```
+https://quantoracle.dev/pricing
+https://quantoracle.dev/about
+https://quantoracle.dev/contact
+https://quantoracle.dev/privacy
+https://quantoracle.dev/terms
+https://quantoracle.dev/options-profit-calculator
+https://quantoracle.dev/position-size-calculator
+https://quantoracle.dev/kelly-criterion-calculator
+https://quantoracle.dev/sharpe-ratio-calculator
+https://quantoracle.dev/monte-carlo-simulation-calculator
+https://quantoracle.dev/compare/kelly-vs-fixed-fractional-vs-optimal-f
+https://quantoracle.dev/compare/var-vs-cvar-vs-max-drawdown
+https://quantoracle.dev/compare/z-score-vs-bollinger-bands-vs-rsi
+```
+
+Note: 5 of these (/pricing, /about, /contact, /privacy, /terms) were previously
+indexed and have re-entered the "Discovered, not crawled" queue — likely a
+transient state during a Google re-crawl cycle. Worth monitoring; not urgent.
 
 ---
 
@@ -70,14 +92,15 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 
 | # | Initiative | State | Next action |
 |---|---|---|---|
-| 1 | [vercel/ai#15295](https://github.com/vercel/ai/pull/15295) — registry add | Open, awaiting review | Watch for review activity; respond fast if maintainer asks for changes |
-| 2 | [goat-sdk/goat#582](https://github.com/goat-sdk/goat/pull/582) — plugin table add | Open, awaiting review | Same |
-| 3 | 15 not-yet-indexed URLs in Google | Submitted via IndexNow to non-Google engines; Google submission pending | User needs to manually click "Request Indexing" in Search Console — sequence prioritized in last session |
+| 1 | [vercel/ai#15295](https://github.com/vercel/ai/pull/15295) — registry add | Open, awaiting review (filed 2026-05-14) | Watch for review activity; respond fast if maintainer asks for changes |
+| 2 | [goat-sdk/goat#582](https://github.com/goat-sdk/goat/pull/582) — plugin table add | Open, awaiting review (filed 2026-05-14) | Same |
+| 3 | 13 not-yet-indexed URLs in Google (was 15; -2 net change since AM sweep) | Submitted via IndexNow to non-Google engines; Google submission pending | CEO needs to manually click "Request Indexing" in Search Console for the 13 URLs listed below |
 | 4 | /writing/agent-framework-comparison-2026 indexing | **Indexed in Google as of 2026-05-17** | Watch for first organic clicks |
 | 5 | /compare/sharpe-vs-information-ratio-vs-treynor | Crawled, not yet indexed | Wait 3-7 days; resubmit if not indexed by then |
-| 6 | /compare/z-score-vs-bollinger-bands-vs-rsi | Published today, not yet seen by Google | Auto-submitted to IndexNow; Google manual pending |
-| 7 | Weekly GSC + content-opportunity scan | CronCreate job exists, session-only, expires 7 days | Schedule skill (remote claude.ai) was failing; retry next session |
+| 6 | /compare/z-score-vs-bollinger-bands-vs-rsi | **Indexed + already ranking page 1 (pos 5.3) for "mean reversion + std deviation" niche query within 24h of publish** | Watch for first organic clicks |
+| 7 | Weekly GSC + content-opportunity scan | CronCreate job exists, session-only, expires 7 days. `ops/gsc-weekly.py` runs manually | Schedule skill (remote claude.ai) was failing; retry next session |
 | 8 | AdSense readiness monitor | Manual; checked during morning brief | Run during each brief |
+| 9 | Dependabot HIGH alert #1 (bigint-buffer transitive in agentkit) | **No fix path — package abandoned at 1.1.5; comes via @coinbase/agentkit → @solana/spl-token. Scope=dev, never in published @quantoracle/agentkit artifact** | Wait for upstream Coinbase team to switch off @solana/spl-token; no action available |
 
 ## Decision log
 
@@ -91,6 +114,9 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 2026-05-17 | gunicorn `--timeout 300` to fix MCP SSE worker kills | 13 worker kills/3h before fix, 0 after; persistent in deploy/quantoracle.service |
 | 2026-05-17 | Build custom GSC MCP wrapper instead of third-party | Trust surface minimization; 165 lines we own beats a black-box dependency |
 | 2026-05-17 | Manual Google indexing submission instead of Indexing API | Indexing API officially for JobPosting/BroadcastEvent only; manual via Search Console is the sanctioned path |
+| 2026-05-17 | Merge 5 Dependabot moderate-severity PRs (#7-#11) in one batch | Cleared 9 of 14 open alerts; all PRs passed Vercel checks; runtime hono + ip-address fixes shipped to mcp-server |
+| 2026-05-17 | No action on bigint-buffer HIGH (alert #1) | No upstream patch exists; transitive via Coinbase agentkit peer dep; scope=dev never ships in our npm artifact |
+| 2026-05-17 | Skip blind title rewrites on 3 page-1-zero-CTR pages | GSC's <10-imp privacy threshold hides the actual queries; rewrites without query data = guessing |
 
 ## Watch list
 
