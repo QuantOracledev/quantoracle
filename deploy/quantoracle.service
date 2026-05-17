@@ -6,7 +6,17 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/opt/quantoracle
-ExecStart=/usr/local/bin/gunicorn quantoracle:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001
+# --timeout 300       per-request timeout in seconds. Default 30s is too low for
+#                     MCP SSE connections that stay open for tens of seconds to
+#                     minutes; 300s covers normal MCP polling without killing
+#                     workers mid-stream.
+# --graceful-timeout  how long to wait for a worker to finish in-flight requests
+#                     during a restart (30s is the default and is fine).
+# --keep-alive 75     how long an idle keep-alive connection waits before being
+#                     closed. Default 2s is much shorter than browsers' 60s
+#                     keep-alive expectation, causing connection churn. 75s
+#                     mirrors what Vercel/Cloudflare expect from upstream.
+ExecStart=/usr/local/bin/gunicorn quantoracle:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001 --timeout 300 --graceful-timeout 30 --keep-alive 75
 Restart=always
 RestartSec=5
 Environment=QO_API_KEYS=
