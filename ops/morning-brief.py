@@ -94,8 +94,66 @@ def main() -> None:
         "journalctl -u quantoracle --since '6 hours ago' --no-pager | grep -c 'WORKER TIMEOUT' || true",
     ]))
 
-    # ── 3. Today's API metrics ────────────────────────────────────────
-    section('Today + recent API call volume')
+    # ── 3a. AUDIENCE SIGNAL ──────────────────────────────────────────
+    # The most important read in the brief. The product has THREE distinct
+    # audiences and we need to track each one separately:
+    #   Humans              → GA4 sessions      → AdSense monetization
+    #   Agents (MCP/SDK)    → External API      → x402 + integration pkgs
+    #   Bots (Googlebot)    → Internal/SSR API  → no revenue, just cost
+    # GA4 NEVER sees agent traffic (no browser pageview). Total API count
+    # NEVER cleanly separates agents from bot crawls. This block does both.
+    section('Audience signal — humans / agents / bots')
+    yesterday = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+    # One ssh call: 7-day external-only history + yesterday source breakdown.
+    audience_script = f"""
+import sqlite3
+c = sqlite3.connect('/opt/quantoracle/metrics.db')
+INTERNAL = ('quantoracle-site', 'unknown')
+# 7-day external history
+print('  External API (agents/MCP/SDK clients) — last 7 days:')
+rows = list(c.execute(\"\"\"
+    SELECT date, source, COUNT(*) FROM calls
+    WHERE date >= date('now', '-7 days')
+    GROUP BY date, source ORDER BY date
+\"\"\"))
+days = {{}}
+for d, s, n in rows:
+    if s not in INTERNAL:
+        days.setdefault(d, 0)
+        days[d] += n
+for d in sorted(days):
+    print(f'    {{d}}  {{days[d]:>4}} external calls')
+# Yesterday source breakdown (external only)
+print()
+print(f'  Yesterday external sources ({yesterday}):')
+yrows = list(c.execute(\"\"\"
+    SELECT source, COUNT(*) FROM calls
+    WHERE date='{yesterday}' GROUP BY source ORDER BY 2 DESC
+\"\"\"))
+ext = [(s, n) for s, n in yrows if s not in INTERNAL]
+if ext:
+    for s, n in ext:
+        print(f'    {{s:<25}} {{n}}')
+else:
+    print('    (no external agent traffic recorded)')
+internal_total = sum(n for s, n in yrows if s in INTERNAL)
+print()
+print(f'  Yesterday internal/SSR (mostly bot crawls of calculator pages): {{internal_total}}')
+"""
+    try:
+        r = subprocess.run(
+            ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',
+             'root@142.93.191.231', 'python3 -'],
+            input=audience_script, capture_output=True, text=True,
+            timeout=30, encoding='utf-8', errors='replace',
+        )
+        print(r.stdout.strip() if r.returncode == 0
+              else f'  (audience-signal ERR {r.returncode}: {r.stderr.strip()[:200]})')
+    except Exception as e:
+        print(f'  (audience-signal EXC: {e})')
+
+    # ── 3b. Today's API metrics (full detail) ────────────────────────
+    section('Today + recent API call volume (all sources)')
     metrics_raw = run("curl -s --max-time 5 https://api.quantoracle.dev/metrics") or ''
     try:
         m = json.loads(metrics_raw)

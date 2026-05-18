@@ -38,6 +38,32 @@ Right-now bottleneck: **traffic**. Product works (4-10 min engagement on top
 calcs, 50% engagement rate on /compare/* when found, 100% engagement on the
 returning-user cohort). Distribution is what's behind.
 
+### Three audience surfaces — track each separately
+
+The product has three distinct audiences, and each one's signal lives in
+a different place. **Never lump them.** The morning brief's "Audience signal"
+section makes this split visible at a glance.
+
+| Audience | Signal | Monetization | What it means when it moves |
+|---|---|---|---|
+| Humans (browsers) | GA4 sessions | AdSense | Real content readers; the AdSense applicability metric |
+| Agents (MCP, Vercel AI, Python, LangChain) | External API calls (source ∉ {quantoracle-site, unknown}) | x402 micropayments + integration packages | Real product-market fit for the API surface |
+| Bots (Googlebot, Bingbot, SSR prefetch) | Internal/SSR API calls (source = quantoracle-site) | none — pure cost | Crawl health + architectural noise; minimize where possible |
+
+**GA4 will never see the agentic surface** — there's no browser pageview for
+an MCP client or Python script. So the external API count is the *only*
+signal we have for the agentic product. Lumping it into a single "total API
+calls" number lets it hide.
+
+**Documented churn signal — 2026-05-16 TradingKarlos burst:** A single agent
+(`TradingKarlos/portfolio-optimizer`, IP 187.188.32.152 Mexico) made 102
+calls executing a real portfolio workflow (optimize → MC → VaR → drawdown →
+correlation). Then never came back. Open API means we have zero contact info
+to follow up. Pattern worth instrumenting: when an unknown UA does a real
+workflow and disappears, that's a lost-customer signal that's currently
+invisible. Future consideration: optional contact-capture for high-volume
+anonymous agents.
+
 ---
 
 ## Top 3 strategic priorities (next 30 days)
