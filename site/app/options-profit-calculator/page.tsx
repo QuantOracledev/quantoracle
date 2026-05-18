@@ -294,8 +294,12 @@ function AddLegButton({ legs, type }: { legs: Leg[]; type: 'call' | 'put' }) {
   sp.append('premium', '1');
   sp.append('direction', 'long');
   sp.append('quantity', '1');
+  // rel="nofollow" is critical — without it crawlers follow these links and
+  // generate an infinite URL tree (each Add-leg link spawns more Add-leg links
+  // on the new page). That was driving ~374 server-side API calls/day to
+  // /options/payoff-diagram with zero user value. See OPERATIONS.md (2026-05-18).
   return (
-    <a href={`?${sp.toString()}`} className="btn-ghost text-xs">
+    <a href={`?${sp.toString()}`} className="btn-ghost text-xs" rel="nofollow">
       + Add {type}
     </a>
   );

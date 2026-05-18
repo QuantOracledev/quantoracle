@@ -27,7 +27,7 @@ import os
 import sys
 import json
 import subprocess
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 
 # Force UTF-8 stdout on Windows so checkmarks / unicode don't crash the brief.
 try:
@@ -102,18 +102,59 @@ def main() -> None:
         today = m.get('today', {})
         hist = m.get('daily_history', {})
         recent_days = sorted(hist.items())[-7:]
-        print(f"  Today: {today.get('calls', 0)} calls, "
-              f"{today.get('unique_ips', 0)} unique IPs, "
-              f"{len(today.get('by_source', {}))} sources")
+        # Split today's calls: "internal" = quantoracle-site (Next.js SSR
+        # fetches, mostly bot pageviews of calculator pages). "External" =
+        # actual MCP/agent/python clients. The external number is the real
+        # signal for product-market fit on the API.
+        by_src = today.get('by_source', {})
+        internal_today = by_src.get('quantoracle-site', 0) + by_src.get('unknown', 0)
+        external_today = today.get('calls', 0) - internal_today
+        print(f"  Today: {today.get('calls', 0)} calls "
+              f"({external_today} external + {internal_today} internal/SSR), "
+              f"{today.get('unique_ips', 0)} unique IPs")
+        if by_src:
+            top_srcs = sorted(by_src.items(), key=lambda kv: -kv[1])[:5]
+            srcs = ', '.join(f'{s}={n}' for s, n in top_srcs)
+            print(f"  Today sources:  {srcs}")
         print(f"  Lifetime: {m.get('calls', 0)} calls, "
               f"{m.get('all_time', {}).get('unique_ips', 0)} unique IPs, "
               f"{m.get('all_time', {}).get('days_tracked', 0)} days tracked")
-        print(f"  Last 7 days:")
+        print(f"  Last 7 days (total calls — includes SSR/bot pageviews):")
         for d, n in recent_days:
             print(f'    {d}  {n:>5} calls')
     except (ValueError, KeyError) as e:
         print(f'  (metrics parse failed: {e})')
         print(f'  raw: {metrics_raw[:400]}')
+
+    # Yesterday's external/internal split via the droplet metrics DB.
+    # This is the truest signal of real API consumption — internal SSR
+    # calls vary with crawl rate, external calls track actual users.
+    # Use UTC because the server's `date` column is UTC.
+    yesterday = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+    # Pipe the script in via ssh stdin — avoids the quoting hell of trying
+    # to embed multiline python in a `python3 -c "..."` argument.
+    remote_script = f"""
+import sqlite3
+c = sqlite3.connect('/opt/quantoracle/metrics.db')
+rows = list(c.execute("SELECT source, COUNT(*) FROM calls WHERE date='{yesterday}' GROUP BY source ORDER BY 2 DESC"))
+total = sum(n for _, n in rows)
+internal = sum(n for s, n in rows if s in ('quantoracle-site', 'unknown'))
+external = total - internal
+print(f'  Yesterday ({yesterday}): {{total}} total, {{external}} external, {{internal}} internal/SSR')
+if rows:
+    print('  Yesterday sources:  ' + ', '.join(f'{{s}}={{n}}' for s, n in rows[:5]))
+"""
+    try:
+        r = subprocess.run(
+            ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',
+             'root@142.93.191.231', 'python3 -'],
+            input=remote_script, capture_output=True, text=True,
+            timeout=30, encoding='utf-8', errors='replace',
+        )
+        print(r.stdout.strip() if r.returncode == 0
+              else f'  (yesterday-split ERR {r.returncode}: {r.stderr.strip()[:200]})')
+    except Exception as e:
+        print(f'  (yesterday-split EXC: {e})')
 
     # ── 4. GA4 sessions ───────────────────────────────────────────────
     section('GA4 traffic — today + last 7 days')
