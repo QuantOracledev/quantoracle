@@ -143,9 +143,21 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 2026-05-17 | Merge 5 Dependabot moderate-severity PRs (#7-#11) in one batch | Cleared 9 of 14 open alerts; all PRs passed Vercel checks; runtime hono + ip-address fixes shipped to mcp-server |
 | 2026-05-17 | No action on bigint-buffer HIGH (alert #1) | No upstream patch exists; transitive via Coinbase agentkit peer dep; scope=dev never ships in our npm artifact |
 | 2026-05-17 | Skip blind title rewrites on 3 page-1-zero-CTR pages | GSC's <10-imp privacy threshold hides the actual queries; rewrites without query data = guessing |
+| 2026-05-18 | Wait one more day on the crawler-trap fix before escalating | rel="nofollow" + robots.txt Disallow shipped 2026-05-17 21:08 UTC. 2026-05-18 partial-day showed 567 SSR calls (vs 374 prior day) — likely the existing crawl queue draining, not new crawls. Decision criterion below. |
+| 2026-05-18 | Don't enable Cloudflare Bot Fight Mode yet | DNS is currently configured backwards for what we'd need: apex/www are DNS-only (Vercel direct, Cloudflare doesn't see them) while api.quantoracle.dev IS proxied. Toggling BFM today would filter agentic traffic while leaving the bot traffic untouched. |
 
 ## Watch list
 
+- **Crawler-trap fix verification — 2026-05-19/20 brief.** rel="nofollow"
+  + robots.txt Disallow deployed 2026-05-17 21:08 UTC for the
+  options-profit-calculator. Decision criterion:
+  - **2026-05-19 brief:** if `/options/payoff-diagram` SSR calls < 200/day,
+    fix is working — crawl queue draining as expected. Continue waiting.
+  - **2026-05-20 brief:** if still > 300/day, fix is not enough. Traffic
+    is from non-robots-respecting clients. Escalate to:
+    (a) DNS reverse: apex → orange cloud, api → gray cloud, then enable
+        Cloudflare Bot Fight Mode (free, but Vercel+CF interaction risk), or
+    (b) Vercel Firewall (~$20/mo, escalate decision, native to Vercel).
 - **Worker timeout reoccurrence.** Fixed 2026-05-17 with `--timeout 300`. If
   the pattern returns (>5 SIGABRT kills/hour), there's a different root cause
   (memory pressure, KV stall, new SSE consumer).
