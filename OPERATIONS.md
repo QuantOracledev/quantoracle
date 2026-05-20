@@ -148,16 +148,11 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 
 ## Watch list
 
-- **Crawler-trap fix verification — 2026-05-19/20 brief.** rel="nofollow"
-  + robots.txt Disallow deployed 2026-05-17 21:08 UTC for the
-  options-profit-calculator. Decision criterion:
-  - **2026-05-19 brief:** if `/options/payoff-diagram` SSR calls < 200/day,
-    fix is working — crawl queue draining as expected. Continue waiting.
-  - **2026-05-20 brief:** if still > 300/day, fix is not enough. Traffic
-    is from non-robots-respecting clients. Escalate to:
-    (a) DNS reverse: apex → orange cloud, api → gray cloud, then enable
-        Cloudflare Bot Fight Mode (free, but Vercel+CF interaction risk), or
-    (b) Vercel Firewall (~$20/mo, escalate decision, native to Vercel).
+- **Crawler-trap fix — RESOLVED 2026-05-20.** rel="nofollow" + robots.txt
+  Disallow (deployed 2026-05-17 21:08 UTC) worked. `/options/payoff-diagram`
+  SSR calls: 567 (05-18) → 0 (05-19) → 22 (05-20). Total internal/SSR
+  collapsed 596/day → ~54-77/day. No escalation needed — Cloudflare Bot
+  Fight Mode / Vercel Firewall not required. Free fix held.
 - **Worker timeout reoccurrence.** Fixed 2026-05-17 with `--timeout 300`. If
   the pattern returns (>5 SIGABRT kills/hour), there's a different root cause
   (memory pressure, KV stall, new SSE consumer).
