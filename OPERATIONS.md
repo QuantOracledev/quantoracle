@@ -165,6 +165,7 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 2026-05-18 | Don't enable Cloudflare Bot Fight Mode yet | DNS is currently configured backwards for what we'd need: apex/www are DNS-only (Vercel direct, Cloudflare doesn't see them) while api.quantoracle.dev IS proxied. Toggling BFM today would filter agentic traffic while leaving the bot traffic untouched. |
 | 2026-05-20 | Crawler-trap fix confirmed working; no Cloudflare/Vercel-Firewall escalation | /options/payoff-diagram SSR: 567 → 0 → 37. Free rel="nofollow" + robots.txt fix held. The $20/mo Vercel Firewall question is off the table. |
 | 2026-05-20 | Reframe priority #1: bottleneck is rank, not indexing, not CTR | 25+ URLs indexed; ~300 impressions/7d → 5 clicks. 0% CTR at position 6-9 is the noise floor (expected clicks <1), not a fixable title defect. Levers are now authority/links + domain age, not metadata. |
+| 2026-05-20 | Interconnect the /compare cluster (commit 04379b7) | Audit found 4 of 11 /compare articles had zero sibling links — Google saw disconnected leaves, not a topical cluster. Added lib/compare-cross-links.ts + CompareRelated component; every article now links 3 conceptually-adjacent siblings. Highest-leverage on-site SEO move available during the sandbox-aging window. |
 
 ## Watch list
 
