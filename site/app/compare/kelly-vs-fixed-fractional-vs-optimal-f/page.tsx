@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Faq } from '@/components/FAQ';
+import { CompareRelated } from '@/components/CompareRelated';
 import { AffiliateCta } from '@/components/AffiliateCta';
 import { buildMetadata, faqJsonLd } from '@/lib/seo';
 import { faqs } from './faqs';
@@ -402,6 +403,8 @@ export default function Page() {
         <h2 className="text-2xl font-semibold mb-4">Frequently asked questions</h2>
         <Faq items={faqs} />
       </section>
+
+      <CompareRelated slug="kelly-vs-fixed-fractional-vs-optimal-f" />
 
       <script
         type="application/ld+json"
