@@ -3,7 +3,7 @@
 > Internal COO working document. Updated each session. The first thing Claude
 > reads when starting a fresh operating session.
 
-**Last updated:** 2026-05-17 (afternoon — post Dependabot triage + GSC weekly sweep)  
+**Last updated:** 2026-05-20 (crawler-trap fix confirmed; priority #1 reframed to rank/authority)  
 **Updated by:** Claude (COO)
 
 **Current 13 URLs needing manual Google Search Console submission** (paste into URL Inspection):
@@ -74,20 +74,37 @@ anonymous agents.
 age 90+ days. Realistic apply date: **early August 2026** at current
 trajectory; could pull forward to early July if upstream PRs merge.
 
-Levers (in priority order):
+**Bottleneck reframe (2026-05-20):** The "get indexed" era is over — 25+ URLs
+are indexed and pages are appearing in results. The new bottleneck is **rank,
+not indexing, and not CTR.** GSC (last 7d): ~300 impressions → 5 clicks.
+Several pages rank position 6-9 (bottom of page 1) with 0 clicks, and
+/black-scholes-calculator sits at position ~60 (page 6) on its 73 impressions.
 
-- **Get the 15 not-yet-indexed URLs into Google.** Already pushed via IndexNow
-  for Bing/Yandex/DDG/Seznam. Google requires manual Search Console submission
-  (or the Indexing API with an additional gcloud scope — gray area but works).
-- **Compound the /compare and /writing catalogs.** 6 of 12 pages already rank
-  page 1 for niche queries (per GSC, 2026-05-17). Each new well-researched
-  article potentially adds another page-1 niche to the catalog.
+Important honest finding: the 0% CTR on position-8 pages is **NOT a fixable
+title/meta problem.** At 8-43 impressions per page at position 6-9, expected
+clicks are <1 regardless of title (position 8 + AI Overviews + featured
+snippets = ~1-2% CTR ceiling). We're seeing the statistical noise floor, not
+a metadata defect. Don't burn effort on speculative title rewrites — GSC's
+<10-impression privacy threshold also hides the actual queries, so any
+rewrite is blind guessing.
+
+What actually moves rank for a 16-day-old domain:
+
+- **Time.** New domains are suppressed for weeks-to-months ("sandbox"). Some
+  of the position-60 problem resolves on its own as the domain ages.
 - **Land the two upstream PRs.** [vercel/ai#15295](https://github.com/vercel/ai/pull/15295)
-  and [goat-sdk/goat#582](https://github.com/goat-sdk/goat/pull/582) — each
-  would put us in front of thousands of developers.
-- **Drive CTR on already-ranking pages.** Several pages rank page 1 but get
-  0% CTR — that's a title/meta problem. Rewrites for those compound at
-  current ranking.
+  and [goat-sdk/goat#582](https://github.com/goat-sdk/goat/pull/582) — these
+  are the highest-value backlinks available and the asymmetric bet. Authority
+  links are the lever that moves page-6 rankings.
+- **Content depth + internal linking.** Make each calculator/compare page the
+  genuinely best resource for its query, and interlink the catalog so ranking
+  authority flows between pages.
+- **Compound the /compare cluster.** 7 of 11 /compare pages now rank page 1
+  for niche queries. Topical authority in a cluster lifts the whole cluster.
+
+Do NOT keep doing: manual indexing submission (done), title rewrites on
+already-ranking pages (no diagnosable defect), publishing more content
+speculatively (existing set hasn't proven out — see weekly scan 2026-05-18).
 
 ### 2. x402 settlement growth
 
@@ -123,10 +140,11 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 3 | 13 not-yet-indexed URLs in Google (was 15; -2 net change since AM sweep) | Submitted via IndexNow to non-Google engines; Google submission pending | CEO needs to manually click "Request Indexing" in Search Console for the 13 URLs listed below |
 | 4 | /writing/agent-framework-comparison-2026 indexing | **Indexed in Google as of 2026-05-17** | Watch for first organic clicks |
 | 5 | /compare/sharpe-vs-information-ratio-vs-treynor | Crawled, not yet indexed | Wait 3-7 days; resubmit if not indexed by then |
-| 6 | /compare/z-score-vs-bollinger-bands-vs-rsi | **Indexed + already ranking page 1 (pos 5.3) for "mean reversion + std deviation" niche query within 24h of publish** | Watch for first organic clicks |
+| 6 | /compare/z-score-vs-bollinger-bands-vs-rsi | **Indexed + ranking page 1 (pos ~6.7) for "mean reversion" niche query, 11 impressions/7d, 0 clicks** | Position-8 noise floor; no action — see priority #1 reframe |
 | 7 | Weekly GSC + content-opportunity scan | CronCreate job exists, session-only, expires 7 days. `ops/gsc-weekly.py` runs manually | Schedule skill (remote claude.ai) was failing; retry next session |
 | 8 | AdSense readiness monitor | Manual; checked during morning brief | Run during each brief |
 | 9 | Dependabot HIGH alert #1 (bigint-buffer transitive in agentkit) | **No fix path — package abandoned at 1.1.5; comes via @coinbase/agentkit → @solana/spl-token. Scope=dev, never in published @quantoracle/agentkit artifact** | Wait for upstream Coinbase team to switch off @solana/spl-token; no action available |
+| 10 | options-profit-calculator crawler trap | **CLOSED 2026-05-20.** rel="nofollow" + robots.txt Disallow (deployed 2026-05-17) worked: /options/payoff-diagram SSR calls went 567 (05-18) → 0 (05-19) → 37 (05-20). No Cloudflare/Vercel-Firewall escalation needed. | Done |
 
 ## Decision log
 
@@ -145,6 +163,8 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 2026-05-17 | Skip blind title rewrites on 3 page-1-zero-CTR pages | GSC's <10-imp privacy threshold hides the actual queries; rewrites without query data = guessing |
 | 2026-05-18 | Wait one more day on the crawler-trap fix before escalating | rel="nofollow" + robots.txt Disallow shipped 2026-05-17 21:08 UTC. 2026-05-18 partial-day showed 567 SSR calls (vs 374 prior day) — likely the existing crawl queue draining, not new crawls. Decision criterion below. |
 | 2026-05-18 | Don't enable Cloudflare Bot Fight Mode yet | DNS is currently configured backwards for what we'd need: apex/www are DNS-only (Vercel direct, Cloudflare doesn't see them) while api.quantoracle.dev IS proxied. Toggling BFM today would filter agentic traffic while leaving the bot traffic untouched. |
+| 2026-05-20 | Crawler-trap fix confirmed working; no Cloudflare/Vercel-Firewall escalation | /options/payoff-diagram SSR: 567 → 0 → 37. Free rel="nofollow" + robots.txt fix held. The $20/mo Vercel Firewall question is off the table. |
+| 2026-05-20 | Reframe priority #1: bottleneck is rank, not indexing, not CTR | 25+ URLs indexed; ~300 impressions/7d → 5 clicks. 0% CTR at position 6-9 is the noise floor (expected clicks <1), not a fixable title defect. Levers are now authority/links + domain age, not metadata. |
 
 ## Watch list
 
@@ -161,14 +181,18 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 - **Vercel webhook lag.** Direct pushes sometimes don't trigger Vercel auto-
   deploy. Pattern: gh-CLI merge commits fire reliably; direct git pushes
   intermittent. Workaround: empty-commit retrigger if no deploy within 3 min.
-- **AdSense readiness criteria.**
-  - 7-day average daily sessions ≥ 50 (currently ~10)
-  - Domain age ≥ 90 days (currently 13)
-  - Organic search share ≥ 30% (currently ~9%)
-  - All four pass → recommend applying
-- **/compare ranking pages with 0% CTR** (signals title/meta problem):
-  - /compare/sharpe-vs-sortino-vs-calmar — fixed 2026-05-17, watch for CTR change
-  - /probabilistic-sharpe-ratio-calculator at position 10.2 also 0 CTR
+- **AdSense readiness criteria** (as of 2026-05-20):
+  - 7-day average daily sessions ≥ 50 (currently ~8/day — 16% of target)
+  - Domain age ≥ 90 days (currently 16 days — earliest viable 2026-08-02)
+  - Organic search share ≥ 30% (currently ~11%, flat for 3 weeks)
+  - Engagement rate ≥ 30% (currently ~37% — MEETING ✓)
+  - All pass → recommend applying. Domain-age gate is binding regardless.
+- **Rank, not CTR, is the bottleneck** (2026-05-20 finding). Pages at
+  position 6-9 with 0 clicks are at the statistical noise floor, not a
+  metadata defect — do not rewrite titles speculatively. /black-scholes-
+  calculator is the priority climb: 73 impressions/7d stuck at position
+  ~60 (page 6). Authority/links + domain age are the levers. See
+  priority #1 reframe above.
 
 ## Things I can do without asking
 
