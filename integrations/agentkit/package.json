@@ -1,6 +1,6 @@
 {
   "name": "@quantoracle/agentkit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic quant finance math for Coinbase AgentKit agents — Black-Scholes, Kelly, Monte Carlo, full risk audit, hedge recommendations. Free tier + x402 micropayments for paid composites.",
   "type": "module",
   "main": "dist/index.js",
