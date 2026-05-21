@@ -216,6 +216,11 @@ if rows:
 
     # ── 4. GA4 sessions ───────────────────────────────────────────────
     section('GA4 traffic — today + last 7 days')
+    # Captured here, consumed by the AdSense readiness section (#9) so that
+    # section reports live numbers instead of stale hardcoded estimates.
+    ga4_sessions_7d = None
+    ga4_engaged_7d = None
+    ga4_organic_pct = None
     try:
         # Import the GA4 client via the same path
         from google.auth import default as ga_default
@@ -250,6 +255,26 @@ if rows:
                   f'users={mv[1]["value"]:>4}  '
                   f'engaged={mv[2]["value"]:>4}  '
                   f'avg_dur={float(mv[3]["value"]):>5.1f}s')
+            if idx == 2:  # the 7-day range
+                ga4_sessions_7d = int(mv[0]['value'])
+                ga4_engaged_7d = int(mv[2]['value'])
+
+        # Second query: 7-day sessions by channel, for the organic-search %.
+        ch_resp = ga.properties().runReport(
+            property='properties/536051756',
+            body={
+                'dateRanges': [{'startDate': '7daysAgo', 'endDate': 'today'}],
+                'dimensions': [{'name': 'sessionDefaultChannelGroup'}],
+                'metrics': [{'name': 'sessions'}],
+            },
+        ).execute()
+        ch = {r['dimensionValues'][0]['value']: int(r['metricValues'][0]['value'])
+              for r in ch_resp.get('rows', [])}
+        ch_total = sum(ch.values())
+        if ch_total > 0:
+            ga4_organic_pct = 100.0 * ch.get('Organic Search', 0) / ch_total
+            print(f'  channel 7d: ' + ', '.join(
+                f'{k}={v}' for k, v in sorted(ch.items(), key=lambda kv: -kv[1])))
     except Exception as e:
         print(f'  GA4 unavailable: {e}')
 
@@ -331,18 +356,53 @@ if rows:
     site_launch = date(2026, 5, 4)
     today = date.today()
     age_days = (today - site_launch).days
-    print(f'  Domain age:                {age_days} days (target: 90+)')
-    print(f'  Daily sessions baseline:   ~10/day from last GA4 sweep (target: 50+/day sustained)')
-    print(f'  Organic search %:          ~9% (target: 30%+)')
-    print(f'  Indexed pages:             25 of 40 (per last GSC sweep)')
-    print(f'  Engaged session %:         50% (target: 30%+) ✓ MEETING')
-    print(f'  Required policy pages:     all present ✓ MEETING')
-    print()
-    if age_days >= 90:
-        print('  → VERDICT: domain age criterion met; check other 3 metrics in detail')
+
+    def gate(ok: bool) -> str:
+        return '✓ MEETING' if ok else '✗ below target'
+
+    # Domain age — always live.
+    age_ok = age_days >= 90
+    print(f'  Domain age:            {age_days} days (target: 90+)  {gate(age_ok)}')
+
+    # Daily sessions — live from GA4 (7-day average). None if GA4 failed.
+    sessions_ok = False
+    if ga4_sessions_7d is not None:
+        daily_avg = ga4_sessions_7d / 7.0
+        sessions_ok = daily_avg >= 50
+        print(f'  Daily sessions (7d avg): {daily_avg:.1f}/day '
+              f'(target: 50+)  {gate(sessions_ok)}')
     else:
+        print(f'  Daily sessions:        (GA4 unavailable this run)')
+
+    # Organic search share — live from GA4 channel breakdown.
+    organic_ok = False
+    if ga4_organic_pct is not None:
+        organic_ok = ga4_organic_pct >= 30
+        print(f'  Organic search %:      {ga4_organic_pct:.0f}% '
+              f'(target: 30%+)  {gate(organic_ok)}')
+    else:
+        print(f'  Organic search %:      (GA4 unavailable this run)')
+
+    # Engagement rate — live from GA4 (engaged / total sessions, 7d).
+    engaged_ok = False
+    if ga4_sessions_7d and ga4_engaged_7d is not None and ga4_sessions_7d > 0:
+        eng_pct = 100.0 * ga4_engaged_7d / ga4_sessions_7d
+        engaged_ok = eng_pct >= 30
+        print(f'  Engaged session %:     {eng_pct:.0f}% '
+              f'(target: 30%+)  {gate(engaged_ok)}')
+    else:
+        print(f'  Engaged session %:     (GA4 unavailable this run)')
+
+    print(f'  Required policy pages: all present  {gate(True)}')
+    print(f'  Indexed pages:         run ops/gsc-weekly.py for the current count')
+    print()
+    if age_ok and sessions_ok and organic_ok and engaged_ok:
+        print('  → VERDICT: all measurable criteria met — recommend applying for AdSense')
+    elif not age_ok:
         eta = site_launch + timedelta(days=90)
         print(f'  → VERDICT: not ready (domain too young — ETA earliest {eta.isoformat()})')
+    else:
+        print('  → VERDICT: domain age met, but traffic criteria still below target')
 
     print()
     print('=' * 72)
