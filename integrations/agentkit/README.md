@@ -34,13 +34,19 @@ The full QuantOracle API has 73 endpoints plus a `/v1/batch` endpoint that bundl
 
 ## Installation
 
-The action provider files live alongside your AgentKit project:
+**Recommended — install the npm package:**
 
 ```bash
-# 1. Create a new AgentKit project (or use an existing one)
-npx create-onchain-agent
+npm install @quantoracle/agentkit
+```
 
-# 2. Copy the QuantOracle action provider files into your project
+It ships built ESM + CJS + TypeScript types. `@coinbase/agentkit` and `zod` are
+peer dependencies — both already present in a `create-onchain-agent` project.
+
+**Alternative — vendor the source.** If you'd rather copy the provider into your
+repo (to customize it, or pin a specific version), pull the four files directly:
+
+```bash
 mkdir -p src/quantoracle
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/quantoracleActionProvider.ts -o src/quantoracle/quantoracleActionProvider.ts
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/schemas.ts -o src/quantoracle/schemas.ts
@@ -48,18 +54,14 @@ curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integ
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/index.ts -o src/quantoracle/index.ts
 ```
 
-Or clone the QuantOracle repo and copy the directory:
-
-```bash
-git clone https://github.com/QuantOracledev/quantoracle
-cp -r quantoracle/integrations/agentkit ./src/quantoracle
-```
+If you vendor the files this way, import from `./quantoracle` instead of
+`@quantoracle/agentkit` in the usage example below.
 
 ## Usage
 
 ```ts
 import { AgentKit, CdpEvmWalletProvider } from "@coinbase/agentkit";
-import { quantoracleActionProvider } from "./quantoracle";
+import { quantoracleActionProvider } from "@quantoracle/agentkit";
 
 const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
   apiKeyId: process.env.CDP_API_KEY_ID!,

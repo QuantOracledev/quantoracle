@@ -117,15 +117,31 @@ cd your-agent-name`}</code></pre>
           ReAct loop wired in.
         </p>
 
-        <h3>2. Drop the QuantOracle action provider into your project</h3>
+        <h3>2. Add the QuantOracle action provider</h3>
+        <p>
+          The recommended way is the published npm package — one command, ships built
+          ESM + CJS + TypeScript types:
+        </p>
+        <pre><code className="language-bash">{`npm install @quantoracle/agentkit`}</code></pre>
+        <p>
+          <code>@coinbase/agentkit</code> and <code>zod</code> are peer dependencies — both
+          already in the <code>create-onchain-agent</code> template, so there&apos;s nothing
+          else to install.
+        </p>
+        <p>
+          <strong>Alternative — vendor the source.</strong> If you&apos;d rather copy the
+          provider into your repo (to customize it, or to pin a specific version), pull the
+          four files directly instead:
+        </p>
         <pre><code className="language-bash">{`mkdir -p src/quantoracle
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/quantoracleActionProvider.ts -o src/quantoracle/quantoracleActionProvider.ts
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/schemas.ts -o src/quantoracle/schemas.ts
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/constants.ts -o src/quantoracle/constants.ts
 curl -sL https://raw.githubusercontent.com/QuantOracledev/quantoracle/main/integrations/agentkit/index.ts -o src/quantoracle/index.ts`}</code></pre>
         <p>
-          Four files, ~800 lines total. No new npm dependencies — the provider uses{' '}
-          <code>zod</code> and the AgentKit core, both already in the template.
+          Four files, ~800 lines total. If you vendor them this way, import from{' '}
+          <code>./quantoracle</code> instead of <code>@quantoracle/agentkit</code> in the
+          next step.
         </p>
 
         <h3>3. Wire the provider into your agent</h3>
@@ -135,7 +151,7 @@ import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import { ChatOpenAI } from "@langchain/openai";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { MemorySaver } from "@langchain/langgraph";
-import { quantoracleActionProvider } from "./quantoracle";
+import { quantoracleActionProvider } from "@quantoracle/agentkit";
 
 const walletProvider = await CdpEvmWalletProvider.configureWithWallet({
   apiKeyId: process.env.CDP_API_KEY_ID!,
@@ -216,7 +232,7 @@ console.log(response.messages.at(-1).content);`}</code></pre>
           <code>SolanaKeypairWalletProvider</code>:
         </p>
         <pre><code className="language-typescript">{`import { AgentKit, SolanaKeypairWalletProvider } from "@coinbase/agentkit";
-import { quantoracleActionProvider } from "./quantoracle";
+import { quantoracleActionProvider } from "@quantoracle/agentkit";
 
 const walletProvider = await SolanaKeypairWalletProvider.fromBase58PrivateKey(
   process.env.SOLANA_PRIVATE_KEY!,
