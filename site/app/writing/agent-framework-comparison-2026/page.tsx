@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AffiliateCta } from '@/components/AffiliateCta';
+import { WritingRelated } from '@/components/WritingRelated';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -514,6 +515,8 @@ const runtime = new AgentRuntime({
           </li>
         </ul>
       </article>
+
+      <WritingRelated slug="agent-framework-comparison-2026" />
 
       <script
         type="application/ld+json"

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AffiliateCta } from '@/components/AffiliateCta';
+import { WritingRelated } from '@/components/WritingRelated';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -398,6 +399,8 @@ const agentkit = await AgentKit.from({
           </li>
         </ul>
       </article>
+
+      <WritingRelated slug="agentkit-reliable-quant-finance-math" />
 
       <div className="mt-12">
         <AffiliateCta subId="writing-agentkit-tutorial" category="compare" />

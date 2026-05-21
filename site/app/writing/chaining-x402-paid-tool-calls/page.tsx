@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AffiliateCta } from '@/components/AffiliateCta';
+import { WritingRelated } from '@/components/WritingRelated';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -386,6 +387,8 @@ T+3.2s  user prompt 2 sent (different turn)
           </li>
         </ul>
       </article>
+
+      <WritingRelated slug="chaining-x402-paid-tool-calls" />
 
       <div className="mt-12">
         <AffiliateCta subId="writing-chained-x402-tutorial" category="compare" />

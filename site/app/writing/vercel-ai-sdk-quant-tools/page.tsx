@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AffiliateCta } from '@/components/AffiliateCta';
+import { WritingRelated } from '@/components/WritingRelated';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata = buildMetadata({
@@ -468,6 +469,8 @@ const tools = quantoraclePaidTools({
           </li>
         </ul>
       </article>
+
+      <WritingRelated slug="vercel-ai-sdk-quant-tools" />
 
       <script
         type="application/ld+json"
