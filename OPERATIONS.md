@@ -3,7 +3,7 @@
 > Internal COO working document. Updated each session. The first thing Claude
 > reads when starting a fresh operating session.
 
-**Last updated:** 2026-05-20 (crawler-trap fix confirmed; priority #1 reframed to rank/authority)  
+**Last updated:** 2026-05-21 (ramping agentic user identified; Dependabot triage)  
 **Updated by:** Claude (COO)
 
 **Current 13 URLs needing manual Google Search Console submission** (paste into URL Inspection):
@@ -145,6 +145,7 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 8 | AdSense readiness monitor | Manual; checked during morning brief | Run during each brief |
 | 9 | Dependabot HIGH alert #1 (bigint-buffer transitive in agentkit) | **No fix path — package abandoned at 1.1.5; comes via @coinbase/agentkit → @solana/spl-token. Scope=dev, never in published @quantoracle/agentkit artifact** | Wait for upstream Coinbase team to switch off @solana/spl-token; no action available |
 | 10 | options-profit-calculator crawler trap | **CLOSED 2026-05-20.** rel="nofollow" + robots.txt Disallow (deployed 2026-05-17) worked: /options/payoff-diagram SSR calls went 567 (05-18) → 0 (05-19) → 37 (05-20). No Cloudflare/Vercel-Firewall escalation needed. | Done |
+| 11 | **Ramping agentic user — Mozilla/X11 Linux UA, IPv6 `2a06:98c0:3600::103`** | Identified as MCP client (Claude Desktop on Linux or similar — UA + mcp-other source classification). 36 distinct endpoints, real general-purpose quant work. Growth: 8 → 15 → 167 → 47+ over 4 days. **Biggest sustained agentic signal we've ever seen.** Same churn risk as TradingKarlos — anonymous, no contact path. | Watch for continued growth in daily brief; flag immediately if pattern stops or accelerates |
 
 ## Decision log
 
@@ -166,6 +167,10 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 2026-05-20 | Crawler-trap fix confirmed working; no Cloudflare/Vercel-Firewall escalation | /options/payoff-diagram SSR: 567 → 0 → 37. Free rel="nofollow" + robots.txt fix held. The $20/mo Vercel Firewall question is off the table. |
 | 2026-05-20 | Reframe priority #1: bottleneck is rank, not indexing, not CTR | 25+ URLs indexed; ~300 impressions/7d → 5 clicks. 0% CTR at position 6-9 is the noise floor (expected clicks <1), not a fixable title defect. Levers are now authority/links + domain age, not metadata. |
 | 2026-05-20 | Interconnect the /compare cluster (commit 04379b7) | Audit found 4 of 11 /compare articles had zero sibling links — Google saw disconnected leaves, not a topical cluster. Added lib/compare-cross-links.ts + CompareRelated component; every article now links 3 conceptually-adjacent siblings. Highest-leverage on-site SEO move available during the sandbox-aging window. |
+| 2026-05-20 | Interconnect the /writing tutorial cluster + ship `@quantoracle/agentkit@0.1.1` | Mirrored compare-cluster pattern for the agentic conversion funnel (4 tutorials, was orphaned flagship). Then republished agentkit package so the npm-page README shows `npm install` as the recommended path (was teaching the curl-source path despite the package being live). |
+| 2026-05-21 | Take Dependabot PR #14 (`ai` 5.0.52), close PR #13 (`ai` 6.0.184) | #14 is within our declared peer range (`>=3.0.0 <6.0.0`); #13 violates it. Bumping the peer range to allow v6 would require evaluation + our own major bump per semver — separate decision. Our code only uses `tool` + `generateText` so v5 is mechanically safe. |
+| 2026-05-21 | No action on Dependabot alerts #70 (ws) and #72 (qs) | Both transitive (zero direct usage in our source). `ws` is not loadable in the Cloudflare Worker runtime (no Node `net` module) — graph noise only. `qs` is via express body-parser; the `qs.stringify` DoS requires attacker-controlled stringify input which mcp-server doesn't expose. Wait for upstream patches. |
+| 2026-05-21 | Wire morning brief AdSense section to live GA4 data (commit 66c9731) | Replaced 4 stale hardcoded numbers with live GA4 queries (7d sessions, organic %, engagement %). Per-criterion ✓/✗ gates. Verdict auto-flips to "recommend applying" when all four pass. |
 
 ## Watch list
 
