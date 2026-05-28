@@ -3,7 +3,7 @@
 > Internal COO working document. Updated each session. The first thing Claude
 > reads when starting a fresh operating session.
 
-**Last updated:** 2026-05-21 (ramping agentic user identified; Dependabot triage)  
+**Last updated:** 2026-05-27 (priorities reframed as two co-equal surfaces — human + agentic — with current adoption signals)  
 **Updated by:** Claude (COO)
 
 **Current 13 URLs needing manual Google Search Console submission** (paste into URL Inspection):
@@ -66,59 +66,95 @@ anonymous agents.
 
 ---
 
-## Top 3 strategic priorities (next 30 days)
+## Top strategic priorities (next 30 days)
 
-### 1. Traffic → AdSense readiness
+**Two co-equal priorities — different audiences, different timelines,
+different mechanics, both worth deliberate effort.** Don't deprioritize
+one in favor of the other; they compound independently.
+
+### 1a. Human surface → AdSense readiness
+
+**Audience:** humans landing on calculators / /compare / /writing via
+organic search. **Monetization:** AdSense (when ready).
 
 **Target:** sustained 50+ daily sessions, 30%+ organic search share, domain
 age 90+ days. Realistic apply date: **early August 2026** at current
-trajectory; could pull forward to early July if upstream PRs merge.
+trajectory; could pull forward if upstream PRs merge.
 
-**Bottleneck reframe (2026-05-20):** The "get indexed" era is over — 25+ URLs
-are indexed and pages are appearing in results. The new bottleneck is **rank,
-not indexing, and not CTR.** GSC (last 7d): ~300 impressions → 5 clicks.
-Several pages rank position 6-9 (bottom of page 1) with 0 clicks, and
-/black-scholes-calculator sits at position ~60 (page 6) on its 73 impressions.
+**State (2026-05-27):** 4 of 4 measurable AdSense gates currently below
+target — 23/90 days domain age (binding), ~4-8 sessions/day vs 50, 7-11%
+organic share vs 30%, engagement reading low but noise-dominated at this
+volume. Effectively a maintenance phase: do the work that compounds, don't
+chase metrics that can't move yet.
 
-Important honest finding: the 0% CTR on position-8 pages is **NOT a fixable
-title/meta problem.** At 8-43 impressions per page at position 6-9, expected
-clicks are <1 regardless of title (position 8 + AI Overviews + featured
-snippets = ~1-2% CTR ceiling). We're seeing the statistical noise floor, not
-a metadata defect. Don't burn effort on speculative title rewrites — GSC's
-<10-impression privacy threshold also hides the actual queries, so any
-rewrite is blind guessing.
+**Bottleneck reframe (2026-05-20):** The "get indexed" era is over — 25+
+URLs are indexed. The new bottleneck is **rank, not indexing, not CTR.**
+GSC (last 7d): ~300 impressions → 5 clicks. The 0% CTR on position-8 pages
+is the statistical noise floor, NOT a fixable title/meta defect. Don't
+burn effort on speculative title rewrites — GSC's <10-impression privacy
+threshold also hides the actual queries.
 
-What actually moves rank for a 16-day-old domain:
+What moves rank for a 23-day-old domain:
 
-- **Time.** New domains are suppressed for weeks-to-months ("sandbox"). Some
-  of the position-60 problem resolves on its own as the domain ages.
+- **Time.** New domains are suppressed for weeks-to-months ("sandbox").
 - **Land the two upstream PRs.** [vercel/ai#15295](https://github.com/vercel/ai/pull/15295)
-  and [goat-sdk/goat#582](https://github.com/goat-sdk/goat/pull/582) — these
-  are the highest-value backlinks available and the asymmetric bet. Authority
-  links are the lever that moves page-6 rankings.
-- **Content depth + internal linking.** Make each calculator/compare page the
-  genuinely best resource for its query, and interlink the catalog so ranking
-  authority flows between pages.
-- **Compound the /compare cluster.** 7 of 11 /compare pages now rank page 1
+  and [goat-sdk/goat#582](https://github.com/goat-sdk/goat/pull/582) — the
+  highest-value backlinks available, asymmetric bet.
+- **Content depth + internal linking.** /compare cluster + /writing cluster
+  both interconnected (commits 04379b7, 059ecd5). Done.
+- **Compound the /compare cluster.** 7 of 11 /compare pages rank page 1
   for niche queries. Topical authority in a cluster lifts the whole cluster.
 
-Do NOT keep doing: manual indexing submission (done), title rewrites on
-already-ranking pages (no diagnosable defect), publishing more content
-speculatively (existing set hasn't proven out — see weekly scan 2026-05-18).
+Do NOT: manual indexing submission (done), title rewrites on already-
+ranking pages (no diagnosable defect), publishing more content speculatively
+(weekly scan 2026-05-18 said no opportunities).
 
-### 2. x402 settlement growth
+### 1b. Agentic surface → x402 + integration revenue
 
-**Target:** measurable settled revenue (>$10/mo recurring) by August 2026.
+**Audience:** AI agents (MCP clients, Vercel AI SDK / AgentKit / GOAT / Eliza
+users, Python/Node integrations) invoking our deterministic quant tools.
+**Monetization:** x402 USDC micropayments on paid composites + integration
+package adoption pulling free-tier traffic that becomes paid-tier traffic.
 
-Lifetime settled revenue is $2.495 USDC across 171 transactions, mostly from
-April 20-21 load tests. Real organic agent traffic to paid endpoints is near
-zero. Path forward:
+**Critical insight: GA4 never sees this audience** — agents don't render
+browsers, don't trigger pageviews. The morning brief's "Audience signal"
+section is the only place this surface is visible.
 
-- Get the 4 published npm integration packages into developer hands (the PRs
-  above + /writing tutorials are the levers)
-- The `@quantoracle/ai-tools` package (Vercel AI SDK) has the broadest
-  audience; that's the primary driver
-- AgentKit and GOAT serve the onchain-agent audience specifically
+**State (2026-05-27) — materially more adoption than the doc previously
+acknowledged:**
+- **Smithery: 1,050 uses** (the strongest concrete agentic-adoption signal we have)
+- **`@quantoracle/agentkit`: 181 weekly npm downloads** (other 3 packages 7-13/wk)
+- **External API calls: ~90/day 7-day average** vs ~3/day two weeks ago — a 30× sustained lift
+- **One identified power user** (Cloudflare WARP, IPv6 `2a06:98c0:3600::103`):
+  600+ calls across 8 days, upgraded tooling Claude Desktop → Claude Code SDK
+  → Python over the period. Real developer building something serious.
+- **Directory presence: 6 of 7 viable MCP directories** (Official MCP Registry,
+  punkpeye/awesome-mcp-servers, Glama.ai, mcp.so, PulseMCP, Smithery;
+  mcpservers.org submitted 2026-05-27, awaiting review).
+- **Lifetime x402 settled revenue still ~$2.50 USDC** — adoption growing
+  but mostly on free-tier endpoints; haven't crossed paid-composite threshold
+  in revenue yet.
+
+**Target:** measurable settled revenue (>$10/mo recurring) by August 2026,
+sustained external-API growth, at least one identifiable named user we have
+contact with.
+
+Levers:
+
+- **Land the two upstream PRs** (also serve priority 1a) — they put us in
+  front of the agent-builder audience at scale.
+- **Sharpen MCP server description** in `mcp-server/server.json` and
+  `mcp-server/package.json` — the differentiation pitch ("LLMs drift 5-30%
+  on Black-Scholes — deterministic tools fix it") is currently buried under
+  generic "free tier" language. Propagates to the registry on next publish.
+- **Watch for new external UAs** in the morning brief — every new agent
+  client is a real signal worth investigating once.
+- **Optional: contact-capture experiment.** Both TradingKarlos (one-day
+  burst) and the WARP power user came and worked silently. No contact path.
+  Real product gap; revisit when adoption is large enough to justify.
+
+Do NOT: write more dev.to tutorials (2/2 flopped, channel is dead for us);
+chase HN (account shadowbanned); spam Reddit / Discord communities.
 
 ### 3. Maintain product + infra reliability
 
@@ -145,7 +181,8 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 8 | AdSense readiness monitor | Manual; checked during morning brief | Run during each brief |
 | 9 | Dependabot HIGH alert #1 (bigint-buffer transitive in agentkit) | **No fix path — package abandoned at 1.1.5; comes via @coinbase/agentkit → @solana/spl-token. Scope=dev, never in published @quantoracle/agentkit artifact** | Wait for upstream Coinbase team to switch off @solana/spl-token; no action available |
 | 10 | options-profit-calculator crawler trap | **CLOSED 2026-05-20.** rel="nofollow" + robots.txt Disallow (deployed 2026-05-17) worked: /options/payoff-diagram SSR calls went 567 (05-18) → 0 (05-19) → 37 (05-20). No Cloudflare/Vercel-Firewall escalation needed. | Done |
-| 11 | **Ramping agentic user — Mozilla/X11 Linux UA, IPv6 `2a06:98c0:3600::103`** | Identified as MCP client (Claude Desktop on Linux or similar — UA + mcp-other source classification). 36 distinct endpoints, real general-purpose quant work. Growth: 8 → 15 → 167 → 47+ over 4 days. **Biggest sustained agentic signal we've ever seen.** Same churn risk as TradingKarlos — anonymous, no contact path. | Watch for continued growth in daily brief; flag immediately if pattern stops or accelerates |
+| 11 | **Ramping agentic power user — Cloudflare WARP, IPv6 `2a06:98c0:3600::103`** | Confirmed MCP client behind Cloudflare WARP consumer VPN (geographically anonymized). Upgraded tooling Mozilla/X11 Linux → claude-code/2.1.90 (sdk-cli) → python-requests over 8 days. **612+ calls across 36 distinct endpoints** (options/TVM/stats/risk/fixed-income/macro/FX) = real general-purpose practitioner usage. Biggest single agentic user identified. Anonymous, no contact path. | Watch in daily brief; flag if pattern accelerates or new IPs join. Future: consider contact-capture experiment for high-volume anonymous agents. |
+| 12 | mcpservers.org listing | Submitted 2026-05-27, awaiting review (~12h SLA). Closes the directory-coverage gap — 7 of 7 viable MCP directories pursued. | Watch `hello@quantoracle.dev` for approval/rejection email |
 
 ## Decision log
 
@@ -171,6 +208,10 @@ droplet to 2GB tier ($12/mo on DigitalOcean). Below that threshold, hold.
 | 2026-05-21 | Take Dependabot PR #14 (`ai` 5.0.52), close PR #13 (`ai` 6.0.184) | #14 is within our declared peer range (`>=3.0.0 <6.0.0`); #13 violates it. Bumping the peer range to allow v6 would require evaluation + our own major bump per semver — separate decision. Our code only uses `tool` + `generateText` so v5 is mechanically safe. |
 | 2026-05-21 | No action on Dependabot alerts #70 (ws) and #72 (qs) | Both transitive (zero direct usage in our source). `ws` is not loadable in the Cloudflare Worker runtime (no Node `net` module) — graph noise only. `qs` is via express body-parser; the `qs.stringify` DoS requires attacker-controlled stringify input which mcp-server doesn't expose. Wait for upstream patches. |
 | 2026-05-21 | Wire morning brief AdSense section to live GA4 data (commit 66c9731) | Replaced 4 stale hardcoded numbers with live GA4 queries (7d sessions, organic %, engagement %). Per-criterion ✓/✗ gates. Verdict auto-flips to "recommend applying" when all four pass. |
+| 2026-05-27 | Merge Dependabot PR #17 (qs + express in /mcp-server) | Cleared alert #72 — upstream patched 5 days after our "wait" call. |
+| 2026-05-27 | Submit mcpservers.org listing; do NOT file a polish-PR to punkpeye/awesome-mcp-servers | The existing punkpeye entry is competent; filing a polish PR burns goodwill we'd want for a bigger ask later. mcpservers.org was the only confirmed directory gap and free to submit. |
+| 2026-05-27 | Don't fight GA4 OAuth-ADC further if it expires again | Service accounts didn't work previously per CEO; OAuth-ADC works but requires periodic browser re-auth. Acceptable cost given GA4 is one of several signals, not the only one. |
+| 2026-05-27 | Reframe top priorities as 1a + 1b (human + agentic co-equal), not 1 + 2 | Adoption signals revealed agentic surface is materially more developed than the doc acknowledged (1.05k Smithery uses, 181/wk agentkit npm downloads, WARP power user). Both audiences worth deliberate effort; different timelines, different mechanics. |
 
 ## Watch list
 
