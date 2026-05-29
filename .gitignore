@@ -65,3 +65,9 @@ examples/backtest_output.txt
 examples/tearsheet_carbon.png
 api/metrics.db
 tools_response.json
+
+# ── Internal operational state (NEVER commit) ────────────────────
+# COO operating doc + ops scripts contain droplet IPs, user IPs,
+# decision logs, and strategic intel that shouldn't be public.
+OPERATIONS.md
+ops/
