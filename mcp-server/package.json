@@ -1,8 +1,8 @@
 {
   "name": "quantoracle-mcp",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "mcpName": "io.github.fel123/quantoracle",
-  "description": "63 deterministic quant calculators + 10 composite workflows for AI agents via MCP. Options pricing, Greeks, derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, TVM, strategy backtesting, rebalance planning, options strategy optimization, hedging. 1,000 free calls/day. x402 payments on Base or Solana.",
+  "description": "Grounded quant finance math for AI agents over MCP. LLMs drift 5-30% on Black-Scholes Greeks and silently fail at Kelly, Sharpe, and VaR — this server is deterministic, citation-tested math (Hull, Wilmott, Lopez de Prado). 63 calculators (options pricing, Greeks, derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, TVM) plus 10 composite workflows (risk audit, hedge recommend, strategy optimize, rebalance plan). 1,000 free calls/day; paid composites via x402 USDC on Base or Solana.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

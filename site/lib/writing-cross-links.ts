@@ -50,6 +50,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     blurb:
       'A working risk-audit → hedge-recommend demo on Base mainnet. The system-prompt pattern that makes multi-step paid tool calls reliable.',
   },
+  {
+    slug: 'quant-tools-mcp-server',
+    title: 'Add 73 quant tools to your AI agent in 60 seconds with MCP',
+    blurb:
+      'Wire 63 deterministic calculators + 10 composite workflows into Claude Desktop, Cursor, or any MCP-capable agent in one config line. Free tier + x402 paid composites.',
+  },
 ];
 
 const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
@@ -59,24 +65,34 @@ const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
 /** writing-slug → sibling writing-slugs (the rest of the tutorial cluster). */
 const RELATED: Record<string, string[]> = {
   'agent-framework-comparison-2026': [
+    'quant-tools-mcp-server',
     'vercel-ai-sdk-quant-tools',
     'agentkit-reliable-quant-finance-math',
     'chaining-x402-paid-tool-calls',
   ],
   'vercel-ai-sdk-quant-tools': [
+    'quant-tools-mcp-server',
     'agentkit-reliable-quant-finance-math',
     'agent-framework-comparison-2026',
     'chaining-x402-paid-tool-calls',
   ],
   'agentkit-reliable-quant-finance-math': [
+    'quant-tools-mcp-server',
     'vercel-ai-sdk-quant-tools',
     'agent-framework-comparison-2026',
     'chaining-x402-paid-tool-calls',
   ],
   'chaining-x402-paid-tool-calls': [
+    'quant-tools-mcp-server',
     'agent-framework-comparison-2026',
     'vercel-ai-sdk-quant-tools',
     'agentkit-reliable-quant-finance-math',
+  ],
+  'quant-tools-mcp-server': [
+    'agent-framework-comparison-2026',
+    'vercel-ai-sdk-quant-tools',
+    'agentkit-reliable-quant-finance-math',
+    'chaining-x402-paid-tool-calls',
   ],
 };
 
@@ -105,6 +121,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'value-at-risk-calculator',
     'monte-carlo-simulation-calculator',
     'drawdown-calculator',
+  ],
+  'quant-tools-mcp-server': [
+    'black-scholes-calculator',
+    'kelly-criterion-calculator',
+    'monte-carlo-simulation-calculator',
   ],
 };
 

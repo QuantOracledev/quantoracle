@@ -102,6 +102,10 @@ const WRITING_TITLES = {
     title: "Choosing an agent framework — the comparison",
     what: 'AgentKit vs GOAT vs Vercel AI SDK vs LangChain vs elizaOS, with decision tables and migration paths.',
   },
+  'quant-tools-mcp-server': {
+    title: 'Use this from Claude Desktop, Cursor, or any MCP client',
+    what: 'Wire all 73 quant tools into Claude Desktop, Cursor, or your custom MCP agent in 60 seconds.',
+  },
 } as const;
 
 function mkCompare(slug: keyof typeof COMPARE_TITLES) {
@@ -120,6 +124,7 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
       mkCompare('implied-vol-vs-historical-vol-vs-realized-vol'),
     ],
     writing: [
+      mkWriting('quant-tools-mcp-server'),
       mkWriting('vercel-ai-sdk-quant-tools'),
       mkWriting('agentkit-reliable-quant-finance-math'),
       mkWriting('agent-framework-comparison-2026'),
@@ -130,11 +135,12 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
       mkCompare('american-vs-european-vs-bermudan-options'),
       mkCompare('black-scholes-vs-binomial'),
     ],
-    writing: [mkWriting('vercel-ai-sdk-quant-tools')],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('vercel-ai-sdk-quant-tools')],
   },
   'monte-carlo-simulation-calculator': {
     compare: [mkCompare('black-scholes-vs-monte-carlo')],
     writing: [
+      mkWriting('quant-tools-mcp-server'),
       mkWriting('vercel-ai-sdk-quant-tools'),
       mkWriting('agentkit-reliable-quant-finance-math'),
       mkWriting('agent-framework-comparison-2026'),
@@ -142,18 +148,19 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
   },
   'implied-volatility-calculator': {
     compare: [mkCompare('implied-vol-vs-historical-vol-vs-realized-vol')],
-    writing: [mkWriting('vercel-ai-sdk-quant-tools')],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('vercel-ai-sdk-quant-tools')],
   },
   'kelly-criterion-calculator': {
     compare: [mkCompare('kelly-vs-fixed-fractional-vs-optimal-f')],
     writing: [
+      mkWriting('quant-tools-mcp-server'),
       mkWriting('vercel-ai-sdk-quant-tools'),
       mkWriting('agentkit-reliable-quant-finance-math'),
     ],
   },
   'position-size-calculator': {
     compare: [mkCompare('kelly-vs-fixed-fractional-vs-optimal-f')],
-    writing: [mkWriting('agentkit-reliable-quant-finance-math')],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('agentkit-reliable-quant-finance-math')],
   },
   'value-at-risk-calculator': {
     compare: [
@@ -161,50 +168,54 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
       mkCompare('z-score-vs-bollinger-bands-vs-rsi'),
     ],
     writing: [
+      mkWriting('quant-tools-mcp-server'),
       mkWriting('agentkit-reliable-quant-finance-math'),
       mkWriting('chaining-x402-paid-tool-calls'),
     ],
   },
   'drawdown-calculator': {
     compare: [mkCompare('var-vs-cvar-vs-max-drawdown')],
-    writing: [],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('chaining-x402-paid-tool-calls')],
   },
   'hurst-exponent-calculator': {
     compare: [
       mkCompare('hurst-vs-autocorrelation-vs-variance-ratio'),
       mkCompare('z-score-vs-bollinger-bands-vs-rsi'),
     ],
-    writing: [],
+    writing: [mkWriting('quant-tools-mcp-server')],
   },
   'probabilistic-sharpe-ratio-calculator': {
     compare: [
       mkCompare('sharpe-vs-sortino-vs-calmar'),
       mkCompare('sharpe-vs-information-ratio-vs-treynor'),
     ],
-    writing: [],
+    writing: [mkWriting('quant-tools-mcp-server')],
   },
   'sharpe-ratio-calculator': {
     compare: [
       mkCompare('sharpe-vs-sortino-vs-calmar'),
       mkCompare('sharpe-vs-information-ratio-vs-treynor'),
     ],
-    writing: [mkWriting('agentkit-reliable-quant-finance-math')],
+    writing: [
+      mkWriting('quant-tools-mcp-server'),
+      mkWriting('agentkit-reliable-quant-finance-math'),
+    ],
   },
   'cagr-calculator': {
     compare: [mkCompare('geometric-vs-arithmetic-vs-time-weighted-returns')],
-    writing: [],
+    writing: [mkWriting('quant-tools-mcp-server')],
   },
   'options-profit-calculator': {
     compare: [],
-    writing: [mkWriting('vercel-ai-sdk-quant-tools')],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('vercel-ai-sdk-quant-tools')],
   },
   'crypto-liquidation-calculator': {
     compare: [],
-    writing: [mkWriting('vercel-ai-sdk-quant-tools')],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('vercel-ai-sdk-quant-tools')],
   },
   'impermanent-loss-calculator': {
     compare: [],
-    writing: [mkWriting('vercel-ai-sdk-quant-tools')],
+    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('vercel-ai-sdk-quant-tools')],
   },
 };
 

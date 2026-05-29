@@ -35,6 +35,15 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title: 'Add 73 quant tools to your AI agent in 60 seconds with MCP',
+    description:
+      'Wire 63 deterministic quant calculators plus 10 composite workflows into Claude Desktop, Cursor, or any MCP-capable agent in one config line. Free tier handles most use cases; paid composites settle via x402 USDC on Base or Solana.',
+    url: '/writing/quant-tools-mcp-server',
+    publishedAt: '2026-05-28',
+    tags: ['mcp', 'claude-desktop', 'cursor', 'tutorial', 'ai-agent'],
+    venue: 'site',
+  },
+  {
     title:
       'AgentKit vs GOAT vs Vercel AI SDK vs LangChain vs elizaOS: which agent framework for quant tools?',
     description:
