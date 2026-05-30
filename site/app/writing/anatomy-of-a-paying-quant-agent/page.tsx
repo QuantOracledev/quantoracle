@@ -435,8 +435,29 @@ into the next call's inputs.
         <h2>Verifiable on-chain</h2>
         <p>
           We don&apos;t need you to take our word for any of this. Every settlement above is a
-          real transaction on Base mainnet. Click any <code>tx ↗</code> link in the table to see
-          the USDC transfer, the payer, the receiver, and the amount on BaseScan.
+          real transaction on Base mainnet. Click any <code>tx ↗</code> link in the table and look
+          at the <strong>&quot;ERC-20 Tokens Transferred&quot;</strong> row on BaseScan — you&apos;ll
+          see <code>{PAYER.slice(0, 8)}…{PAYER.slice(-4)}</code> sending exactly the listed USDC
+          amount to our settlement wallet.
+        </p>
+        <p>
+          <strong>One thing that trips people up:</strong> the top-level &quot;From&quot; field on
+          each transaction is <em>not</em> the payer — it&apos;s a facilitator/relayer. That&apos;s
+          how x402 works: under{' '}
+          <a
+            href="https://eips.ethereum.org/EIPS/eip-3009"
+            target="_blank"
+            rel="noopener"
+            className="text-accent"
+          >
+            EIP-3009
+          </a>
+          {' '}(<code>transferWithAuthorization</code>), the paying agent signs a payment
+          authorization off-chain, and a facilitator submits it to the chain and pays the gas. So
+          the payer never needs ETH for gas — only USDC. The agent&apos;s wallet is the{' '}
+          <em>token sender</em> inside the transfer event, which is the row that actually proves
+          who paid. We verified all 8: every one shows{' '}
+          <code>{PAYER.slice(0, 8)}…{PAYER.slice(-4)}</code> as the USDC sender.
         </p>
         <p>
           The QuantOracle x402 settlement wallet on Base is{' '}
