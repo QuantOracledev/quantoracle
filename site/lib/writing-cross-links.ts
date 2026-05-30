@@ -56,6 +56,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     blurb:
       'Wire 63 deterministic calculators + 10 composite workflows into Claude Desktop, Cursor, or any MCP-capable agent in one config line. Free tier + x402 paid composites.',
   },
+  {
+    slug: 'anatomy-of-a-paying-quant-agent',
+    title: 'Anatomy of a paying quant agent — 8 x402 tool calls, 75 minutes, $0.285 USDC',
+    blurb:
+      "A real wallet ran 8 chained paid composites through QuantOracle on Base mainnet in 75 minutes for $0.285 USDC. The exact sequence, the on-chain proof, and how to build one.",
+  },
 ];
 
 const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
@@ -65,34 +71,41 @@ const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
 /** writing-slug → sibling writing-slugs (the rest of the tutorial cluster). */
 const RELATED: Record<string, string[]> = {
   'agent-framework-comparison-2026': [
+    'anatomy-of-a-paying-quant-agent',
     'quant-tools-mcp-server',
     'vercel-ai-sdk-quant-tools',
     'agentkit-reliable-quant-finance-math',
     'chaining-x402-paid-tool-calls',
   ],
   'vercel-ai-sdk-quant-tools': [
+    'anatomy-of-a-paying-quant-agent',
     'quant-tools-mcp-server',
     'agentkit-reliable-quant-finance-math',
-    'agent-framework-comparison-2026',
     'chaining-x402-paid-tool-calls',
   ],
   'agentkit-reliable-quant-finance-math': [
+    'anatomy-of-a-paying-quant-agent',
     'quant-tools-mcp-server',
     'vercel-ai-sdk-quant-tools',
-    'agent-framework-comparison-2026',
     'chaining-x402-paid-tool-calls',
   ],
   'chaining-x402-paid-tool-calls': [
+    'anatomy-of-a-paying-quant-agent',
     'quant-tools-mcp-server',
     'agent-framework-comparison-2026',
-    'vercel-ai-sdk-quant-tools',
     'agentkit-reliable-quant-finance-math',
   ],
   'quant-tools-mcp-server': [
+    'anatomy-of-a-paying-quant-agent',
     'agent-framework-comparison-2026',
     'vercel-ai-sdk-quant-tools',
-    'agentkit-reliable-quant-finance-math',
     'chaining-x402-paid-tool-calls',
+  ],
+  'anatomy-of-a-paying-quant-agent': [
+    'chaining-x402-paid-tool-calls',
+    'quant-tools-mcp-server',
+    'agentkit-reliable-quant-finance-math',
+    'vercel-ai-sdk-quant-tools',
   ],
 };
 
@@ -126,6 +139,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'black-scholes-calculator',
     'kelly-criterion-calculator',
     'monte-carlo-simulation-calculator',
+  ],
+  'anatomy-of-a-paying-quant-agent': [
+    'value-at-risk-calculator',
+    'sharpe-ratio-calculator',
+    'kelly-criterion-calculator',
   ],
 };
 

@@ -43,6 +43,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/writing/vercel-ai-sdk-quant-tools`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/writing/agent-framework-comparison-2026`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/writing/quant-tools-mcp-server`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/writing/anatomy-of-a-paying-quant-agent`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/affiliate-disclosure`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },

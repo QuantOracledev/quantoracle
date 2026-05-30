@@ -35,6 +35,16 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title:
+      'Anatomy of a paying quant agent — 8 x402 tool calls, 75 minutes, $0.285 USDC on Base mainnet',
+    description:
+      "Case study: on 2026-05-29 a single wallet ran 8 chained x402 paid tool calls through the QuantOracle API in 75 minutes for $0.285 USDC. All 8 transactions are settled on Base and verifiable on-chain. The exact sequence, what each step does, the pauses that tell a story, and how to build an agent that runs the same loop.",
+    url: '/writing/anatomy-of-a-paying-quant-agent',
+    publishedAt: '2026-05-29',
+    tags: ['x402', 'case-study', 'base-mainnet', 'agent-loop', 'on-chain'],
+    venue: 'site',
+  },
+  {
     title: 'Add 73 quant tools to your AI agent in 60 seconds with MCP',
     description:
       'Wire 63 deterministic quant calculators plus 10 composite workflows into Claude Desktop, Cursor, or any MCP-capable agent in one config line. Free tier handles most use cases; paid composites settle via x402 USDC on Base or Solana.',

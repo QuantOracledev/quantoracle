@@ -106,6 +106,10 @@ const WRITING_TITLES = {
     title: 'Use this from Claude Desktop, Cursor, or any MCP client',
     what: 'Wire all 73 quant tools into Claude Desktop, Cursor, or your custom MCP agent in 60 seconds.',
   },
+  'anatomy-of-a-paying-quant-agent': {
+    title: 'How a real agent chained 8 paid tools for $0.29',
+    what: 'Case study: 8 chained x402 paid composites in 75 minutes on Base mainnet, settled on-chain.',
+  },
 } as const;
 
 function mkCompare(slug: keyof typeof COMPARE_TITLES) {
@@ -140,6 +144,7 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
   'monte-carlo-simulation-calculator': {
     compare: [mkCompare('black-scholes-vs-monte-carlo')],
     writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
       mkWriting('quant-tools-mcp-server'),
       mkWriting('vercel-ai-sdk-quant-tools'),
       mkWriting('agentkit-reliable-quant-finance-math'),
@@ -153,6 +158,7 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
   'kelly-criterion-calculator': {
     compare: [mkCompare('kelly-vs-fixed-fractional-vs-optimal-f')],
     writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
       mkWriting('quant-tools-mcp-server'),
       mkWriting('vercel-ai-sdk-quant-tools'),
       mkWriting('agentkit-reliable-quant-finance-math'),
@@ -160,7 +166,11 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
   },
   'position-size-calculator': {
     compare: [mkCompare('kelly-vs-fixed-fractional-vs-optimal-f')],
-    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('agentkit-reliable-quant-finance-math')],
+    writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
+      mkWriting('quant-tools-mcp-server'),
+      mkWriting('agentkit-reliable-quant-finance-math'),
+    ],
   },
   'value-at-risk-calculator': {
     compare: [
@@ -168,6 +178,7 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
       mkCompare('z-score-vs-bollinger-bands-vs-rsi'),
     ],
     writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
       mkWriting('quant-tools-mcp-server'),
       mkWriting('agentkit-reliable-quant-finance-math'),
       mkWriting('chaining-x402-paid-tool-calls'),
@@ -175,21 +186,31 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
   },
   'drawdown-calculator': {
     compare: [mkCompare('var-vs-cvar-vs-max-drawdown')],
-    writing: [mkWriting('quant-tools-mcp-server'), mkWriting('chaining-x402-paid-tool-calls')],
+    writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
+      mkWriting('quant-tools-mcp-server'),
+      mkWriting('chaining-x402-paid-tool-calls'),
+    ],
   },
   'hurst-exponent-calculator': {
     compare: [
       mkCompare('hurst-vs-autocorrelation-vs-variance-ratio'),
       mkCompare('z-score-vs-bollinger-bands-vs-rsi'),
     ],
-    writing: [mkWriting('quant-tools-mcp-server')],
+    writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
+      mkWriting('quant-tools-mcp-server'),
+    ],
   },
   'probabilistic-sharpe-ratio-calculator': {
     compare: [
       mkCompare('sharpe-vs-sortino-vs-calmar'),
       mkCompare('sharpe-vs-information-ratio-vs-treynor'),
     ],
-    writing: [mkWriting('quant-tools-mcp-server')],
+    writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
+      mkWriting('quant-tools-mcp-server'),
+    ],
   },
   'sharpe-ratio-calculator': {
     compare: [
@@ -197,6 +218,7 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
       mkCompare('sharpe-vs-information-ratio-vs-treynor'),
     ],
     writing: [
+      mkWriting('anatomy-of-a-paying-quant-agent'),
       mkWriting('quant-tools-mcp-server'),
       mkWriting('agentkit-reliable-quant-finance-math'),
     ],
