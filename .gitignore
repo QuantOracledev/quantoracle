@@ -71,3 +71,6 @@ tools_response.json
 # decision logs, and strategic intel that shouldn't be public.
 OPERATIONS.md
 ops/
+
+# ── Marketing/distribution working drafts (internal, not public) ──
+drafts/
