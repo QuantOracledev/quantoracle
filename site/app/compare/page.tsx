@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AffiliateCta } from '@/components/AffiliateCta';
 import { buildMetadata } from '@/lib/seo';
 import { COMPARE_ARTICLES as articles } from '@/lib/compare-cross-links';
 
@@ -37,6 +38,13 @@ export default function ComparePage() {
             <div className="text-sm text-slate-400">{a.blurb}</div>
           </Link>
         ))}
+      </div>
+
+      {/* Monetization — this index page gets organic traffic but had no
+          revenue surface. Trader/practitioner audience aligns with the
+          TradingView affiliate. */}
+      <div className="mt-10">
+        <AffiliateCta subId="compare-index" category="compare" />
       </div>
     </div>
   );

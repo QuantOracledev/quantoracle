@@ -158,6 +158,36 @@ export function CalculatorShell({
         </section>
       )}
 
+      {/* Developer/agent bridge — converts the human calculator audience toward
+          the agentic revenue surface (API + x402 paid composites). Always
+          present (unlike the tutorial cards, which depend on per-calc
+          cross-links). The calculator IS the same engine the API exposes, so
+          this is a natural, non-clutter upsell: "you just used this once; here's
+          how to call it 10,000 times from your code." */}
+      <section className="mt-12">
+        <div className="card border-accent/20 bg-accent/[0.03] sm:flex sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-accent mb-1">
+              Building something?
+            </div>
+            <h2 className="text-lg font-semibold mb-1">Call this from your own code or agent</h2>
+            <p className="text-sm text-slate-300 max-w-xl">
+              This calculator runs on the QuantOracle API — 73 endpoints, deterministic, the same
+              math AI agents call directly. First 1,000 calls/day are free, no signup. Paid
+              composites (full risk audit, hedge recommendations) start at $0.015 USDC via x402.
+            </p>
+          </div>
+          <div className="mt-4 sm:mt-0 flex shrink-0 gap-2">
+            <Link href="/pricing" className="btn-primary whitespace-nowrap">
+              See pricing
+            </Link>
+            <Link href="/api-docs" className="btn-ghost whitespace-nowrap">
+              API docs →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Related */}
       <section className="mt-12">
         <h2 className="text-xl font-semibold mb-4">Related calculators</h2>

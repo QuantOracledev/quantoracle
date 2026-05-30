@@ -184,7 +184,28 @@ export default function WritingPage() {
         })}
       </div>
 
-      <section className="mt-12 pt-8 border-t border-ink-700/40">
+      {/* Build CTA — the /writing audience is developers evaluating whether to
+          build with QuantOracle. The aligned conversion is the API/pricing
+          funnel (agentic revenue), not a chart-platform affiliate. */}
+      <section className="mt-12 rounded-lg border border-accent/30 bg-accent/[0.04] p-6">
+        <h2 className="text-xl font-semibold mb-2">Ready to build?</h2>
+        <p className="text-sm text-slate-300 leading-relaxed mb-4 max-w-2xl">
+          Every tutorial here runs on the same deterministic API — 73 endpoints, 1,000 free
+          calls per day with no signup, and paid composite workflows (full risk audit, hedge
+          recommendations, strategy optimization) from $0.015 USDC settled automatically via
+          x402 on Base or Solana. No API keys, no billing setup.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/pricing" className="btn-primary">
+            See pricing
+          </Link>
+          <Link href="/api-docs" className="btn-ghost">
+            API docs →
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-8 pt-8 border-t border-ink-700/40">
         <h2 className="text-lg font-semibold mb-2">Follow for new posts</h2>
         <p className="text-sm text-slate-300 leading-relaxed">
           <a
