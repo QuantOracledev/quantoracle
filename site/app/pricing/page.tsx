@@ -203,6 +203,7 @@ export default function PricingPage() {
           <div className="rounded-lg border border-ink-700/60 p-4">
             <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Limits</div>
             <ul className="text-sm text-slate-300 leading-relaxed space-y-1">
+              <li>• <strong className="text-accent">First batch call free</strong> (one per IP, no wallet needed)</li>
               <li>• Up to <strong>100 sub-requests</strong> per call</li>
               <li>• Any mix of calculator + composite endpoints</li>
               <li>• Single x402 settlement for the entire batch</li>
@@ -233,10 +234,12 @@ export default function PricingPage() {
 #    "ms": 142}`}</code>
         </pre>
 
-        <p className="mt-4 text-xs text-slate-500">
-          The <code>total_price_usdc</code> field tells you exactly what was charged. The
-          batch is paid-only (no free tier) since you&apos;re explicitly requesting bulk
-          computation; route through individual free endpoints if you only need a handful.
+        <p className="mt-4 text-sm text-slate-300">
+          <strong className="text-accent">Your first batch call is free</strong> — one per IP,
+          no wallet required. Bundle up to 100 calculations and see exactly how it works before
+          paying for anything. After that, batches are charged as the{' '}
+          <code>total_price_usdc</code> shown in the response (the sum of component prices). If you
+          only need a handful of calls, route through the individual free endpoints instead.
         </p>
       </section>
 
