@@ -244,3 +244,99 @@ export const CROSS_LINKS: Record<string, CalculatorCrossLinks> = {
 export function getCrossLinks(slug: string): CalculatorCrossLinks {
   return CROSS_LINKS[slug] ?? { compare: [], writing: [] };
 }
+
+/**
+ * Composite upsell per calculator. The strategic point (2026-05-31 funnel
+ * analysis): the free calculator IS the funnel; the paid composite is the
+ * product. Someone using the VaR calculator is exactly who'd want
+ * `risk/full-analysis` — so instead of a generic "see pricing" link, pitch
+ * the SPECIFIC composite that does the pro version of what they're doing.
+ *
+ * Each composite chains 5-15 calculator calls into one call. Prices match
+ * the /pricing page. Only mapped where the upsell is genuinely compelling;
+ * calcs without an entry fall back to the generic developer/API bridge.
+ */
+export interface CompositeUpsell {
+  endpoint: string;
+  price: string;
+  pitch: string;
+}
+
+const COMPOSITE_UPSELL: Record<string, CompositeUpsell> = {
+  'sharpe-ratio-calculator': {
+    endpoint: '/v1/risk/full-analysis',
+    price: '$0.04',
+    pitch:
+      'Get Sharpe + Sortino + Calmar + max drawdown + VaR + CVaR + Kelly + Hurst on your return series in a single call.',
+  },
+  'probabilistic-sharpe-ratio-calculator': {
+    endpoint: '/v1/risk/full-analysis',
+    price: '$0.04',
+    pitch:
+      'The full risk audit — Sharpe, Sortino, Calmar, max drawdown, VaR, CVaR, Kelly, Hurst — in one call.',
+  },
+  'value-at-risk-calculator': {
+    endpoint: '/v1/risk/full-analysis',
+    price: '$0.04',
+    pitch:
+      'VaR + CVaR + Sharpe + Sortino + Calmar + max drawdown + Kelly + Hurst — the complete risk audit in one call.',
+  },
+  'drawdown-calculator': {
+    endpoint: '/v1/risk/full-analysis',
+    price: '$0.04',
+    pitch:
+      'Max drawdown is one of 8 metrics in the full risk audit — get them all (VaR, CVaR, Sharpe, Sortino, Calmar, Kelly, Hurst) in one call.',
+  },
+  'hurst-exponent-calculator': {
+    endpoint: '/v1/indicators/regime-classify',
+    price: '$0.015',
+    pitch:
+      'Turn the Hurst exponent into an actionable market-regime label (trending / mean-reverting / volatile) in one call.',
+  },
+  'kelly-criterion-calculator': {
+    endpoint: '/v1/trade/evaluate',
+    price: '$0.025',
+    pitch:
+      'Evaluate a specific trade against your full portfolio and risk profile — not just the standalone Kelly fraction.',
+  },
+  'position-size-calculator': {
+    endpoint: '/v1/trade/evaluate',
+    price: '$0.025',
+    pitch:
+      'Evaluate a proposed trade against your existing position and risk limits, not just the raw size.',
+  },
+  'black-scholes-calculator': {
+    endpoint: '/v1/options/strategy-optimizer',
+    price: '$0.08',
+    pitch:
+      'Find the optimal option structure for your market outlook and constraints — not just one contract’s price.',
+  },
+  'american-option-calculator': {
+    endpoint: '/v1/options/strategy-optimizer',
+    price: '$0.08',
+    pitch:
+      'Let the optimizer pick the best option structure for your outlook, instead of pricing one contract at a time.',
+  },
+  'options-profit-calculator': {
+    endpoint: '/v1/options/spread-scan',
+    price: '$0.05',
+    pitch:
+      'Scan and rank multi-leg spread structures by expected value automatically, instead of testing legs by hand.',
+  },
+  'implied-volatility-calculator': {
+    endpoint: '/v1/options/strategy-optimizer',
+    price: '$0.08',
+    pitch:
+      'Go from a single IV number to the optimal option structure for your view in one call.',
+  },
+  'monte-carlo-simulation-calculator': {
+    endpoint: '/v1/backtest/strategy',
+    price: '$0.10',
+    pitch:
+      'Backtest a real strategy specification against historical data — not just a random-walk projection.',
+  },
+};
+
+export function getCompositeUpsell(slug: string): CompositeUpsell | null {
+  return COMPOSITE_UPSELL[slug] ?? null;
+}

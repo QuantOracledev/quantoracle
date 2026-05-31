@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { AdSlot } from './AdSlot';
 import { AffiliateCta } from './AffiliateCta';
 import { getRelated, getCalculator } from '@/lib/calculators';
-import { getCrossLinks } from '@/lib/calculator-cross-links';
+import { getCrossLinks, getCompositeUpsell } from '@/lib/calculator-cross-links';
 import { howToJsonLd, organizationJsonLd } from '@/lib/seo';
 
 interface Props {
@@ -42,6 +42,7 @@ export function CalculatorShell({
 }: Props) {
   const related = getRelated(slug, 3);
   const { compare: compareLinks, writing: writingLinks } = getCrossLinks(slug);
+  const composite = getCompositeUpsell(slug);
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
@@ -159,33 +160,63 @@ export function CalculatorShell({
       )}
 
       {/* Developer/agent bridge — converts the human calculator audience toward
-          the agentic revenue surface (API + x402 paid composites). Always
-          present (unlike the tutorial cards, which depend on per-calc
-          cross-links). The calculator IS the same engine the API exposes, so
-          this is a natural, non-clutter upsell: "you just used this once; here's
-          how to call it 10,000 times from your code." */}
+          the agentic revenue surface. Composite-aware (2026-05-31 funnel work):
+          when a calculator has a natural "pro version" composite, pitch that
+          SPECIFIC endpoint ("the VaR user wants risk/full-analysis") instead of
+          a generic pricing link — the free calculator is the funnel, the paid
+          composite is the product. Falls back to the generic API bridge for
+          calcs without a clean composite fit. */}
       <section className="mt-12">
-        <div className="card border-accent/20 bg-accent/[0.03] sm:flex sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-accent mb-1">
-              Building something?
+        {composite ? (
+          <div className="card border-accent/30 bg-accent/[0.05] border-l-4 border-l-accent">
+            <div className="sm:flex sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-accent mb-1">
+                  Doing this for real? The composite does more
+                </div>
+                <h2 className="text-lg font-semibold mb-1">
+                  <code className="text-accent">{composite.endpoint}</code>{' '}
+                  <span className="text-slate-400 font-normal text-sm">— {composite.price} USDC / call</span>
+                </h2>
+                <p className="text-sm text-slate-300 max-w-xl">{composite.pitch}</p>
+                <p className="text-xs text-slate-500 mt-2">
+                  One paid call instead of chaining many. Settles automatically via x402 on Base or
+                  Solana — no API key, no signup. The 73 calculator endpoints stay free (1,000/day).
+                </p>
+              </div>
+              <div className="mt-4 sm:mt-0 flex shrink-0 gap-2">
+                <Link href="/pricing" className="btn-primary whitespace-nowrap">
+                  See pricing
+                </Link>
+                <Link href="/api-docs" className="btn-ghost whitespace-nowrap">
+                  API docs →
+                </Link>
+              </div>
             </div>
-            <h2 className="text-lg font-semibold mb-1">Call this from your own code or agent</h2>
-            <p className="text-sm text-slate-300 max-w-xl">
-              This calculator runs on the QuantOracle API — 73 endpoints, deterministic, the same
-              math AI agents call directly. First 1,000 calls/day are free, no signup. Paid
-              composites (full risk audit, hedge recommendations) start at $0.015 USDC via x402.
-            </p>
           </div>
-          <div className="mt-4 sm:mt-0 flex shrink-0 gap-2">
-            <Link href="/pricing" className="btn-primary whitespace-nowrap">
-              See pricing
-            </Link>
-            <Link href="/api-docs" className="btn-ghost whitespace-nowrap">
-              API docs →
-            </Link>
+        ) : (
+          <div className="card border-accent/20 bg-accent/[0.03] sm:flex sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-accent mb-1">
+                Building something?
+              </div>
+              <h2 className="text-lg font-semibold mb-1">Call this from your own code or agent</h2>
+              <p className="text-sm text-slate-300 max-w-xl">
+                This calculator runs on the QuantOracle API — 73 endpoints, deterministic, the same
+                math AI agents call directly. First 1,000 calls/day are free, no signup. Paid
+                composites (full risk audit, hedge recommendations) start at $0.015 USDC via x402.
+              </p>
+            </div>
+            <div className="mt-4 sm:mt-0 flex shrink-0 gap-2">
+              <Link href="/pricing" className="btn-primary whitespace-nowrap">
+                See pricing
+              </Link>
+              <Link href="/api-docs" className="btn-ghost whitespace-nowrap">
+                API docs →
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Related */}
