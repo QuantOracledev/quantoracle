@@ -74,3 +74,6 @@ ops/
 
 # ── Marketing/distribution working drafts (internal, not public) ──
 drafts/
+
+# Downloaded CLI tooling (mcp-publisher binary, etc.)
+.tooling/

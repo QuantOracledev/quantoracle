@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.fel123/quantoracle",
-  "description": "Deterministic quant math for AI agents — Black-Scholes Greeks, Kelly, Monte Carlo, VaR, options strategy, hedging, and 60+ more. LLMs drift 5-30% on these calculations and silently fail; this is grounded, citation-tested math. 1,000 free calls/day; paid composites via x402 USDC on Base or Solana.",
+  "description": "73 deterministic quant tools for AI agents. LLMs drift on Black-Scholes; these are exact math.",
   "repository": {
     "url": "https://github.com/QuantOracledev/quantoracle",
     "source": "github",
