@@ -58,6 +58,25 @@ export function faqJsonLd(faqs: { question: string; answer: string }[]): object 
   };
 }
 
+/**
+ * Schema.org BreadcrumbList JSON-LD. Mirrors the visible breadcrumb nav so
+ * Google can render breadcrumb trails in the SERP (instead of a bare URL) and
+ * better understands site hierarchy. Pass the ordered trail from root to the
+ * current page.
+ */
+export function breadcrumbJsonLd(items: { name: string; url: string }[]): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
 /** Schema.org SoftwareApplication JSON-LD for calculator pages. */
 export function calculatorJsonLd(opts: {
   name: string;

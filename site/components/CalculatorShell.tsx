@@ -4,7 +4,7 @@ import { AdSlot } from './AdSlot';
 import { AffiliateCta } from './AffiliateCta';
 import { getRelated, getCalculator } from '@/lib/calculators';
 import { getCrossLinks, getCompositeUpsell } from '@/lib/calculator-cross-links';
-import { howToJsonLd, organizationJsonLd } from '@/lib/seo';
+import { howToJsonLd, organizationJsonLd, breadcrumbJsonLd } from '@/lib/seo';
 
 interface Props {
   slug: string;
@@ -246,6 +246,11 @@ export function CalculatorShell({
         const calcUrl = `https://quantoracle.dev/${slug}`;
         const augmentedJsonLd = [
           ...jsonLd,
+          breadcrumbJsonLd([
+            { name: 'Home', url: 'https://quantoracle.dev' },
+            { name: 'Calculators', url: 'https://quantoracle.dev/#calculators' },
+            { name: calc?.title ?? title, url: calcUrl },
+          ]),
           howToJsonLd({ name: calc?.title ?? title, url: calcUrl }),
           organizationJsonLd(),
         ];
