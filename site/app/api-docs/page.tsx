@@ -39,7 +39,7 @@ export default function ApiDocsPage() {
       <pre className="bg-ink-800 border border-ink-700 rounded-md p-4 overflow-x-auto text-xs">
         <code>{`curl -X POST https://api.quantoracle.dev/v1/options/price \\
   -H "Content-Type: application/json" \\
-  -d '{"S":100,"K":100,"T":0.25,"r":0.05,"sigma":0.2,"option_type":"call"}'
+  -d '{"S":100,"K":100,"T":0.25,"r":0.05,"sigma":0.2,"type":"call"}'
 
 # → {"price":4.615,"breakeven":104.615,"prob_itm":0.5299,
 #    "greeks":{"delta":0.569,"gamma":0.039,"vega":0.196,

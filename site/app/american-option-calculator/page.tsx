@@ -84,9 +84,13 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
 
 async function priceTree(inputs: Inputs): Promise<BinomialResult | null> {
   try {
+    // The API's option-type field is `type` (not `option_type`). Map it here
+    // so puts price as puts — otherwise the API defaults to `call` and the put
+    // result silently shows the call price.
+    const { option_type, ...rest } = inputs;
     return await callQuantOracle<BinomialResult>(
       '/v1/derivatives/binomial-tree',
-      inputs as unknown as Record<string, unknown>,
+      { ...rest, type: option_type } as unknown as Record<string, unknown>,
     );
   } catch {
     return null;

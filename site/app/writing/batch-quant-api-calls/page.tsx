@@ -107,9 +107,9 @@ Content-Type: application/json
 
 {
   "requests": [
-    { "endpoint": "options/price", "params": { "S": 100, "K": 95,  "T": 0.25, "r": 0.05, "sigma": 0.2, "option_type": "call" } },
-    { "endpoint": "options/price", "params": { "S": 100, "K": 100, "T": 0.25, "r": 0.05, "sigma": 0.2, "option_type": "call" } },
-    { "endpoint": "options/price", "params": { "S": 100, "K": 105, "T": 0.25, "r": 0.05, "sigma": 0.2, "option_type": "call" } },
+    { "endpoint": "options/price", "params": { "S": 100, "K": 95,  "T": 0.25, "r": 0.05, "sigma": 0.2, "type": "call" } },
+    { "endpoint": "options/price", "params": { "S": 100, "K": 100, "T": 0.25, "r": 0.05, "sigma": 0.2, "type": "call" } },
+    { "endpoint": "options/price", "params": { "S": 100, "K": 105, "T": 0.25, "r": 0.05, "sigma": 0.2, "type": "call" } },
     { "endpoint": "risk/kelly",    "params": { "win_prob": 0.55, "win_loss_ratio": 1.8 } }
   ]
 }`}</code></pre>
@@ -231,7 +231,7 @@ batch = {
             "endpoint": "options/price",
             "params": {
                 "S": 100, "K": k, "T": 0.25,
-                "r": 0.05, "sigma": 0.2, "option_type": "call",
+                "r": 0.05, "sigma": 0.2, "type": "call",
             },
         }
         for k in strikes
@@ -253,7 +253,7 @@ for req, res in zip(batch["requests"], out["results"]):
   body: JSON.stringify({
     requests: strikes.map((K) => ({
       endpoint: "options/price",
-      params: { S: 100, K, T: 0.25, r: 0.05, sigma: 0.2, option_type: "call" },
+      params: { S: 100, K, T: 0.25, r: 0.05, sigma: 0.2, type: "call" },
     })),
   }),
 });
@@ -272,7 +272,7 @@ const { results, ms, total_price_usdc } = await res.json();`}</code></pre>
 const batchPriceTool = {
   name: "batch_price_options",
   description:
-    "Price many options at once. Pass an array of {K, T, sigma, option_type}; " +
+    "Price many options at once. Pass an array of {K, T, sigma, type}; " +
     "returns every price + Greeks in a single response. Use this instead of " +
     "calling the single-option pricer in a loop.",
   schema: z.object({
@@ -280,7 +280,7 @@ const batchPriceTool = {
     r: z.number(),
     legs: z.array(z.object({
       K: z.number(), T: z.number(), sigma: z.number(),
-      option_type: z.enum(["call", "put"]),
+      type: z.enum(["call", "put"]),
     })),
   }),
   func: async ({ S, r, legs }) => {

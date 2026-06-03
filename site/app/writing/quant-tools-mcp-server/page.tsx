@@ -217,7 +217,7 @@ npx -y quantoracle-mcp`}</code></pre>
     "T": 0.082,    // 30 days in years
     "r": 0.05,
     "sigma": 0.28,
-    "option_type": "call"
+    "type": "call"
   }
 }
 
