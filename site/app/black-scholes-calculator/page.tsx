@@ -78,8 +78,8 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
 async function priceBoth(inputs: Inputs): Promise<{ call: OptionPrice; put: OptionPrice } | null> {
   try {
     const [call, put] = await Promise.all([
-      callQuantOracle<OptionPrice>('/v1/options/price', { ...inputs, option_type: 'call' }),
-      callQuantOracle<OptionPrice>('/v1/options/price', { ...inputs, option_type: 'put' }),
+      callQuantOracle<OptionPrice>('/v1/options/price', { ...inputs, type: 'call' }),
+      callQuantOracle<OptionPrice>('/v1/options/price', { ...inputs, type: 'put' }),
     ]);
     return { call, put };
   } catch {
