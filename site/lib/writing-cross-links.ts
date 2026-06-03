@@ -62,6 +62,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     blurb:
       "A real wallet ran 8 chained paid composites through QuantOracle on Base mainnet in 75 minutes for $0.285 USDC. The exact sequence, the on-chain proof, and how to build one.",
   },
+  {
+    slug: 'batch-quant-api-calls',
+    title: 'Batch API calls for speed: price a whole option chain in one request',
+    blurb:
+      'The /v1/batch endpoint bundles up to 100 computations into one HTTP round-trip. A real run: 20 Black-Scholes calls, 7,182 ms → 1,426 ms (5× faster) for the same 0.1 USDC.',
+  },
 ];
 
 const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
@@ -90,6 +96,7 @@ const RELATED: Record<string, string[]> = {
     'chaining-x402-paid-tool-calls',
   ],
   'chaining-x402-paid-tool-calls': [
+    'batch-quant-api-calls',
     'anatomy-of-a-paying-quant-agent',
     'quant-tools-mcp-server',
     'agent-framework-comparison-2026',
@@ -97,6 +104,7 @@ const RELATED: Record<string, string[]> = {
   ],
   'quant-tools-mcp-server': [
     'anatomy-of-a-paying-quant-agent',
+    'batch-quant-api-calls',
     'agent-framework-comparison-2026',
     'vercel-ai-sdk-quant-tools',
     'chaining-x402-paid-tool-calls',
@@ -106,6 +114,12 @@ const RELATED: Record<string, string[]> = {
     'quant-tools-mcp-server',
     'agentkit-reliable-quant-finance-math',
     'vercel-ai-sdk-quant-tools',
+  ],
+  'batch-quant-api-calls': [
+    'chaining-x402-paid-tool-calls',
+    'quant-tools-mcp-server',
+    'vercel-ai-sdk-quant-tools',
+    'agent-framework-comparison-2026',
   ],
 };
 
@@ -144,6 +158,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'value-at-risk-calculator',
     'sharpe-ratio-calculator',
     'kelly-criterion-calculator',
+  ],
+  'batch-quant-api-calls': [
+    'black-scholes-calculator',
+    'value-at-risk-calculator',
+    'monte-carlo-simulation-calculator',
   ],
 };
 

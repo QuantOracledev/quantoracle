@@ -25,6 +25,14 @@ interface Article {
 /** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
 const WRITING_ARTICLES: Article[] = [
   {
+    slug: 'batch-quant-api-calls',
+    title: 'Batch API Calls for Speed: Price a Whole Option Chain in One Request',
+    description:
+      'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster — for the same 0.1 USDC. Request shape, response shape, pricing, gotchas, and the single-tool agent pattern.',
+    publishedAt: '2026-06-02T16:00:00Z',
+    section: 'writing',
+  },
+  {
     slug: 'agent-framework-comparison-2026',
     title:
       'AgentKit vs GOAT vs Vercel AI SDK vs LangChain vs elizaOS: Which Agent Framework for Quant Tools?',
