@@ -35,6 +35,15 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title: 'Batch API calls for speed: price a whole option chain in one request',
+    description:
+      'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster — for the same 0.1 USDC. Request shape, response shape, pricing, gotchas, and the single-tool agent pattern.',
+    url: '/writing/batch-quant-api-calls',
+    publishedAt: '2026-06-02',
+    tags: ['batch', 'performance', 'api', 'option-chain', 'ai-agent'],
+    venue: 'site',
+  },
+  {
     title:
       'Anatomy of a paying quant agent — 8 x402 tool calls, 75 minutes, $0.285 USDC on Base mainnet',
     description:
