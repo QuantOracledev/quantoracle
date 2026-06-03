@@ -28,6 +28,25 @@ export const faqs: (FaqItem & { plainAnswer: string })[] = [
       'Volatility is the annualized standard deviation of the log returns of the underlying. 0.20 means 20% annualized volatility — roughly typical for a major US equity index. High-volatility names like single-name biotech or speculative tech can run 50-100%+; low-volatility names like utilities run 12-18%.',
   },
   {
+    question: 'Can this calculator handle dividends?',
+    plainAnswer:
+      'Yes. Enter the continuous annualized dividend yield in the "Dividend yield" field (e.g. 0.03 for 3%); use 0 for a non-dividend-paying stock. The calculator uses the Black-Scholes-Merton extension, which discounts the spot price by the dividend yield. A positive dividend yield lowers call prices and raises put prices, because holding the option means forgoing the dividend stream.',
+    answer: (
+      <>
+        Yes. Enter the continuous annualized dividend yield in the{' '}
+        <strong>Dividend yield</strong> field (e.g. <code>0.03</code> for 3%); use <code>0</code> for
+        a non-dividend-paying stock. The calculator uses the Black-Scholes-<em>Merton</em> extension,
+        which discounts the spot price by the dividend yield. A positive dividend yield lowers call
+        prices and raises put prices, because holding the option means forgoing the dividend stream.
+        For discrete dividends or American-style early exercise around an ex-date, use the{' '}
+        <a href="/american-option-calculator" className="text-accent underline">
+          American Option Calculator
+        </a>{' '}
+        instead.
+      </>
+    ),
+  },
+  {
     question: 'How accurate are the Greeks?',
     plainAnswer:
       'The Greeks returned by this calculator are exact analytical derivatives of the Black-Scholes formula, computed in closed form. They are accurate to about six decimal places. The model itself, however, is an approximation of real markets — see the explainer below for when Black-Scholes breaks down.',

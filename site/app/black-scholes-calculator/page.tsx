@@ -52,9 +52,11 @@ interface Inputs {
   T: number;
   r: number;
   sigma: number;
+  /** Continuous dividend yield (q). 0 for a non-dividend-paying stock. */
+  q: number;
 }
 
-const DEFAULTS: Inputs = { S: 100, K: 100, T: 0.25, r: 0.05, sigma: 0.2 };
+const DEFAULTS: Inputs = { S: 100, K: 100, T: 0.25, r: 0.05, sigma: 0.2, q: 0 };
 
 function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs {
   const num = (v: string | string[] | undefined, fallback: number) => {
@@ -69,6 +71,7 @@ function parseInputs(sp: Record<string, string | string[] | undefined>): Inputs 
     T: num(sp.T, DEFAULTS.T),
     r: num(sp.r, DEFAULTS.r),
     sigma: num(sp.sigma, DEFAULTS.sigma),
+    q: num(sp.q, DEFAULTS.q),
   };
 }
 
@@ -173,6 +176,14 @@ function InputsCard({ inputs }: { inputs: Inputs }) {
           min="0.001"
           hint="0.2 = 20%"
         />
+        <Field
+          name="q"
+          label="Dividend yield"
+          value={inputs.q}
+          step="any"
+          min="0"
+          hint="0.03 = 3% · use 0 for none"
+        />
       </div>
       <button type="submit" className="btn-primary w-full mt-5">
         Calculate
@@ -227,6 +238,7 @@ function ResultsCard({ inputs, call, put }: { inputs: Inputs; call: OptionPrice;
         <span className="text-xs text-slate-500">
           ${inputs.S} spot · ${inputs.K} strike · {days}d · {(inputs.sigma * 100).toFixed(1)}% IV ·{' '}
           {(inputs.r * 100).toFixed(1)}% r
+          {inputs.q > 0 && <> · {(inputs.q * 100).toFixed(1)}% div</>}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-4 mb-6">
@@ -343,7 +355,11 @@ function Longform() {
         thirty days ≈ 0.082. <strong>Risk-free rate (r)</strong> is typically the yield on a
         short-dated Treasury matching the option&apos;s tenor. <strong>Volatility (σ)</strong> is
         the annualized standard deviation of the log returns of the underlying — almost always
-        estimated from historical prices or implied from market option prices.
+        estimated from historical prices or implied from market option prices.{' '}
+        <strong>Dividend yield (q)</strong> is the continuous annualized dividend yield of the
+        underlying; set it to 0 for a non-dividend-paying stock. This calculator uses the
+        Black-Scholes-Merton extension, which discounts the spot by the dividend yield — a positive
+        q lowers call values and raises put values, exactly as a known dividend stream should.
       </p>
 
       <h3>The Greeks, in plain English</h3>
@@ -359,8 +375,9 @@ function Longform() {
       <h3>When Black-Scholes breaks down</h3>
       <p>
         The model assumes constant volatility, but real markets have volatility smiles and skews.
-        It assumes lognormal returns, but real returns have fat tails. It ignores dividends and
-        American-style early exercise — for either case, use the{' '}
+        It assumes lognormal returns, but real returns have fat tails. Continuous dividends are
+        handled here via the dividend-yield input, but the formula still cannot price
+        American-style early exercise — for that, use the{' '}
         <a href="/american-option-calculator" className="text-accent">
           American Option Calculator
         </a>
