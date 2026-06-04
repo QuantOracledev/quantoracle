@@ -13,7 +13,7 @@
     "@x402/extensions": "^2.9.0",
     "@x402/hono": "^2.9.0",
     "@x402/svm": "^2.10.0",
-    "hono": "^4.12.18"
+    "hono": "^4.12.23"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
