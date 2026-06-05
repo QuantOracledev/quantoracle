@@ -7,9 +7,9 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/compare/geometric-vs-arithmetic-vs-time-weighted-returns',
-  title: 'Geometric vs Arithmetic vs Time-Weighted Return: Which to Report',
+  title: 'Geometric vs Arithmetic vs Time-Weighted Return: Which to Use',
   description:
-    'Three ways to compute mean return, three different answers. The arithmetic-geometric gap (volatility drag) is real money. CAGR, Sharpe inputs, manager comparison — each demands a different one.',
+    'Three ways to average returns, three different answers. How volatility drag splits them, and which to use for CAGR, Sharpe, or comparing managers. Free calculator included.',
   keywords: [
     'geometric vs arithmetic return',
     'time weighted return vs IRR',

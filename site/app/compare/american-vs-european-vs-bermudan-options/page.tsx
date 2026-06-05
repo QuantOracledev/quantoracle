@@ -7,9 +7,9 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/compare/american-vs-european-vs-bermudan-options',
-  title: 'American vs European vs Bermudan Options: Exercise Rights Explained',
+  title: 'American vs European vs Bermudan Options: Pricing Explained',
   description:
-    'Three option exercise styles, three different prices. American = any time. European = only at expiry. Bermudan = specific dates. Merton\'s 1973 theorem, the early exercise premium, and which calculator to use for each.',
+    'American (exercise anytime), European (expiry only), Bermudan (set dates): what each means and why they price differently. Free calculator with the early-exercise premium shown live.',
   keywords: [
     'american vs european options',
     'bermudan options explained',
