@@ -7,9 +7,9 @@ import { faqs } from './faqs';
 
 export const metadata = buildMetadata({
   path: '/compare/black-scholes-vs-monte-carlo',
-  title: 'Black-Scholes vs Monte Carlo: Which Option Pricing Method Should You Use?',
+  title: 'Black-Scholes vs Monte Carlo: Which Pricing Method to Use',
   description:
-    'Two option pricing approaches, two different jobs. Closed-form Black-Scholes is microseconds-fast but only handles vanilla European payoffs. Monte Carlo handles anything you can simulate but pays the variance tax. Decision rule, convergence, and Greeks.',
+    'When closed-form beats simulation and when it doesn\'t. Black-Scholes is instant but vanilla-only; Monte Carlo prices anything you can simulate, just slower. Clear decision rule + free calculators.',
   keywords: [
     'black scholes vs monte carlo',
     'monte carlo option pricing',
