@@ -66,7 +66,7 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     slug: 'batch-quant-api-calls',
     title: 'Batch API calls for speed: price a whole option chain in one request',
     blurb:
-      'The /v1/batch endpoint bundles up to 100 computations into one HTTP round-trip. A real run: 20 Black-Scholes calls, 7,182 ms → 1,426 ms (5× faster) for the same 0.1 USDC.',
+      'The /v1/batch endpoint bundles up to 100 computations into one HTTP round-trip. A real run: 20 Black-Scholes calls, 7,182 ms → 1,426 ms (5× faster). Batch is paid — you pay for the speed.',
   },
 ];
 

@@ -9,6 +9,6 @@ export default function Og() {
     title: 'Batch API Calls for Speed',
     kicker: 'Tutorial',
     subtitle:
-      'Bundle up to 100 quant computations into one HTTP round-trip. A real run: 20 Black-Scholes calls, 7,182 ms → 1,426 ms — 5× faster for the same 0.1 USDC.',
+      'Bundle up to 100 quant computations into one HTTP round-trip. A real run: 20 Black-Scholes calls, 7,182 ms → 1,426 ms — 5× faster. A paid endpoint: you pay for the speed.',
   });
 }

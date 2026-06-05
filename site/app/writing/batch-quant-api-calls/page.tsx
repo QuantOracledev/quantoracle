@@ -7,7 +7,7 @@ export const metadata = buildMetadata({
   path: '/writing/batch-quant-api-calls',
   title: 'Batch API Calls for Speed — Price a Whole Option Chain in One Request',
   description:
-    'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster — for the same 0.1 USDC. Request shape, response shape, pricing, and the agent-tool pattern.',
+    'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster. Batch is a paid endpoint (sum of sub-request prices via x402) — you pay for the speed, not a discount. Request shape, response shape, pricing, and the agent-tool pattern.',
   keywords: [
     'batch api requests',
     'reduce api latency',
@@ -27,7 +27,7 @@ const articleJsonLd = {
   '@type': 'Article',
   headline: 'Batch API Calls for Speed — Price a Whole Option Chain in One Request',
   description:
-    'The /v1/batch endpoint bundles up to 100 quant computations into one HTTP round-trip. Real benchmark: 20 Black-Scholes calls, 7,182 ms sequential → 1,426 ms batched (5× faster) for the same 0.1 USDC.',
+    'The /v1/batch endpoint bundles up to 100 quant computations into one HTTP round-trip. Real benchmark: 20 Black-Scholes calls, 7,182 ms sequential → 1,426 ms batched (5× faster). Batch is a paid endpoint — you pay for the speed.',
   author: { '@type': 'Organization', name: 'QuantOracle' },
   publisher: { '@type': 'Organization', name: 'QuantOracle', url: 'https://quantoracle.dev' },
   datePublished: '2026-06-02',
@@ -71,7 +71,8 @@ export default function Page() {
           parameter sweep, a multi-asset risk pass — firing them one at a time means paying the
           network round-trip tax on every single call. The <code>/v1/batch</code> endpoint bundles
           up to 100 computations into one HTTP round-trip. In a real run below, that turned{' '}
-          <strong>7,182 ms into 1,426 ms — a 5× speedup</strong> — for the exact same price.
+          <strong>7,182 ms into 1,426 ms — a 5× speedup</strong>. The batch endpoint is paid — you
+          pay for the speed, not a discount — but for the right workload it&apos;s well worth it.
         </p>
         <p className="mt-3 text-xs text-slate-500">Published {LAST_UPDATED}</p>
       </header>
@@ -143,7 +144,8 @@ Sequential wall-clock:  7,182 ms      (one HTTP round-trip per call)
 Batch wall-clock     :  1,426 ms      (one round-trip total)
 Speedup              :  5.0×
 Batch server compute :    320 ms      (server-reported "ms" — ~16 ms/calc)
-Price (both ways)    :  0.1 USDC      (20 × $0.005 — batching is not cheaper, just faster)`}</code></pre>
+Sequential cost      :  free          (20 calculator calls, under the 1,000/day free tier)
+Batch cost           :  0.1 USDC      (paid endpoint — 20 × $0.005, settled via x402)`}</code></pre>
         <p>
           The shape of those numbers is the whole point. The batch did the same 20 calculations in
           ~320 ms of actual compute; the remaining ~1.1 s of its wall-clock is the single network
@@ -192,19 +194,22 @@ Price (both ways)    :  0.1 USDC      (20 × $0.005 — batching is not cheaper,
           .
         </p>
 
-        <h2>Pricing: batching is about speed, not discount</h2>
+        <h2>Pricing: the batch endpoint is paid — you pay for speed</h2>
         <p>
-          A batch costs the <strong>sum of its sub-request prices</strong> — no more, no less.
-          Twenty Black-Scholes calls at $0.005 each cost $0.10 whether you fire them sequentially or
-          in one batch. Batching buys you latency, not a volume discount.
+          Here is the tradeoff to understand: <strong>the batch endpoint is paid, and it sits
+          outside the free tier.</strong> Individual calculator calls are free for the first 1,000
+          per IP per day — but bundling them into a batch is a paid convenience. Each IP gets{' '}
+          <strong>one free trial batch</strong>; after that, every batch costs the{' '}
+          <strong>sum of its sub-request prices</strong> (20 Black-Scholes calls × $0.005 = $0.10),
+          settled via x402 micropayments in USDC on Base or Solana.
         </p>
         <p>
-          And most of the time it costs nothing: the free tier covers{' '}
-          <strong>1,000 calls per IP per day with no API key</strong>, and every one of the 63
-          calculator endpoints is free within that quota. A 20-call batch counts as 20 calls
-          against your daily free quota — well within reach for development and most production
-          loads. You only pay (via x402 USDC micropayments on Base or Solana) once you exceed the
-          free tier or call the paid composite endpoints. Full breakdown on the{' '}
+          So you are not getting the speedup for free — <strong>you are paying for it.</strong> If
+          those 20 calls would have fit inside your daily free quota, the sequential version costs
+          nothing and the batch costs $0.10: that $0.10 buys the 5× latency win and one round-trip
+          instead of twenty. Above the free tier, where the individual calls cost $0.005 each
+          anyway, the batch is the <em>same</em> price and simply far faster. Batching never gives a
+          volume discount — it trades dollars for latency. Full breakdown on the{' '}
           <Link href="/pricing" className="text-accent">pricing page</Link>.
         </p>
 
@@ -330,8 +335,10 @@ const batchPriceTool = {
             <code>requests[i]</code>. Zip them by index.
           </li>
           <li>
-            <strong>It&apos;s still N calls for billing/quota.</strong> A 50-call batch consumes 50
-            of your 1,000 daily free calls and, past the free tier, costs the sum of the 50 prices.
+            <strong>Batch is paid, outside the free tier.</strong> Unlike individual calculator
+            calls (free up to 1,000/IP/day), a batch costs the sum of its sub-request prices via
+            x402 — after a single free trial batch per IP. A 50-call batch of $0.005 calculators
+            costs $0.25.
           </li>
         </ul>
 
@@ -340,8 +347,9 @@ const batchPriceTool = {
           If your code or your agent calls a quant endpoint in a loop, you&apos;re almost certainly
           paying network latency you don&apos;t need to. Collapse the loop into one{' '}
           <code>/v1/batch</code> request and the round-trip tax goes from N× to 1×. In the run above
-          that was a 5× speedup on 20 calls, for the same 0.1 USDC — and the win grows with the
-          batch size. Same math, same price, a fraction of the wait.
+          that was a 5× speedup on 20 calls for $0.10 via the paid batch endpoint — and the win
+          grows with the batch size. You pay for the speed, but when you are network-bound, a
+          fraction of the wait is usually worth a fraction of a cent.
         </p>
 
         <h2>Related</h2>

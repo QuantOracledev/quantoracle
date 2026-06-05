@@ -28,7 +28,7 @@ const WRITING_ARTICLES: Article[] = [
     slug: 'batch-quant-api-calls',
     title: 'Batch API Calls for Speed: Price a Whole Option Chain in One Request',
     description:
-      'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster — for the same 0.1 USDC. Request shape, response shape, pricing, gotchas, and the single-tool agent pattern.',
+      'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster. Batch is a paid endpoint (sum of sub-request prices via x402) — you pay for the speed, not a discount. Request shape, response shape, pricing, gotchas, and the single-tool agent pattern.',
     publishedAt: '2026-06-02T16:00:00Z',
     section: 'writing',
   },
