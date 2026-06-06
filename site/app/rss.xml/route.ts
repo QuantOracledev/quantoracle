@@ -25,6 +25,14 @@ interface Article {
 /** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
 const WRITING_ARTICLES: Article[] = [
   {
+    slug: 'sui-talus-quant-agent',
+    title: 'Add Reliable Quant Math to Your Sui / Talus Agent',
+    description:
+      'Wire deterministic quant-finance tools — Black-Scholes, liquidation price, impermanent loss, Monte Carlo, full risk analysis — into a Sui AI agent (Talus/Nexus, Sui AI Agent Kit, or any MCP host). Two routes: zero-code MCP, or a portable TypeScript tool-pack. Free tier, no API key.',
+    publishedAt: '2026-06-05T18:00:00Z',
+    section: 'writing',
+  },
+  {
     slug: 'batch-quant-api-calls',
     title: 'Batch API Calls for Speed: Price a Whole Option Chain in One Request',
     description:

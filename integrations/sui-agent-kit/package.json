@@ -1,0 +1,51 @@
+{
+  "name": "@quantoracle/sui-agent-kit",
+  "version": "0.1.0",
+  "description": "Deterministic quant-finance tools (Black-Scholes, liquidation price, impermanent loss, Monte Carlo, full risk analysis, hedging) for Sui / Talus AI agents. Free tier, no API key; paid composites via x402.",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "sui",
+    "talus",
+    "nexus",
+    "ai-agent",
+    "mcp",
+    "quant-finance",
+    "options-pricing",
+    "black-scholes",
+    "liquidation-price",
+    "impermanent-loss",
+    "defi",
+    "x402",
+    "deterministic"
+  ],
+  "author": "QuantOracle <hello@quantoracle.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QuantOracledev/quantoracle.git",
+    "directory": "integrations/sui-agent-kit"
+  },
+  "homepage": "https://quantoracle.dev",
+  "peerDependencies": {
+    "zod": ">=3.22.0 <5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "zod": "^3.23.0"
+  }
+}
