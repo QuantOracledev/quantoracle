@@ -35,6 +35,15 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title: 'Add reliable quant math to your Sui / Talus agent',
+    description:
+      'Wire deterministic quant-finance tools — Black-Scholes, liquidation price, impermanent loss, Monte Carlo, full risk analysis — into a Sui AI agent (Talus/Nexus, Sui AI Agent Kit, or any MCP host). Two routes: zero-code MCP, or a portable TypeScript tool-pack. Free tier, no API key.',
+    url: '/writing/sui-talus-quant-agent',
+    publishedAt: '2026-06-05',
+    tags: ['sui', 'talus', 'ai-agent', 'mcp', 'defi'],
+    venue: 'site',
+  },
+  {
     title: 'Batch API calls for speed: price a whole option chain in one request',
     description:
       'The /v1/batch endpoint bundles up to 100 quant computations into a single HTTP round-trip. A real benchmark: 20 Black-Scholes calls dropped from 7,182 ms sequential to 1,426 ms batched — 5× faster. Batch is a paid endpoint (sum of sub-request prices via x402) — you pay for the speed, not a discount. Request shape, response shape, pricing, gotchas, and the single-tool agent pattern.',

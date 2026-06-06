@@ -68,6 +68,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     blurb:
       'The /v1/batch endpoint bundles up to 100 computations into one HTTP round-trip. A real run: 20 Black-Scholes calls, 7,182 ms → 1,426 ms (5× faster). Batch is paid — you pay for the speed.',
   },
+  {
+    slug: 'sui-talus-quant-agent',
+    title: 'Add reliable quant math to your Sui / Talus agent',
+    blurb:
+      'Wire deterministic quant tools into a Sui AI agent (Talus/Nexus, Sui AI Agent Kit, or any MCP host) — two routes: zero-code MCP, or a portable TypeScript tool-pack. Free tier, no API key.',
+  },
 ];
 
 const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
@@ -121,6 +127,12 @@ const RELATED: Record<string, string[]> = {
     'vercel-ai-sdk-quant-tools',
     'agent-framework-comparison-2026',
   ],
+  'sui-talus-quant-agent': [
+    'quant-tools-mcp-server',
+    'chaining-x402-paid-tool-calls',
+    'batch-quant-api-calls',
+    'agent-framework-comparison-2026',
+  ],
 };
 
 /**
@@ -163,6 +175,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'black-scholes-calculator',
     'value-at-risk-calculator',
     'monte-carlo-simulation-calculator',
+  ],
+  'sui-talus-quant-agent': [
+    'crypto-liquidation-calculator',
+    'impermanent-loss-calculator',
+    'value-at-risk-calculator',
   ],
 };
 
