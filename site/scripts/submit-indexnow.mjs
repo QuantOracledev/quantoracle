@@ -61,11 +61,15 @@ const URLS = [
   `https://${HOST}/compare/sharpe-vs-information-ratio-vs-treynor`,
   `https://${HOST}/compare/z-score-vs-bollinger-bands-vs-rsi`,
 
-  // Writing (4)
+  // Writing (8)
   `https://${HOST}/writing/agentkit-reliable-quant-finance-math`,
   `https://${HOST}/writing/chaining-x402-paid-tool-calls`,
   `https://${HOST}/writing/vercel-ai-sdk-quant-tools`,
   `https://${HOST}/writing/agent-framework-comparison-2026`,
+  `https://${HOST}/writing/quant-tools-mcp-server`,
+  `https://${HOST}/writing/anatomy-of-a-paying-quant-agent`,
+  `https://${HOST}/writing/batch-quant-api-calls`,
+  `https://${HOST}/writing/sui-talus-quant-agent`,
 ];
 
 const body = {
