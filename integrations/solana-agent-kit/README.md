@@ -6,7 +6,7 @@ Deterministic quantitative finance tools for agents built with [Solana Agent Kit
 
 ## What this provides
 
-11 high-value quant finance actions for Solana Agent Kit agents:
+13 high-value quant finance actions for Solana Agent Kit agents:
 
 | Action | Description | Price |
 |--------|-------------|-------|
@@ -21,6 +21,8 @@ Deterministic quantitative finance tools for agents built with [Solana Agent Kit
 | `QUANT_IMPERMANENT_LOSS` | Uniswap v2/v3 IL calculator | Free tier / $0.005 |
 | `QUANT_MONTE_CARLO_SIM` | GBM portfolio simulation with contributions/withdrawals | Free tier / $0.015 |
 | `QUANT_LIQUIDATION_PRICE` | Liquidation price for leveraged longs/shorts | Free tier / $0.002 |
+| `QUANT_LIVE_VOLATILITY` | **Live** realized vol (7/30/90d) + regime — fresh data + compute | $0.02 (3 free/day) |
+| `QUANT_LIVE_FUNDING_RATES` | **Live** perp funding rate + annualized carry | $0.01 (3 free/day) |
 
 ## Why QuantOracle?
 
