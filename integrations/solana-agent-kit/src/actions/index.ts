@@ -9,3 +9,5 @@ export { quantPairsSignalAction } from "./pairsSignal";
 export { quantImpermanentLossAction } from "./cryptoImpermanentLoss";
 export { quantMonteCarloAction } from "./monteCarlo";
 export { quantLiquidationPriceAction } from "./cryptoLiquidationPrice";
+export { quantLiveVolatilityAction } from "./liveVolatility";
+export { quantLiveFundingRatesAction } from "./liveFundingRates";
