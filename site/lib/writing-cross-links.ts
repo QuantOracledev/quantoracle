@@ -74,6 +74,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     blurb:
       'Wire deterministic quant tools into a Sui AI agent (Talus/Nexus, Sui AI Agent Kit, or any MCP host) — two routes: zero-code MCP, or a portable TypeScript tool-pack. Free tier, no API key.',
   },
+  {
+    slug: 'live-crypto-data-for-agents',
+    title: 'Live crypto volatility & funding for your agent, in one call',
+    blurb:
+      'QuantOracle Live: give your agent fresh realized volatility + perp funding rates with one API call — we fetch the market data and run the math. 3 free/day, then pay-per-call via x402.',
+  },
 ];
 
 const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
@@ -133,6 +139,12 @@ const RELATED: Record<string, string[]> = {
     'batch-quant-api-calls',
     'agent-framework-comparison-2026',
   ],
+  'live-crypto-data-for-agents': [
+    'batch-quant-api-calls',
+    'quant-tools-mcp-server',
+    'chaining-x402-paid-tool-calls',
+    'anatomy-of-a-paying-quant-agent',
+  ],
 };
 
 /**
@@ -180,6 +192,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'crypto-liquidation-calculator',
     'impermanent-loss-calculator',
     'value-at-risk-calculator',
+  ],
+  'live-crypto-data-for-agents': [
+    'crypto-liquidation-calculator',
+    'impermanent-loss-calculator',
+    'monte-carlo-simulation-calculator',
   ],
 };
 

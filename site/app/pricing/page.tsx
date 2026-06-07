@@ -5,7 +5,7 @@ export const metadata = buildMetadata({
   path: '/pricing',
   title: 'Pricing — Free Tier + x402 Micropayments for Agents',
   description:
-    'QuantOracle API pricing: 1,000 free calls per IP per day (no signup, no API key), then $0.002–$0.10 USDC per call via x402 micropayments on Base or Solana. 10 composite workflows and a /v1/batch endpoint that bundles up to 100 sub-requests into one HTTP call.',
+    'QuantOracle API pricing: 1,000 free calls per IP per day (no signup, no API key), then $0.002–$0.10 USDC per call via x402 micropayments on Base or Solana. 10 composite workflows, a /v1/batch endpoint, and QuantOracle Live — a paid market-data tier (real-time crypto volatility + funding rates).',
   keywords: [
     'quantoracle pricing',
     'quant api pricing',
@@ -176,6 +176,46 @@ export default function PricingPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* QuantOracle Live — data tier */}
+      <section className="mb-12">
+        <h2 className="text-xl font-semibold mb-4">QuantOracle Live — fresh market data + compute</h2>
+        <p className="text-sm text-slate-400 mb-5">
+          Every other endpoint is pure math on inputs <em>you</em> supply — the 73 calculators stay
+          genuinely zero-dependency (no market data, no third-party APIs). The Live tier is the
+          deliberate exception: you supply just a ticker, and we fetch fresh market data and run the
+          computation, so your agent never has to source or maintain a data feed. It&apos;s the one
+          tier priced from the first call (it isn&apos;t part of the 1,000/day calculator free tier).
+        </p>
+        <div className="overflow-x-auto rounded-lg border border-ink-700/60">
+          <table className="w-full text-sm">
+            <thead className="bg-ink-800/40">
+              <tr className="text-left">
+                <th className="px-4 py-2 text-xs uppercase tracking-wide text-slate-400">Endpoint</th>
+                <th className="px-4 py-2 text-xs uppercase tracking-wide text-slate-400">Price</th>
+                <th className="px-4 py-2 text-xs uppercase tracking-wide text-slate-400">What it does</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-300">
+              <tr className="border-t border-ink-700/40">
+                <td className="px-4 py-2 font-mono text-xs">live/volatility</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">$0.02</td>
+                <td className="px-4 py-2 text-sm">Realized volatility (7d / 30d / 90d) + regime for a crypto asset, from fresh daily candles</td>
+              </tr>
+              <tr className="border-t border-ink-700/40">
+                <td className="px-4 py-2 font-mono text-xs">live/funding-rates</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">$0.01</td>
+                <td className="px-4 py-2 text-sm">Current perpetual funding rate + annualized carry for a crypto asset</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 text-sm text-slate-300">
+          <strong className="text-accent">3 free trial calls per IP per day</strong>, then
+          pay-per-call via x402 (Base or Solana). You pay for the freshness and the data pipeline —
+          not the math.
+        </p>
       </section>
 
       {/* Batch endpoint */}

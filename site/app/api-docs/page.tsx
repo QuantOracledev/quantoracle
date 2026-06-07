@@ -5,7 +5,7 @@ export const metadata = buildMetadata({
   path: '/api-docs',
   title: 'API for Quant Finance — 73 Endpoints + Batch, Free Tier, No Signup',
   description:
-    '73 deterministic quant finance endpoints (options, derivatives, risk, portfolio, statistics, crypto, FX, macro) plus a /batch endpoint that bundles up to 100 calls into a single HTTP roundtrip. Free tier of 1,000 calls/IP/day, no API key. Pay-per-call x402 micropayments for higher volume.',
+    '73 deterministic quant finance endpoints (options, derivatives, risk, portfolio, statistics, crypto, FX, macro) plus a /batch endpoint and a new live market-data tier (real-time crypto volatility + perp funding rates). Free tier of 1,000 calls/IP/day, no API key. Pay-per-call x402 micropayments.',
   keywords: [
     'quant finance API',
     'options API',
@@ -77,6 +77,14 @@ export default function ApiDocsPage() {
           response. Charged as the sum of the component endpoint prices, but settled in
           one x402 transaction with one round trip.
         </li>
+        <li>
+          <strong>QuantOracle Live (new)</strong> — <code>/v1/live/volatility</code> and{' '}
+          <code>/v1/live/funding-rates</code> are the one tier that <em>brings the data</em>: we
+          fetch fresh crypto market data and run the math, so your agent gets a computed answer
+          (realized vol across 7/30/90d + regime; annualized funding carry) without sourcing or
+          maintaining a data feed itself. A separate paid tier — 3 free calls/IP/day, then
+          pay-per-call via x402.
+        </li>
       </ul>
 
       <h2>Pricing</h2>
@@ -99,6 +107,11 @@ export default function ApiDocsPage() {
           sub-requests. A batch of 50 Black-Scholes calls ($0.005 × 50 = $0.25) costs the same
           as 50 individual calls, but you save 49 HTTP roundtrips and settle in one x402
           transaction. Designed for agents that need many computations at once.
+        </li>
+        <li>
+          <strong>QuantOracle Live:</strong> <code>/v1/live/*</code> is paid (it fetches fresh
+          market data, not part of the 1,000/day calculator tier). 3 free trial calls per IP per
+          day, then $0.01–$0.02/call via x402. You pay for the freshness, not the math.
         </li>
         <li>
           <strong>High-volume / enterprise:</strong> for flat-rate billing, an API key, an SLA, or
