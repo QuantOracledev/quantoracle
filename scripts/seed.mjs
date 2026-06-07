@@ -115,6 +115,8 @@ const BODIES = {
   '/v1/backtest/strategy': { prices: PRICES_30, strategy: 'sma_crossover', params: { fast: 5, slow: 20 }, initial_capital: 10000 },
   '/v1/hedging/recommend': { position_type: 'long_stock', position_value: 100000, asset_price: 185, volatility: 0.25, time_horizon_days: 30 },
   '/v1/batch': { requests: [{ endpoint: 'stats/zscore', params: { series: [10, 12, 14, 11, 13, 15] } }] },
+  '/v1/live/volatility': { asset: 'BTC' },
+  '/v1/live/funding-rates': { asset: 'BTC' },
 };
 
 const paths = Object.keys(BODIES);
