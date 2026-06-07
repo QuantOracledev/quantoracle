@@ -35,6 +35,15 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title: 'Live crypto volatility & funding for your agent, in one call',
+    description:
+      'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations, rate limits, or geo-blocks to manage. 3 free calls/IP/day, then pay-per-call via x402.',
+    url: '/writing/live-crypto-data-for-agents',
+    publishedAt: '2026-06-07',
+    tags: ['live-data', 'crypto', 'ai-agent', 'x402', 'volatility'],
+    venue: 'site',
+  },
+  {
     title: 'Add reliable quant math to your Sui / Talus agent',
     description:
       'Wire deterministic quant-finance tools — Black-Scholes, liquidation price, impermanent loss, Monte Carlo, full risk analysis — into a Sui AI agent (Talus/Nexus, Sui AI Agent Kit, or any MCP host). Two routes: zero-code MCP, or a portable TypeScript tool-pack. Free tier, no API key.',

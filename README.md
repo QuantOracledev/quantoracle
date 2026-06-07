@@ -51,8 +51,9 @@
 
 - **63 pure calculators** across options, derivatives, risk, portfolio, statistics, crypto/DeFi, FX/macro, and TVM
 - **10 composite workflows** that bundle 5-15 calculator calls (backtest strategies, rebalance planning, options strategy selection, hedging recommendations, full risk analysis, pairs signals, and more)
-- **Zero dependencies** on market data, accounts, or third-party APIs -- send numbers in, get numbers out
-- **Deterministic** -- same inputs always produce the same outputs, so agents can cache, verify, and chain calls
+- **Zero dependencies** for the 73 calculators + composites -- no market data, accounts, or third-party APIs; send numbers in, get numbers out
+- **QuantOracle Live (new)** -- a separate paid tier that *brings* the data: fresh crypto volatility (`/v1/live/volatility`) and perp funding rates (`/v1/live/funding-rates`). We fetch the live market data and run the math, so your agent doesn't have to. 3 free calls/IP/day, then pay-per-call via x402.
+- **Deterministic** -- the calculators always produce the same outputs for the same inputs, so agents can cache, verify, and chain calls
 - **Citation-verified** -- every formula tested against published textbook values (Hull, Wilmott, Bailey & Lopez de Prado)
 - **120 accuracy benchmarks** passing with analytical solutions
 - **Fast** -- sub-millisecond to 70ms compute time per call

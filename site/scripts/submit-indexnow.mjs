@@ -70,6 +70,7 @@ const URLS = [
   `https://${HOST}/writing/anatomy-of-a-paying-quant-agent`,
   `https://${HOST}/writing/batch-quant-api-calls`,
   `https://${HOST}/writing/sui-talus-quant-agent`,
+  `https://${HOST}/writing/live-crypto-data-for-agents`,
 ];
 
 const body = {
