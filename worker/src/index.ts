@@ -114,6 +114,10 @@ const PRICES: Record<string, string> = {
   '/v1/portfolio/rebalance-plan': '$0.05',
   '/v1/options/strategy-optimizer': '$0.08',
   '/v1/hedging/recommend': '$0.04',
+  // Live data — paid revenue tier (fresh market data + compute). Not part of
+  // the 1,000/day free calculator tier; gated by a tiny daily trial instead.
+  '/v1/live/volatility': '$0.02',
+  '/v1/live/funding-rates': '$0.01',
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -130,6 +134,14 @@ function getClientIP(c: any): string {
 function todayKey(ip: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return `calls:${ip}:${date}`;
+}
+
+// Live-data tier: tiny daily free trial (evaluate-then-pay), separate from the
+// 1,000/day calculator free tier. Real usage pays via x402.
+const LIVE_FREE_TRIAL = 3;
+function liveTrialKey(ip: string): string {
+  const date = new Date().toISOString().slice(0, 10);
+  return `live-trial:${ip}:${date}`;
 }
 
 // ── x402 discovery endpoint ────────────────────────────────────────────
@@ -1120,12 +1132,15 @@ app.all('/v1/*', async (c, next) => {
     }
   }
 
-  // No payment — check free tier
+  // No payment — check free tier. Live-data endpoints use their own tiny daily
+  // trial (LIVE_FREE_TRIAL) instead of the 1,000/day calculator quota.
   if (price !== undefined) {
-    const key = todayKey(ip);
+    const isLive = path.startsWith('/v1/live/');
+    const key = isLive ? liveTrialKey(ip) : todayKey(ip);
+    const effLimit = isLive ? LIVE_FREE_TRIAL : limit;
     const count = parseInt((await c.env.RATE_LIMITS.get(key)) || '0');
 
-    if (count >= limit) {
+    if (count >= effLimit) {
       // Free tier exhausted — return x402 payment required
       const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
       const outputSchema = await getOutputSchema(path, c.env);

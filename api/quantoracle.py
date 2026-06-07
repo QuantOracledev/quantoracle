@@ -243,6 +243,15 @@ def _init_db():
         CREATE INDEX IF NOT EXISTS idx_settle_network ON settlements(network);
         CREATE INDEX IF NOT EXISTS idx_settle_tx ON settlements(tx_hash);
     """)
+    # Live-data cache — TTL'd responses from external market-data sources.
+    # Shared across the 4 gunicorn workers (no in-process cache would sync).
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS live_cache (
+            key TEXT PRIMARY KEY,
+            json TEXT NOT NULL,
+            fetched_at REAL NOT NULL
+        );
+    """)
     conn.close()
 
 _init_db()
@@ -301,6 +310,10 @@ PRICES = {
     "portfolio/rebalance-plan": 0.05,
     "options/strategy-optimizer": 0.08,
     "hedging/recommend": 0.04,
+    # Live data (paid revenue tier — fresh market data + compute, not replaceable
+    # by a local lib because the agent doesn't bring the data).
+    "live/volatility": 0.02,
+    "live/funding-rates": 0.01,
 }
 
 def hit(ep):
@@ -4016,6 +4029,149 @@ async def pairs_signal(req: PairsSignalIn):
         "pair": [req.name_a, req.name_b],
         "ms": r2((time.perf_counter() - t0) * 1000),
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LIVE DATA — fresh market data + compute (the paid data-moat tier)
+# Sources picked for reachability FROM THE DROPLET (Binance/Bybit are
+# geo-blocked here: 451/403). Volatility -> Kraken OHLC; funding -> OKX.
+# Results are cached in SQLite (live_cache) so the 4 gunicorn workers share
+# TTL'd data and we don't hammer upstreams. Stale-on-error: if the upstream
+# is down we serve the last good value (flagged) rather than failing.
+# ══════════════════════════════════════════════════════════════════════════
+import json as _json
+
+_LIVE_UA = "quantoracle-live/1.0 (+https://quantoracle.dev)"
+
+def _cache_read(key):
+    try:
+        conn = _get_db()
+        row = conn.execute("SELECT json, fetched_at FROM live_cache WHERE key=?", (key,)).fetchone()
+        conn.close()
+        if row:
+            return _json.loads(row[0]), row[1]
+    except Exception:
+        pass
+    return None, None
+
+def _cache_write(key, data, ts):
+    try:
+        conn = _get_db()
+        conn.execute(
+            "INSERT INTO live_cache (key, json, fetched_at) VALUES (?,?,?) "
+            "ON CONFLICT(key) DO UPDATE SET json=excluded.json, fetched_at=excluded.fetched_at",
+            (key, _json.dumps(data), ts))
+        conn.commit(); conn.close()
+    except Exception:
+        pass
+
+async def cached_fetch(key, ttl_seconds, fetch_fn):
+    """Serve from live_cache if fresh; else fetch + store. On upstream error,
+    fall back to the last cached value (flagged stale). Returns (data, age, stale)."""
+    now = time.time()
+    cached, fetched_at = _cache_read(key)
+    if cached is not None and fetched_at is not None and (now - fetched_at) < ttl_seconds:
+        return cached, round(now - fetched_at, 1), False
+    try:
+        data = await fetch_fn()
+        _cache_write(key, data, now)
+        return data, 0.0, False
+    except Exception:
+        if cached is not None:
+            return cached, round(now - (fetched_at or now), 1), True
+        raise
+
+def _norm_sym(s):
+    s = (s or "").strip().upper().replace("/", "").replace("-", "")
+    return s.replace("USDT", "").replace("USD", "") or "BTC"
+
+# ---- Live volatility (Kraken OHLC) ------------------------------------------
+_KRAKEN_PAIR = {"BTC": "XBTUSD"}  # Kraken uses XBT for BTC; others map to {SYM}USD
+
+async def _fetch_kraken_vol(asset):
+    import httpx
+    pair = _KRAKEN_PAIR.get(asset, f"{asset}USD")
+    async with httpx.AsyncClient(timeout=12) as client:
+        r = await client.get("https://api.kraken.com/0/public/OHLC",
+                             params={"pair": pair, "interval": 1440},
+                             headers={"User-Agent": _LIVE_UA})
+        r.raise_for_status()
+        body = r.json()
+    if body.get("error"):
+        raise ValueError(f"kraken error: {body['error']}")
+    series = next((v for k, v in body.get("result", {}).items() if k != "last"), None)
+    if not series:
+        raise ValueError("kraken: no OHLC series")
+    closes = [float(row[4]) for row in series]
+    if len(closes) < 8:
+        raise ValueError("insufficient price history")
+    out = {"asset": asset, "spot": r2(closes[-1])}
+    for w in (7, 30, 90):
+        if len(closes) > w:
+            out[f"realized_vol_{w}d"] = r4(_realized_vol(closes, w))
+    if out.get("realized_vol_30d") and out.get("realized_vol_90d"):
+        ratio = out["realized_vol_30d"] / out["realized_vol_90d"] if out["realized_vol_90d"] else 0
+        out["vol_ratio_30d_90d"] = r4(ratio)
+        out["regime"] = "ELEVATED" if ratio > 1.2 else "SUPPRESSED" if ratio < 0.8 else "NORMAL"
+    return out
+
+class LiveVolIn(BaseModel):
+    asset: str = Field("BTC", description="Crypto asset symbol, e.g. BTC, ETH, SOL (USD pair).")
+
+@app.post("/v1/live/volatility", tags=["Live Data"], dependencies=auth)
+async def live_volatility(req: LiveVolIn):
+    """Live realized volatility (7d/30d/90d) + regime for a crypto asset, computed
+    from fresh daily candles. You supply only the ticker — we fetch the data and
+    run the math. Cached ~5 min."""
+    t0 = time.perf_counter(); hit("live/volatility")
+    asset = _norm_sym(req.asset)
+    try:
+        data, age, stale = await cached_fetch(f"vol:{asset}", 300, lambda: _fetch_kraken_vol(asset))
+    except Exception as e:
+        raise HTTPException(502, f"live volatility unavailable for {asset}: {str(e)[:140]}")
+    return {**data, "as_of_age_seconds": age, "stale": stale, "source": "kraken",
+            "ms": r2((time.perf_counter() - t0) * 1000)}
+
+# ---- Live funding rate (OKX) ------------------------------------------------
+async def _fetch_okx_funding(asset):
+    import httpx
+    inst = f"{asset}-USDT-SWAP"
+    async with httpx.AsyncClient(timeout=12) as client:
+        r = await client.get("https://www.okx.com/api/v5/public/funding-rate",
+                             params={"instId": inst}, headers={"User-Agent": _LIVE_UA})
+        r.raise_for_status()
+        body = r.json()
+    rows = body.get("data") or []
+    if body.get("code") != "0" or not rows:
+        raise ValueError(f"okx: {body.get('msg') or 'no data'} ({inst})")
+    d = rows[0]
+    rate = float(d["fundingRate"])
+    ft = float(d.get("fundingTime") or 0); nft = float(d.get("nextFundingTime") or 0)
+    interval_h = round((nft - ft) / 3_600_000) if (nft and ft and nft > ft) else 8
+    ppy = 365 * 24 / interval_h if interval_h else 1095
+    return {
+        "asset": asset, "instrument": inst,
+        "funding_rate": r6(rate), "interval_hours": interval_h,
+        "annualized_rate": r4(rate * ppy),
+        "regime": "CONTANGO" if rate > 0.0001 else "BACKWARDATION" if rate < -0.0001 else "NEUTRAL",
+        "next_funding_time": d.get("nextFundingTime"),
+    }
+
+class LiveFundingIn(BaseModel):
+    asset: str = Field("BTC", description="Crypto asset symbol, e.g. BTC, ETH, SOL (USDT perp).")
+
+@app.post("/v1/live/funding-rates", tags=["Live Data"], dependencies=auth)
+async def live_funding_rates(req: LiveFundingIn):
+    """Live perpetual funding rate + annualized carry for a crypto asset, from a
+    fresh exchange feed. You supply only the ticker. Cached ~1 min."""
+    t0 = time.perf_counter(); hit("live/funding-rates")
+    asset = _norm_sym(req.asset)
+    try:
+        data, age, stale = await cached_fetch(f"fund:{asset}", 60, lambda: _fetch_okx_funding(asset))
+    except Exception as e:
+        raise HTTPException(502, f"live funding unavailable for {asset}: {str(e)[:140]}")
+    return {**data, "as_of_age_seconds": age, "stale": stale, "source": "okx",
+            "ms": r2((time.perf_counter() - t0) * 1000)}
 
 
 # ══════════════════════════════════════════════════════════════════════════
