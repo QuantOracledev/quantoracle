@@ -60,6 +60,27 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* QuantOracle Live — slim, dev-facing announcement of the new live-data tier.
+          Kept to a single understated line so it doesn't compete with the calculator
+          hero; reuses the existing card + badge tokens to stay on-brand. */}
+      <section className="pb-8">
+        <Link
+          href="/writing/live-crypto-data-for-agents"
+          className="group flex items-center gap-3 rounded-lg border border-accent/20 bg-accent/[0.03] px-4 py-3 text-sm hover:border-accent/40 transition"
+        >
+          <span className="text-[10px] uppercase tracking-wider bg-accent/15 text-accent px-2 py-0.5 rounded shrink-0">
+            New
+          </span>
+          <span className="text-slate-300">
+            <strong className="text-slate-100">QuantOracle Live</strong> — real-time crypto
+            volatility &amp; funding rates for agents, fetched and computed in one call.
+          </span>
+          <span className="text-accent ml-auto shrink-0 transition-transform group-hover:translate-x-0.5">
+            →
+          </span>
+        </Link>
+      </section>
+
       {/* Featured calculators — surfaced based on GA4 (May 2026) showing
           these three pages drive 4-10 minute engaged sessions, 83-100%
           engagement rates, and the bulk of total on-site engagement time.
