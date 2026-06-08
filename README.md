@@ -266,6 +266,7 @@ qo help
 | **Auth** | None | x402 micropayment header |
 | **Calculators** | All 63 | All 63 |
 | **Composite workflows** | None (paid-only) | All 10 |
+| **Live data tier** | 3 calls/day trial | Pay-per-call |
 | **Rate headers** | Yes | Yes |
 
 Every response includes rate limit headers so agents can self-manage:
@@ -336,6 +337,29 @@ Batch pricing is the sum of the individual endpoint prices — no markup. You pa
 
 ---
 
+## QuantOracle Live — fresh market data + compute
+
+Every endpoint above is pure math on inputs **you** supply — the 73 calculators have zero data dependencies, which is what makes them deterministic and cacheable. **QuantOracle Live** is the one tier that *brings the data*: you pass a ticker, the API fetches fresh market data and runs the math, so your agent never has to source or maintain a data feed.
+
+| Endpoint | Description | Price |
+|----------|-------------|-------|
+| `POST /v1/live/volatility` | Realized volatility (7d/30d/90d) + regime for a crypto asset, from fresh daily candles | $0.02 |
+| `POST /v1/live/funding-rates` | Current perpetual funding rate + annualized carry for a crypto asset | $0.01 |
+
+```bash
+curl -X POST https://api.quantoracle.dev/v1/live/volatility \
+  -H "Content-Type: application/json" \
+  -d '{"asset":"BTC"}'
+
+# → {"asset":"BTC","spot":61728.7,"realized_vol_7d":0.4534,
+#    "realized_vol_30d":0.3108,"realized_vol_90d":0.3157,"regime":"NORMAL",
+#    "as_of_age_seconds":0,"stale":false,"source":"kraken", ...}
+```
+
+**Pricing:** the Live tier is **paid from the first call** — it is *not* part of the 1,000/day calculator free tier (the value is the fresh data + pipeline, which you can't replicate with a local library). You get **3 free trial calls per IP per day** to evaluate, then it settles per-call via x402 (USDC on Base or Solana). You pay for freshness, not arithmetic.
+
+Results are cached server-side (volatility ~5 min, funding ~1 min); if an upstream feed is briefly unavailable, the API serves the last good value flagged `stale: true`, with `as_of_age_seconds` telling you how fresh the answer is.
+
 ## x402 Payments
 
 QuantOracle uses the [x402 protocol](https://x402.org) for pay-per-call micropayments. When an agent exhausts its free tier (or calls a paid-only composite), the API returns a standard `402` response with payment instructions advertising **both Base and Solana**. x402-compatible agents (Coinbase AgentKit, AgentCash, OpenClaw, etc.) handle the rest automatically:
@@ -373,7 +397,7 @@ npx agentcash fetch https://api.quantoracle.dev/v1/risk/full-analysis \
 
 ## MCP Server
 
-QuantOracle is available as a native MCP server with 73 tools (63 calculators + 10 composites). Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
+QuantOracle is available as a native MCP server with 75 tools (63 calculators + 10 composites + 2 live market-data endpoints), plus a batch tool. Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
 
 ### Install via npm
 
@@ -565,6 +589,15 @@ curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 | `POST /v1/crypto/vesting-schedule` | Token vesting schedule with cliff, linear/graded unlock, TGE | $0.005 |
 | `POST /v1/crypto/rebalance-threshold` | Portfolio rebalance analyzer: drift detection and trade sizing | $0.005 |
 
+### Live Data (2 endpoints) — paid tier, fresh market data
+
+| Endpoint | Description | Price |
+|----------|-------------|-------|
+| `POST /v1/live/volatility` | Live realized volatility (7d/30d/90d) + regime for a crypto asset | $0.02 |
+| `POST /v1/live/funding-rates` | Live perpetual funding rate + annualized carry for a crypto asset | $0.01 |
+
+*Paid from the first call (not part of the free tier); 3 free trial calls/IP/day. See [QuantOracle Live](#quantoracle-live--fresh-market-data--compute).*
+
 ### FX / Macro (7 endpoints)
 
 | Endpoint | Description | Price |
@@ -687,7 +720,7 @@ python tests/accuracy_benchmarks.py https://api.quantoracle.dev
 quantoracle/
   api/quantoracle.py        -- FastAPI app, 63 calculators + 10 composites, pure Python math
   worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments (Base + Solana)
-  mcp-server/src/index.ts    -- MCP server: 73 tools over Streamable HTTP
+  mcp-server/src/index.ts    -- MCP server: 75 tools + batch over Streamable HTTP
   cli/                       -- quantoracle-cli: all endpoints in the terminal (npm)
   tests/
     test_integration.py      -- 65 integration tests (all endpoints, live API)
