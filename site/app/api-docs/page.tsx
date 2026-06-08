@@ -82,7 +82,7 @@ export default function ApiDocsPage() {
           <code>/v1/live/funding-rates</code> are the one tier that <em>brings the data</em>: we
           fetch fresh crypto market data and run the math, so your agent gets a computed answer
           (realized vol across 7/30/90d + regime; annualized funding carry) without sourcing or
-          maintaining a data feed itself. A separate paid tier — 3 free calls/IP/day, then
+          maintaining a data feed itself. A separate paid tier — 100 free calls/IP/day, then
           pay-per-call via x402.
         </li>
       </ul>
@@ -110,8 +110,8 @@ export default function ApiDocsPage() {
         </li>
         <li>
           <strong>QuantOracle Live:</strong> <code>/v1/live/*</code> is paid (it fetches fresh
-          market data, not part of the 1,000/day calculator tier). 3 free trial calls per IP per
-          day, then $0.01–$0.02/call via x402. You pay for the freshness, not the math.
+          market data, not part of the 1,000/day calculator tier). 100 free calls per IP per
+          day, then $0.005–$0.01/call via x402. You pay for the freshness, not the math.
         </li>
         <li>
           <strong>High-volume / enterprise:</strong> for flat-rate billing, an API key, an SLA, or

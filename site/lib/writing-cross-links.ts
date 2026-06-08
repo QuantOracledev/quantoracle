@@ -78,7 +78,7 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     slug: 'live-crypto-data-for-agents',
     title: 'Live crypto volatility & funding for your agent, in one call',
     blurb:
-      'QuantOracle Live: give your agent fresh realized volatility + perp funding rates with one API call — we fetch the market data and run the math. 3 free/day, then pay-per-call via x402.',
+      'QuantOracle Live: give your agent fresh realized volatility + perp funding rates with one API call — we fetch the market data and run the math. 100 free/day, then pay-per-call via x402.',
   },
   {
     slug: 'langchain-reliable-quant-finance-math',

@@ -104,8 +104,8 @@ const tools = Object.fromEntries(
 | `quant_portfolio_optimize` | Max-Sharpe / min-var / risk-parity weights | Free tier / $0.015 |
 | `quant_risk_full_analysis` | Full risk tearsheet: Sharpe, Sortino, VaR, CVaR, Kelly, drawdown, Hurst, CAGR | $0.04 (paid-only) |
 | `quant_hedging_recommend` | Rank cheapest hedges (put, collar, futures, partial) | $0.04 (paid-only) |
-| `quant_live_volatility` | **Live** realized vol (7/30/90d) + regime — fresh data + compute | $0.02 (3 free/day) |
-| `quant_live_funding_rates` | **Live** perp funding rate + annualized carry | $0.01 (3 free/day) |
+| `quant_live_volatility` | **Live** realized vol (7/30/90d) + regime — fresh data + compute | $0.01 (100 free/day) |
+| `quant_live_funding_rates` | **Live** perp funding rate + annualized carry | $0.005 (100 free/day) |
 
 Need more? The hosted MCP server (Route A) exposes all 74 endpoints; this pack curates the 7 most useful for Sui DeFi agents.
 

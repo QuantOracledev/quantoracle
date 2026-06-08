@@ -37,7 +37,7 @@ const ARTICLES: Article[] = [
   {
     title: 'Live crypto volatility & funding for your agent, in one call',
     description:
-      'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations, rate limits, or geo-blocks to manage. 3 free calls/IP/day, then pay-per-call via x402.',
+      'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations, rate limits, or geo-blocks to manage. 100 free calls/IP/day, then pay-per-call via x402.',
     url: '/writing/live-crypto-data-for-agents',
     publishedAt: '2026-06-07',
     tags: ['live-data', 'crypto', 'ai-agent', 'x402', 'volatility'],

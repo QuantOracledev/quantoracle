@@ -36,7 +36,7 @@ const WRITING_ARTICLES: Article[] = [
     slug: 'live-crypto-data-for-agents',
     title: 'Live Crypto Volatility & Funding for Your Agent — Data + Compute in One Call',
     description:
-      'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations to manage. 3 free calls/IP/day, then pay-per-call via x402.',
+      'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations to manage. 100 free calls/IP/day, then pay-per-call via x402.',
     publishedAt: '2026-06-07T16:00:00Z',
     section: 'writing',
   },

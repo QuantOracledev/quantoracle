@@ -115,9 +115,9 @@ const PRICES: Record<string, string> = {
   '/v1/options/strategy-optimizer': '$0.08',
   '/v1/hedging/recommend': '$0.04',
   // Live data — paid revenue tier (fresh market data + compute). Not part of
-  // the 1,000/day free calculator tier; gated by a tiny daily trial instead.
-  '/v1/live/volatility': '$0.02',
-  '/v1/live/funding-rates': '$0.01',
+  // the 1,000/day free calculator tier; gated by a 100/day free allowance instead.
+  '/v1/live/volatility': '$0.01',
+  '/v1/live/funding-rates': '$0.005',
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -136,9 +136,10 @@ function todayKey(ip: string): string {
   return `calls:${ip}:${date}`;
 }
 
-// Live-data tier: tiny daily free trial (evaluate-then-pay), separate from the
-// 1,000/day calculator free tier. Real usage pays via x402.
-const LIVE_FREE_TRIAL = 3;
+// Live-data tier: 100 free calls/IP/day — generous enough to evaluate and run
+// light workflows — separate from the 1,000/day calculator free tier. Heavier
+// usage pays via x402.
+const LIVE_FREE_DAILY = 100;
 function liveTrialKey(ip: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return `live-trial:${ip}:${date}`;
@@ -1132,12 +1133,12 @@ app.all('/v1/*', async (c, next) => {
     }
   }
 
-  // No payment — check free tier. Live-data endpoints use their own tiny daily
-  // trial (LIVE_FREE_TRIAL) instead of the 1,000/day calculator quota.
+  // No payment — check free tier. Live-data endpoints use their own daily
+  // allowance (LIVE_FREE_DAILY) instead of the 1,000/day calculator quota.
   if (price !== undefined) {
     const isLive = path.startsWith('/v1/live/');
     const key = isLive ? liveTrialKey(ip) : todayKey(ip);
-    const effLimit = isLive ? LIVE_FREE_TRIAL : limit;
+    const effLimit = isLive ? LIVE_FREE_DAILY : limit;
     const count = parseInt((await c.env.RATE_LIMITS.get(key)) || '0');
 
     if (count >= effLimit) {

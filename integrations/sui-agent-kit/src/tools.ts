@@ -144,7 +144,7 @@ export function createQuantOracleTools(opts?: QuantOracleOpts): QuantTool[] {
     {
       name: "quant_live_volatility",
       description:
-        "LIVE realized volatility (7d/30d/90d) + regime for a crypto asset, computed from FRESH market data — pass only the ticker; we fetch the candles and run the math. Use this for current vol; do NOT estimate it yourself. PAID: $0.02/call (3 free trial calls/IP/day).",
+        "LIVE realized volatility (7d/30d/90d) + regime for a crypto asset, computed from FRESH market data — pass only the ticker; we fetch the candles and run the math. Use this for current vol; do NOT estimate it yourself. PAID: $0.01/call (100 free calls/IP/day).",
       schema: z.object({
         asset: z.string().describe("Crypto asset symbol, e.g. BTC, ETH, SOL"),
       }),
@@ -153,7 +153,7 @@ export function createQuantOracleTools(opts?: QuantOracleOpts): QuantTool[] {
     {
       name: "quant_live_funding_rates",
       description:
-        "LIVE perpetual funding rate + annualized carry for a crypto asset, from a fresh exchange feed — pass only the ticker. Use this for current funding; do NOT estimate it. PAID: $0.01/call (3 free trial calls/IP/day).",
+        "LIVE perpetual funding rate + annualized carry for a crypto asset, from a fresh exchange feed — pass only the ticker. Use this for current funding; do NOT estimate it. PAID: $0.005/call (100 free calls/IP/day).",
       schema: z.object({
         asset: z.string().describe("Crypto asset symbol, e.g. BTC, ETH, SOL"),
       }),
