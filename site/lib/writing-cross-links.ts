@@ -80,6 +80,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
     blurb:
       'QuantOracle Live: give your agent fresh realized volatility + perp funding rates with one API call — we fetch the market data and run the math. 3 free/day, then pay-per-call via x402.',
   },
+  {
+    slug: 'langchain-reliable-quant-finance-math',
+    title: 'Reliable quant finance math for your LangChain agent',
+    blurb:
+      'Wire 73 deterministic quant tools into any LangChain agent with one import — options pricing, Greeks, risk metrics, Monte Carlo, backtests. No hallucinated math. 1,000 free calls/day.',
+  },
 ];
 
 const BY_SLUG: Record<string, WritingTutorial> = Object.fromEntries(
@@ -145,6 +151,12 @@ const RELATED: Record<string, string[]> = {
     'chaining-x402-paid-tool-calls',
     'anatomy-of-a-paying-quant-agent',
   ],
+  'langchain-reliable-quant-finance-math': [
+    'vercel-ai-sdk-quant-tools',
+    'quant-tools-mcp-server',
+    'agent-framework-comparison-2026',
+    'agentkit-reliable-quant-finance-math',
+  ],
 };
 
 /**
@@ -197,6 +209,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'crypto-liquidation-calculator',
     'impermanent-loss-calculator',
     'monte-carlo-simulation-calculator',
+  ],
+  'langchain-reliable-quant-finance-math': [
+    'black-scholes-calculator',
+    'kelly-criterion-calculator',
+    'value-at-risk-calculator',
   ],
 };
 

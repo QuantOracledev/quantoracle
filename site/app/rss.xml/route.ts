@@ -25,6 +25,14 @@ interface Article {
 /** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
 const WRITING_ARTICLES: Article[] = [
   {
+    slug: 'langchain-reliable-quant-finance-math',
+    title: 'Reliable Quant Finance Math for Your LangChain Agent (in 10 Minutes)',
+    description:
+      'LLMs hallucinate on Black-Scholes and the Greeks. Wire 73 deterministic quant-finance tools into any LangChain agent with one import — options pricing, risk metrics, Monte Carlo, backtests. 1,000 free calls/day, no API key.',
+    publishedAt: '2026-04-20T16:00:00Z',
+    section: 'writing',
+  },
+  {
     slug: 'live-crypto-data-for-agents',
     title: 'Live Crypto Volatility & Funding for Your Agent — Data + Compute in One Call',
     description:

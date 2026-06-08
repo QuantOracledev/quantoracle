@@ -71,6 +71,7 @@ const URLS = [
   `https://${HOST}/writing/batch-quant-api-calls`,
   `https://${HOST}/writing/sui-talus-quant-agent`,
   `https://${HOST}/writing/live-crypto-data-for-agents`,
+  `https://${HOST}/writing/langchain-reliable-quant-finance-math`,
 ];
 
 const body = {
