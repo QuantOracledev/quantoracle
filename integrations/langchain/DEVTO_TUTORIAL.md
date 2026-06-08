@@ -4,7 +4,7 @@ published: false
 description: "LLMs hallucinate on Black-Scholes. Give your agent a deterministic quant API instead — 1000 free calls/day, no API key."
 tags: langchain, python, ai, finance
 cover_image:
-canonical_url:
+canonical_url: https://quantoracle.dev/writing/langchain-reliable-quant-finance-math
 ---
 
 ## TL;DR

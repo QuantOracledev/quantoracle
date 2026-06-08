@@ -129,11 +129,11 @@ const ARTICLES: Article[] = [
   {
     title: 'How to give your LangChain agent reliable quant finance math (in 10 minutes)',
     description:
-      'LLMs computing Black-Scholes in-context drift 5-30% on the Greeks and the agent can\'t tell. Here\'s how to wire grounded quant tools into a LangChain agent with pip install langchain-quantoracle — covers Kelly, Monte Carlo, Sharpe, and the rest.',
-    url: 'https://dev.to/quantoracle/how-to-give-your-langchain-agent-reliable-quant-finance-math-in-10-minutes-5fki',
+      'LLMs computing Black-Scholes in-context drift 5-30% on the Greeks and the agent can\'t tell. Wire 73 grounded, deterministic quant tools into a LangChain agent with one import (pip install langchain-quantoracle) — options pricing, Greeks, risk metrics, Monte Carlo, backtests.',
+    url: '/writing/langchain-reliable-quant-finance-math',
     publishedAt: '2026-04-20',
     tags: ['langchain', 'python', 'ai', 'finance'],
-    venue: 'dev.to',
+    venue: 'site',
   },
 ];
 
