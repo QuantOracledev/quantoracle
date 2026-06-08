@@ -200,19 +200,19 @@ export default function PricingPage() {
             <tbody className="text-slate-300">
               <tr className="border-t border-ink-700/40">
                 <td className="px-4 py-2 font-mono text-xs">live/volatility</td>
-                <td className="px-4 py-2 font-mono text-accent text-sm">$0.02</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">$0.01</td>
                 <td className="px-4 py-2 text-sm">Realized volatility (7d / 30d / 90d) + regime for a crypto asset, from fresh daily candles</td>
               </tr>
               <tr className="border-t border-ink-700/40">
                 <td className="px-4 py-2 font-mono text-xs">live/funding-rates</td>
-                <td className="px-4 py-2 font-mono text-accent text-sm">$0.01</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">$0.005</td>
                 <td className="px-4 py-2 text-sm">Current perpetual funding rate + annualized carry for a crypto asset</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="mt-4 text-sm text-slate-300">
-          <strong className="text-accent">3 free trial calls per IP per day</strong>, then
+          <strong className="text-accent">100 free calls per IP per day</strong>, then
           pay-per-call via x402 (Base or Solana). You pay for the freshness and the data pipeline —
           not the math.
         </p>

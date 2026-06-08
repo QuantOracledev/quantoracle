@@ -7,7 +7,7 @@ export const metadata = buildMetadata({
   path: '/writing/live-crypto-data-for-agents',
   title: 'Live Crypto Volatility & Funding for Your Agent — Data + Compute in One Call',
   description:
-    'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations, rate limits, or geo-blocks to manage. 3 free calls/IP/day, then pay-per-call via x402.',
+    'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations, rate limits, or geo-blocks to manage. 100 free calls/IP/day, then pay-per-call via x402.',
   keywords: [
     'live crypto volatility api',
     'realized volatility api',
@@ -155,11 +155,11 @@ export default function Page() {
           priced from the first call, separate from the calculator free tier:
         </p>
         <ul>
-          <li><code>/v1/live/volatility</code> — <strong>$0.02</strong>/call</li>
-          <li><code>/v1/live/funding-rates</code> — <strong>$0.01</strong>/call</li>
+          <li><code>/v1/live/volatility</code> — <strong>$0.01</strong>/call</li>
+          <li><code>/v1/live/funding-rates</code> — <strong>$0.005</strong>/call</li>
         </ul>
         <p>
-          You get <strong>3 free trial calls per IP per day</strong> to evaluate the data, then it
+          You get <strong>100 free calls per IP per day</strong> to evaluate the data, then it
           settles per-call via <a href="https://www.x402.org/" target="_blank" rel="noopener" className="text-accent">x402</a>{' '}
           (USDC on Base or Solana) — no API key, no signup. You&apos;re paying for freshness, not
           arithmetic.

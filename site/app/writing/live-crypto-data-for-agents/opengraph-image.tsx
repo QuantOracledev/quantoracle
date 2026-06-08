@@ -9,6 +9,6 @@ export default function Og() {
     title: 'Live Crypto Data for Agents',
     kicker: 'Tutorial',
     subtitle:
-      'Fresh realized volatility + perp funding rates in one call. We fetch the market data and run the math — no exchange integrations to manage. 3 free/day, then x402.',
+      'Fresh realized volatility + perp funding rates in one call. We fetch the market data and run the math — no exchange integrations to manage. 100 free/day, then x402.',
   });
 }

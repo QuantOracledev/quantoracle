@@ -12,7 +12,7 @@ export const quantLiveVolatilityAction: Action = {
     "fresh volatility data",
   ],
   description:
-    "Get LIVE realized volatility (7d/30d/90d) + regime for a crypto asset, computed from FRESH market data. You pass only the ticker; QuantOracle fetches the candles and runs the math. Use this for current volatility — do NOT estimate it yourself. PAID: $0.02 per call via x402 (3 free trial calls/IP/day). Uses QuantOracle's /v1/live/volatility endpoint.",
+    "Get LIVE realized volatility (7d/30d/90d) + regime for a crypto asset, computed from FRESH market data. You pass only the ticker; QuantOracle fetches the candles and runs the math. Use this for current volatility — do NOT estimate it yourself. PAID: $0.01 per call via x402 (100 free calls/IP/day). Uses QuantOracle's /v1/live/volatility endpoint.",
   examples: [
     [
       {

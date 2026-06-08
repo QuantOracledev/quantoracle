@@ -312,8 +312,8 @@ PRICES = {
     "hedging/recommend": 0.04,
     # Live data (paid revenue tier — fresh market data + compute, not replaceable
     # by a local lib because the agent doesn't bring the data).
-    "live/volatility": 0.02,
-    "live/funding-rates": 0.01,
+    "live/volatility": 0.01,
+    "live/funding-rates": 0.005,
 }
 
 def hit(ep):
