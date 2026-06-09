@@ -1983,7 +1983,8 @@ class T33In(BaseModel):
 
 @app.post("/v1/crypto/liquidation-price", tags=["Crypto"], dependencies=auth)
 async def t33(req: T33In):
-    """Liquidation price calculator for leveraged positions."""
+    """Liquidation price calculator for leveraged positions. Perp positions: funding
+    erodes collateral over time — pull the live rate from /v1/live/funding-rates."""
     t0 = time.perf_counter(); hit("crypto/liquidation-price")
     entry, coll, size, lev, dir_ = req.entry_price, req.collateral, req.position_size, req.leverage, req.direction
     mmr = req.maintenance_margin_rate; funding = req.funding_accumulated
@@ -2002,6 +2003,10 @@ async def t33(req: T33In):
         "effective_leverage": r2(lev), "margin_ratio_current": r4(margin_ratio),
         "max_loss_before_liq": r2(max_loss), "direction": dir_,
         "safe_price_range": {"min": r2(liq if dir_ == "long" else 0), "max": r2(liq if dir_ == "short" else entry * 3)},
+        "live_data": {
+            "note": "Holding a perp? Funding erodes collateral over time and shifts this liq price. Pull the current rate from /v1/live/funding-rates ($0.005).",
+            "funding": "/v1/live/funding-rates",
+        },
         "ms": r2((time.perf_counter() - t0) * 1000)
     }
 
@@ -2475,7 +2480,8 @@ class T45In(BaseModel):
 
 @app.post("/v1/risk/var-parametric", tags=["Risk"], dependencies=auth)
 async def t45(req: T45In):
-    """Parametric Value-at-Risk and Conditional VaR."""
+    """Parametric Value-at-Risk and Conditional VaR. VaR scales with volatility; for
+    crypto, feed fresh realized vol from /v1/live/volatility."""
     t0 = time.perf_counter(); hit("risk/var-parametric")
     R = req.returns; n = len(R); m = mu(R); s = sd(R)
     hp_factor = math.sqrt(req.holding_period_days)
@@ -2502,6 +2508,10 @@ async def t45(req: T45In):
         "var_results": results, "holding_period_days": req.holding_period_days,
         "volatility_daily": r6(s), "volatility_annual": r4(s * math.sqrt(252)),
         "skewness": r4(sk), "kurtosis": r4(ku), "n": n,
+        "live_data": {
+            "note": "Parametric VaR scales directly with volatility. For crypto, validate against fresh realized vol from /v1/live/volatility ($0.01).",
+            "volatility": "/v1/live/volatility",
+        },
         "ms": r2((time.perf_counter() - t0) * 1000)
     }
 
