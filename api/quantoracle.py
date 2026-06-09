@@ -564,7 +564,9 @@ class T1In(BaseModel):
 
 @app.post("/v1/options/price", tags=["Options"], dependencies=auth)
 async def t1(req: T1In):
-    """Black-Scholes pricing with 10 Greeks (delta through color)."""
+    """Black-Scholes pricing with 10 Greeks (delta through color). Crypto underlying?
+    Pair with /v1/live/volatility for fresh realized vol instead of a static sigma;
+    perp carry at /v1/live/funding-rates."""
     t0 = time.perf_counter(); hit("options/price")
     S, K, T, r, sig, q, cp = req.S, req.K, req.T, req.r, req.sigma, req.q, req.type
     if T <= 0 or sig <= 0:
@@ -590,7 +592,13 @@ async def t1(req: T1In):
         "prob_itm": r4(N2 if cp == "call" else ncdf(-d2)),
         "greeks": {"delta": r6(dl), "gamma": r6(gm), "theta": r6(th), "vega": r6(vg),
                    "rho": r6(rh), "vanna": r8(va_g), "charm": r8(ch), "volga": r8(vo), "speed": r8(sp)},
-        "d1": r6(d1), "d2": r6(d2), "ms": r2((time.perf_counter() - t0) * 1000)
+        "d1": r6(d1), "d2": r6(d2),
+        "live_data": {
+            "note": "Priced with the sigma you supplied. For crypto underlyings, fetch fresh realized vol ($0.01) or perp funding ($0.005) instead of static inputs.",
+            "volatility": "/v1/live/volatility",
+            "funding": "/v1/live/funding-rates",
+        },
+        "ms": r2((time.perf_counter() - t0) * 1000)
     }
 
 # ══════════════════════════════════════════════════════════════════════════
