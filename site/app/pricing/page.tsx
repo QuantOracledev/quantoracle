@@ -212,7 +212,7 @@ export default function PricingPage() {
           </table>
         </div>
         <p className="mt-4 text-sm text-slate-300">
-          <strong className="text-accent">100 free calls per IP per day</strong>, then
+          <strong className="text-accent">20 free calls per IP per day</strong>, then
           pay-per-call via x402 (Base or Solana). You pay for the freshness and the data pipeline —
           not the math.
         </p>

@@ -12,7 +12,7 @@ export const quantLiveFundingRatesAction: Action = {
     "annualized carry",
   ],
   description:
-    "Get the LIVE perpetual funding rate + annualized carry for a crypto asset, from a fresh exchange feed. Pass only the ticker. Use this for current funding — do NOT estimate it yourself. PAID: $0.005 per call via x402 (100 free calls/IP/day). Uses QuantOracle's /v1/live/funding-rates endpoint.",
+    "Get the LIVE perpetual funding rate + annualized carry for a crypto asset, from a fresh exchange feed. Pass only the ticker. Use this for current funding — do NOT estimate it yourself. PAID: $0.005 per call via x402 (20 free calls/IP/day). Uses QuantOracle's /v1/live/funding-rates endpoint.",
   examples: [
     [
       {

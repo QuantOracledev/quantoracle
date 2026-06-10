@@ -52,7 +52,7 @@
 - **63 pure calculators** across options, derivatives, risk, portfolio, statistics, crypto/DeFi, FX/macro, and TVM
 - **10 composite workflows** that bundle 5-15 calculator calls (backtest strategies, rebalance planning, options strategy selection, hedging recommendations, full risk analysis, pairs signals, and more)
 - **Zero dependencies** for the 73 calculators + composites -- no market data, accounts, or third-party APIs; send numbers in, get numbers out
-- **QuantOracle Live (new)** -- a separate paid tier that *brings* the data: fresh crypto volatility (`/v1/live/volatility`) and perp funding rates (`/v1/live/funding-rates`). We fetch the live market data and run the math, so your agent doesn't have to. 100 free calls/IP/day, then pay-per-call via x402.
+- **QuantOracle Live (new)** -- a separate paid tier that *brings* the data: fresh crypto volatility (`/v1/live/volatility`) and perp funding rates (`/v1/live/funding-rates`). We fetch the live market data and run the math, so your agent doesn't have to. 20 free calls/IP/day to evaluate, then pay-per-call via x402.
 - **Deterministic** -- the calculators always produce the same outputs for the same inputs, so agents can cache, verify, and chain calls
 - **Citation-verified** -- every formula tested against published textbook values (Hull, Wilmott, Bailey & Lopez de Prado)
 - **120 accuracy benchmarks** passing with analytical solutions
@@ -266,7 +266,7 @@ qo help
 | **Auth** | None | x402 micropayment header |
 | **Calculators** | All 63 | All 63 |
 | **Composite workflows** | None (paid-only) | All 10 |
-| **Live data tier** | 100 calls/day | Pay-per-call |
+| **Live data tier** | 20 calls/day | Pay-per-call |
 | **Rate headers** | Yes | Yes |
 
 Every response includes rate limit headers so agents can self-manage:
@@ -356,7 +356,7 @@ curl -X POST https://api.quantoracle.dev/v1/live/volatility \
 #    "as_of_age_seconds":0,"stale":false,"source":"kraken", ...}
 ```
 
-**Pricing:** the Live tier is **paid from the first call** — it is *not* part of the 1,000/day calculator free tier (the value is the fresh data + pipeline, which you can't replicate with a local library). You get **100 free calls per IP per day** to evaluate, then it settles per-call via x402 (USDC on Base or Solana). You pay for freshness, not arithmetic.
+**Pricing:** the Live tier is **paid from the first call** — it is *not* part of the 1,000/day calculator free tier (the value is the fresh data + pipeline, which you can't replicate with a local library). You get **20 free calls per IP per day** to evaluate, then it settles per-call via x402 (USDC on Base or Solana). You pay for freshness, not arithmetic.
 
 Results are cached server-side (volatility ~5 min, funding ~1 min); if an upstream feed is briefly unavailable, the API serves the last good value flagged `stale: true`, with `as_of_age_seconds` telling you how fresh the answer is.
 
@@ -596,7 +596,7 @@ curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 | `POST /v1/live/volatility` | Live realized volatility (7d/30d/90d) + regime for a crypto asset | $0.01 |
 | `POST /v1/live/funding-rates` | Live perpetual funding rate + annualized carry for a crypto asset | $0.005 |
 
-*Paid from the first call (not part of the free tier); 100 free calls/IP/day. See [QuantOracle Live](#quantoracle-live--fresh-market-data--compute).*
+*Paid from the first call (not part of the free tier); 20 free calls/IP/day. See [QuantOracle Live](#quantoracle-live--fresh-market-data--compute).*
 
 ### FX / Macro (7 endpoints)
 
