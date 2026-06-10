@@ -115,7 +115,7 @@ const PRICES: Record<string, string> = {
   '/v1/options/strategy-optimizer': '$0.08',
   '/v1/hedging/recommend': '$0.04',
   // Live data — paid revenue tier (fresh market data + compute). Not part of
-  // the 1,000/day free calculator tier; gated by a 100/day free allowance instead.
+  // the 1,000/day free calculator tier; gated by a 20/day free allowance instead.
   '/v1/live/volatility': '$0.01',
   '/v1/live/funding-rates': '$0.005',
 };
@@ -136,10 +136,10 @@ function todayKey(ip: string): string {
   return `calls:${ip}:${date}`;
 }
 
-// Live-data tier: 100 free calls/IP/day — generous enough to evaluate and run
-// light workflows — separate from the 1,000/day calculator free tier. Heavier
-// usage pays via x402.
-const LIVE_FREE_DAILY = 100;
+// Live-data tier: 20 free calls/IP/day — enough to evaluate thoroughly, while
+// any real production cadence crosses into paying. Separate from the 1,000/day
+// calculator free tier; production usage pays via x402.
+const LIVE_FREE_DAILY = 20;
 function liveTrialKey(ip: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return `live-trial:${ip}:${date}`;

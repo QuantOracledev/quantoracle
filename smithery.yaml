@@ -13,5 +13,5 @@ startCommand:
         default: "https://api.quantoracle.dev"
         description: "QuantOracle REST API base URL. Override to use a self-hosted instance."
     additionalProperties: false
-    description: "QuantOracle requires no configuration. 76 tools: 63 calculators + 10 composites + batch + a live market-data tier (real-time crypto volatility & perp funding). Free tier: 1000 calls/IP/day (live tier: 100 free/day, then x402 on Base or Solana)."
+    description: "QuantOracle requires no configuration. 76 tools: 63 calculators + 10 composites + batch + a live market-data tier (real-time crypto volatility & perp funding). Free tier: 1000 calls/IP/day (live tier: 20 free/day, then x402 on Base or Solana)."
   url: "https://mcp.quantoracle.dev/mcp"
