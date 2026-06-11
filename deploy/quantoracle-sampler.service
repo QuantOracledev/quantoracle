@@ -1,0 +1,8 @@
+[Unit]
+Description=QuantOracle live-data history sampler (one-shot)
+After=quantoracle.service
+Wants=quantoracle.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/quantoracle/sampler.sh

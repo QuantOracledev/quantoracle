@@ -252,6 +252,23 @@ def _init_db():
             fetched_at REAL NOT NULL
         );
     """)
+    # Live-data HISTORY — append-only archive of every fresh upstream snapshot
+    # (organic API fetches + the systemd sampler timer). Free upstreams serve
+    # "now"; nobody can backfill the past — this table is the dataset that
+    # compounds. Never pruned (_RETAIN_DAYS applies only to `calls`); growth
+    # at sampler cadence is ~1K rows/day (~tens of MB/year).
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS live_history (
+            ts REAL NOT NULL,
+            date TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            asset TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT '',
+            json TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_lh_kind_asset_ts ON live_history(kind, asset, ts);
+        CREATE INDEX IF NOT EXISTS idx_lh_date ON live_history(date);
+    """)
     conn.close()
 
 _init_db()
@@ -320,6 +337,8 @@ def hit(ep):
     """Record an API call — persisted to SQLite immediately."""
     ip = _request_ip.get("unknown")
     source = _request_source.get("unknown")
+    if source == "sampler":
+        return  # internal time-series collection (systemd timer), not API usage
     user_agent = _request_user_agent.get("")
     now = datetime.now(timezone.utc)
     price = PRICES.get(ep, 0)
@@ -4075,10 +4094,18 @@ def _cache_read(key):
 def _cache_write(key, data, ts):
     try:
         conn = _get_db()
+        blob = _json.dumps(data)
         conn.execute(
             "INSERT INTO live_cache (key, json, fetched_at) VALUES (?,?,?) "
             "ON CONFLICT(key) DO UPDATE SET json=excluded.json, fetched_at=excluded.fetched_at",
-            (key, _json.dumps(data), ts))
+            (key, blob, ts))
+        # Append-only history: _cache_write only runs on a FRESH upstream fetch,
+        # so each row is one real market snapshot (the TTL dedupes for free).
+        kind, _, asset = key.partition(":")
+        conn.execute(
+            "INSERT INTO live_history (ts, date, kind, asset, source, json) VALUES (?,?,?,?,?,?)",
+            (ts, datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d"),
+             kind, asset, str(data.get("source", "")), blob))
         conn.commit(); conn.close()
     except Exception:
         pass
