@@ -118,6 +118,11 @@ const PRICES: Record<string, string> = {
   // the 1,000/day free calculator tier; gated by a 20/day free allowance instead.
   '/v1/live/volatility': '$0.01',
   '/v1/live/funding-rates': '$0.005',
+  // QuantOracle Watch — recurring revenue: $5 per monitored position per 30
+  // days. Both are PAID_ONLY (no free tier); the free trial is the separate
+  // unpriced /v1/watch/trial endpoint (1 per IP per 30d, enforced backend-side).
+  '/v1/watch/position': '$5.00',
+  '/v1/watch/extend': '$5.00',
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -1002,6 +1007,8 @@ app.all('/v1/*', async (c, next) => {
 
   // Composite endpoints are paid-only — no free tier
   const PAID_ONLY = new Set([
+    '/v1/watch/position',
+    '/v1/watch/extend',
     '/v1/options/spread-scan',
     '/v1/indicators/regime-classify',
     '/v1/risk/full-analysis',
@@ -1189,8 +1196,9 @@ app.all('/v1/*', async (c, next) => {
     await c.env.RATE_LIMITS.put(key, (count + 1).toString(), { expirationTtl: 86400 });
   }
 
-  // Proxy to Python backend (forward real client IP)
-  const backendUrl = `${c.env.BACKEND_URL}${path}`;
+  // Proxy to Python backend (forward real client IP + the original query
+  // string — GET endpoints like /v1/watch/{id}?token=... depend on it)
+  const backendUrl = `${c.env.BACKEND_URL}${path}${new URL(c.req.url).search}`;
   const headers: Record<string, string> = {
     'Content-Type': c.req.header('Content-Type') || 'application/json',
     'X-Forwarded-For': ip,
@@ -1198,7 +1206,8 @@ app.all('/v1/*', async (c, next) => {
     'CF-Connecting-IP': ip,
     'User-Agent': c.req.header('User-Agent') || '',
     'X-Source': c.req.header('X-Source') || '',
-        'X-MCP-Client': c.req.header('X-MCP-Client') || '',
+    'X-MCP-Client': c.req.header('X-MCP-Client') || '',
+    'X-Watch-Token': c.req.header('X-Watch-Token') || '',
   };
 
   const resp = await fetch(backendUrl, {
