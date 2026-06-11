@@ -1,0 +1,4 @@
+# Shell scripts and systemd units deploy to the Linux droplet — CRLF would
+# break bash ("\r: command not found") and systemd parsing. Pin to LF.
+*.sh text eol=lf
+deploy/* text eol=lf
