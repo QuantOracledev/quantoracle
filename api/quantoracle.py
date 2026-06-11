@@ -269,6 +269,40 @@ def _init_db():
         CREATE INDEX IF NOT EXISTS idx_lh_kind_asset_ts ON live_history(kind, asset, ts);
         CREATE INDEX IF NOT EXISTS idx_lh_date ON live_history(date);
     """)
+    # QuantOracle Watch — stateful position monitors + their alert audit log.
+    # Monitors are written by the API (registration) and the isolated watcher
+    # service (state updates, alerts). Token stored as-is: it scopes exactly
+    # one monitor's status and doubles as the webhook HMAC key.
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS watch_monitors (
+            id TEXT PRIMARY KEY,
+            token TEXT NOT NULL,
+            tier TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_ts REAL NOT NULL,
+            expires_ts REAL NOT NULL,
+            ip64 TEXT NOT NULL,
+            asset TEXT NOT NULL,
+            direction TEXT NOT NULL,
+            entry_price REAL NOT NULL,
+            position_size REAL NOT NULL,
+            collateral REAL NOT NULL,
+            mmr REAL NOT NULL,
+            webhook_url TEXT NOT NULL DEFAULT '',
+            thresholds TEXT NOT NULL,
+            state TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_wm_status ON watch_monitors(status, expires_ts);
+        CREATE INDEX IF NOT EXISTS idx_wm_ip ON watch_monitors(ip64);
+        CREATE TABLE IF NOT EXISTS watch_alerts (
+            monitor_id TEXT NOT NULL,
+            ts REAL NOT NULL,
+            type TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            delivered INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_wa_mid ON watch_alerts(monitor_id, ts);
+    """)
     conn.close()
 
 _init_db()
@@ -331,14 +365,18 @@ PRICES = {
     # by a local lib because the agent doesn't bring the data).
     "live/volatility": 0.01,
     "live/funding-rates": 0.005,
+    # QuantOracle Watch — recurring revenue: $5 per monitored position per 30
+    # days (worker gates both as PAID_ONLY; /v1/watch/trial is free, 1/IP/30d).
+    "watch/position": 5.00,
+    "watch/extend": 5.00,
 }
 
 def hit(ep):
     """Record an API call — persisted to SQLite immediately."""
     ip = _request_ip.get("unknown")
     source = _request_source.get("unknown")
-    if source == "sampler":
-        return  # internal time-series collection (systemd timer), not API usage
+    if source in ("sampler", "watcher"):
+        return  # internal services (sampler timer / watch loop), not API usage
     user_agent = _request_user_agent.get("")
     now = datetime.now(timezone.utc)
     price = PRICES.get(ep, 0)
@@ -2025,6 +2063,17 @@ async def t33(req: T33In):
         "live_data": {
             "note": "Holding a perp? Funding erodes collateral over time and shifts this liq price. Pull the current rate from /v1/live/funding-rates ($0.005).",
             "funding": "/v1/live/funding-rates",
+            # Context-aware: when the computed position is actually close to
+            # liquidation, the pitch names its own distance — the moment of
+            # demonstrated need is the highest-conversion ad slot we own.
+            "watch": (
+                f"This position is {r4(distance * 100)}% from liquidation. QuantOracle Watch re-checks it every 60s "
+                "(funding-adjusted) and webhooks you at warn/critical thresholds: POST /v1/watch/position "
+                "($5 per 30 days via x402) — free 48h trial: POST /v1/watch/trial."
+                if 0 < distance * 100 < 20 else
+                "Want this watched 24/7 instead of re-polling? POST /v1/watch/position ($5/30d via x402) "
+                "monitors liq distance + funding flips and webhooks you. Free 48h trial: POST /v1/watch/trial."
+            ),
         },
         "ms": r2((time.perf_counter() - t0) * 1000)
     }
@@ -2530,6 +2579,7 @@ async def t45(req: T45In):
         "live_data": {
             "note": "Parametric VaR scales directly with volatility. For crypto, validate against fresh realized vol from /v1/live/volatility ($0.01).",
             "volatility": "/v1/live/volatility",
+            "watch": "Monitoring a live crypto position? QuantOracle Watch tracks liq distance + funding flips 24/7 and webhooks you: POST /v1/watch/trial (free 48h), then $5/30d.",
         },
         "ms": r2((time.perf_counter() - t0) * 1000)
     }
@@ -3434,9 +3484,20 @@ async def t63(req: T63In):
 # ══════════════════════════════════════════════════════════════════════════
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "quantoracle", "version": "2.0.0",
-            "domain": "quantoracle.dev", "tools": len(PRICES),
-            "uptime": str(datetime.now(timezone.utc) - _boot)}
+    out = {"status": "ok", "service": "quantoracle", "version": "2.0.0",
+           "domain": "quantoracle.dev", "tools": len(PRICES),
+           "uptime": str(datetime.now(timezone.utc) - _boot)}
+    # Watch-loop heartbeat (written by deploy/watcher.py each tick). Stale or
+    # missing heartbeat = monitors aren't being evaluated — surface it here.
+    try:
+        conn = _get_db()
+        row = conn.execute("SELECT fetched_at FROM live_cache WHERE key='watch:heartbeat'").fetchone()
+        conn.close()
+        if row:
+            out["watcher_heartbeat_age_s"] = round(time.time() - row[0], 1)
+    except Exception:
+        pass
+    return out
 
 @app.get("/metrics")
 async def metrics():
@@ -4218,6 +4279,261 @@ async def live_funding_rates(req: LiveFundingIn):
     return {**data, "as_of_age_seconds": age, "stale": stale, "source": "okx",
             "ms": r2((time.perf_counter() - t0) * 1000)}
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# QUANTORACLE WATCH — 24/7 position monitoring (recurring x402 revenue)
+#
+# Register a crypto perp position once; an isolated watcher service
+# (deploy/watcher.py, its own systemd unit — the API never depends on it)
+# re-evaluates it every ~60s: funding-adjusted liquidation distance, funding
+# flips, vol-regime changes. Alerts fire as HMAC-signed webhooks AND are
+# always readable via GET (so a trial needs zero infrastructure).
+#
+# Money: /v1/watch/position + /v1/watch/extend are $5.00, PAID_ONLY at the
+# worker (no free tier). /v1/watch/trial = one free 48h monitor per IPv6-/64
+# per 30 days. Risk posture: no custody, no keys, no execution — read-only
+# market data in, webhooks out; worst failure is a missed alert.
+# ══════════════════════════════════════════════════════════════════════════
+import secrets as _secrets, ipaddress as _ipaddr, socket as _socket
+from urllib.parse import urlparse as _urlparse
+
+WATCH_CAP_GLOBAL = 200   # bounded compute: hard ceiling on active monitors
+WATCH_CAP_PER_IP = 5
+WATCH_TRIAL_HOURS = 48
+WATCH_TERM_DAYS = 30
+
+def _ip64(ip):
+    """Collapse IPv6 to its /64 so address privacy-rotation can't farm trials."""
+    try:
+        a = _ipaddr.ip_address(ip)
+        if a.version == 6:
+            return str(_ipaddr.ip_network(ip + "/64", strict=False).network_address) + "/64"
+    except ValueError:
+        pass
+    return ip
+
+def _webhook_ok(url):
+    """SSRF guard for outbound webhooks: http(s) only, public unicast hosts only
+    (re-checked at send time by the watcher against DNS rebinding)."""
+    try:
+        u = _urlparse(url)
+        if u.scheme not in ("http", "https") or not u.hostname:
+            return False
+        infos = _socket.getaddrinfo(u.hostname, u.port or (443 if u.scheme == "https" else 80),
+                                    proto=_socket.IPPROTO_TCP)
+        if not infos:
+            return False
+        for info in infos:
+            a = _ipaddr.ip_address(info[4][0])
+            if not a.is_global or a.is_multicast:
+                return False
+        return True
+    except Exception:
+        return False
+
+def _watch_liq(direction, entry, size, collateral, mmr, funding_accum, mark):
+    """Same liquidation formula as /v1/crypto/liquidation-price, with funding
+    drift subtracted from collateral and distance measured against MARK."""
+    eff = collateral - funding_accum
+    if direction == "long":
+        liq = max(0.0, entry * (1 - (eff - size * mmr) / size)) if size > 0 else 0.0
+        dist = (mark - liq) / mark if mark > 0 else 0.0
+    else:
+        liq = entry * (1 + (eff - size * mmr) / size) if size > 0 else 0.0
+        dist = (liq - mark) / mark if mark > 0 else 0.0
+    return liq, dist
+
+async def _fetch_kraken_ticker(asset):
+    import httpx
+    pair = _KRAKEN_PAIR.get(asset, f"{asset}USD")
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get("https://api.kraken.com/0/public/Ticker",
+                             params={"pair": pair}, headers={"User-Agent": _LIVE_UA})
+        r.raise_for_status()
+        j = r.json()
+        if j.get("error"):
+            raise ValueError(str(j["error"]))
+        result = next(iter(j["result"].values()))
+        return {"asset": asset, "mark": float(result["c"][0]), "source": "kraken"}
+
+class WatchThresholds(BaseModel):
+    warn_pct: float = Field(15, gt=0, le=90, description="Warn when liquidation distance falls below this percent")
+    critical_pct: float = Field(7, gt=0, le=90, description="Critical alert below this percent distance to liquidation")
+    funding_flip: bool = Field(True, description="Alert when the funding rate flips sign")
+    vol_regime: bool = Field(True, description="Alert when the realized-vol regime changes")
+
+class WatchIn(BaseModel):
+    asset: str = Field(..., description="Crypto asset symbol, e.g. BTC, ETH, SOL (USD pair)")
+    direction: Literal["long", "short"] = Field(..., description="Position direction")
+    entry_price: float = Field(..., gt=0, description="Entry price in USD")
+    position_size: float = Field(..., gt=0, description="Notional position size in USD")
+    collateral: float = Field(..., gt=0, description="Collateral backing the position, in USD")
+    maintenance_margin_rate: float = Field(0.005, ge=0, lt=0.5, description="Maintenance margin rate (e.g. 0.005 = 0.5%)")
+    webhook_url: Optional[str] = Field(None, description="Public http(s) endpoint for HMAC-signed alert POSTs. Optional — status + alert history are always available via GET /v1/watch/{monitor_id}.")
+    thresholds: Optional[WatchThresholds] = Field(None, description="Alert thresholds (sensible defaults if omitted)")
+
+class WatchExtendIn(BaseModel):
+    monitor_id: str = Field(..., description="Monitor id returned at registration")
+    token: str = Field(..., description="Monitor token returned at registration")
+
+def _thresholds_dict(t):
+    t = t or WatchThresholds()
+    return {"warn_pct": t.warn_pct, "critical_pct": t.critical_pct,
+            "funding_flip": t.funding_flip, "vol_regime": t.vol_regime}
+
+def _watch_register(req: WatchIn, tier: str, ip: str):
+    if req.webhook_url and not _webhook_ok(req.webhook_url):
+        raise HTTPException(400, "webhook_url rejected: must resolve to a public http(s) host (no private/internal addresses)")
+    now = time.time()
+    asset = _norm_sym(req.asset)
+    conn = _get_db()
+    try:
+        active = conn.execute("SELECT COUNT(*) FROM watch_monitors WHERE status='active' AND expires_ts>?", (now,)).fetchone()[0]
+        if active >= WATCH_CAP_GLOBAL:
+            raise HTTPException(503, "watch capacity reached — try again later")
+        ip64 = _ip64(ip)
+        mine = conn.execute("SELECT COUNT(*) FROM watch_monitors WHERE ip64=? AND status='active' AND expires_ts>?", (ip64, now)).fetchone()[0]
+        if mine >= WATCH_CAP_PER_IP:
+            raise HTTPException(429, f"per-IP cap reached ({WATCH_CAP_PER_IP} active monitors)")
+        if tier == "trial":
+            used = conn.execute("SELECT COUNT(*) FROM watch_monitors WHERE ip64=? AND tier='trial' AND created_ts>?", (ip64, now - 30 * 86400)).fetchone()[0]
+            if used >= 1:
+                raise HTTPException(429, "trial already used in the last 30 days — register a paid monitor: POST /v1/watch/position ($5 per 30 days via x402)")
+        mid = "w_" + _secrets.token_urlsafe(6)
+        token = _secrets.token_urlsafe(18)
+        expires = now + (WATCH_TRIAL_HOURS * 3600 if tier == "trial" else WATCH_TERM_DAYS * 86400)
+        liq, dist = _watch_liq(req.direction, req.entry_price, req.position_size, req.collateral, req.maintenance_margin_rate, 0.0, req.entry_price)
+        state = {"funding_accum": 0.0, "band": "ok", "last_funding_sign": None,
+                 "regime": None, "alert_ts": {}, "warned_expiry": False, "last_tick": now}
+        conn.execute(
+            "INSERT INTO watch_monitors (id, token, tier, status, created_ts, expires_ts, ip64, asset, direction, entry_price, position_size, collateral, mmr, webhook_url, thresholds, state) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (mid, token, tier, "active", now, expires, ip64, asset, req.direction,
+             req.entry_price, req.position_size, req.collateral, req.maintenance_margin_rate,
+             req.webhook_url or "", _json.dumps(_thresholds_dict(req.thresholds)), _json.dumps(state)))
+        conn.commit()
+    finally:
+        conn.close()
+    return {
+        "monitor_id": mid, "token": token, "tier": tier, "status": "active",
+        "asset": asset, "direction": req.direction,
+        "liquidation_price": r2(liq), "distance_pct": r4(dist * 100),
+        "expires_at": datetime.fromtimestamp(expires, timezone.utc).isoformat(),
+        "check_interval_seconds": 60,
+        "status_url": f"https://api.quantoracle.dev/v1/watch/{mid}",
+        "how_alerts_work": "Webhook POSTs are HMAC-SHA256 signed (X-QO-Signature, key = your token). No webhook? Poll the status_url with your token — alerts are recorded either way.",
+        **({"upgrade": "This is a 48h trial. Keep it running 30 days: POST /v1/watch/extend {monitor_id, token} with x402 payment ($5)."} if tier == "trial" else {}),
+    }
+
+@app.post("/v1/watch/trial", tags=["Watch"], dependencies=auth)
+async def watch_trial(req: WatchIn):
+    """FREE 48-hour trial of QuantOracle Watch (one per IP per 30 days): register a
+    crypto perp position and we monitor it 24/7 — funding-adjusted liquidation
+    distance every 60s, funding-rate flips, vol-regime changes. Evaluate with zero
+    infrastructure by polling GET /v1/watch/{monitor_id}; HMAC-signed webhooks fire
+    too if you provide webhook_url. Production: POST /v1/watch/position ($5 per
+    position per 30 days via x402)."""
+    t0 = time.perf_counter(); hit("watch/trial")
+    out = _watch_register(req, "trial", _request_ip.get("unknown"))
+    out["ms"] = r2((time.perf_counter() - t0) * 1000)
+    return out
+
+@app.post("/v1/watch/position", tags=["Watch"], dependencies=auth)
+async def watch_position(req: WatchIn):
+    """QuantOracle Watch: 24/7 monitoring of a crypto perp position for 30 days —
+    $5 via x402 (USDC on Base or Solana), no signup. We re-evaluate every 60s:
+    funding-adjusted liquidation distance (warn/critical bands), funding-rate
+    flips, vol-regime changes. Alerts arrive as HMAC-signed webhook POSTs and are
+    also readable via GET /v1/watch/{monitor_id}. Cheaper than polling the math
+    yourself (1,440 calls/day x $0.005 = $7.20/day) and you don't run the loop.
+    Free 48h trial: POST /v1/watch/trial."""
+    t0 = time.perf_counter(); hit("watch/position")
+    out = _watch_register(req, "paid", _request_ip.get("unknown"))
+    out["ms"] = r2((time.perf_counter() - t0) * 1000)
+    return out
+
+@app.post("/v1/watch/extend", tags=["Watch"], dependencies=auth)
+async def watch_extend(req: WatchExtendIn):
+    """Extend (or upgrade a trial of) a QuantOracle Watch monitor by 30 days — $5
+    via x402. Body: {monitor_id, token} from registration. Works on active and
+    expired monitors alike; the position config is preserved."""
+    t0 = time.perf_counter(); hit("watch/extend")
+    now = time.time()
+    conn = _get_db()
+    try:
+        row = conn.execute("SELECT token, expires_ts FROM watch_monitors WHERE id=?", (req.monitor_id,)).fetchone()
+        if not row or row[0] != req.token:
+            raise HTTPException(404, "monitor not found (or bad token)")
+        new_exp = max(now, row[1]) + WATCH_TERM_DAYS * 86400
+        conn.execute("UPDATE watch_monitors SET expires_ts=?, tier='paid', status='active' WHERE id=?", (new_exp, req.monitor_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"monitor_id": req.monitor_id, "status": "active", "tier": "paid",
+            "expires_at": datetime.fromtimestamp(new_exp, timezone.utc).isoformat(),
+            "ms": r2((time.perf_counter() - t0) * 1000)}
+
+@app.get("/v1/watch/{monitor_id}", tags=["Watch"], dependencies=auth)
+async def watch_status(monitor_id: str, token: Optional[str] = None,
+                       x_watch_token: Optional[str] = Header(None)):
+    """Live status of a Watch monitor (free): current mark price, funding-adjusted
+    liquidation distance, threshold bands, expiry, and the last 20 recorded alerts.
+    Auth: the monitor token (query ?token= or X-Watch-Token header)."""
+    t0 = time.perf_counter(); hit("watch/status")
+    tok = token or x_watch_token
+    conn = _get_db()
+    try:
+        row = conn.execute("SELECT token, tier, status, expires_ts, asset, direction, entry_price, position_size, collateral, mmr, thresholds, state, webhook_url FROM watch_monitors WHERE id=?", (monitor_id,)).fetchone()
+        if not row or row[0] != tok:
+            raise HTTPException(404, "monitor not found (or bad token)")
+        alerts = conn.execute("SELECT ts, type, payload, delivered FROM watch_alerts WHERE monitor_id=? ORDER BY ts DESC LIMIT 20", (monitor_id,)).fetchall()
+    finally:
+        conn.close()
+    _, tier, status, expires_ts, asset, direction, entry, size, coll, mmr, thr, state_j, webhook = row
+    state = _json.loads(state_j)
+    snapshot = None
+    try:
+        px, age, stale = await cached_fetch(f"px:{asset}", 30, lambda: _fetch_kraken_ticker(asset))
+        mark = px["mark"]
+        liq, dist = _watch_liq(direction, entry, size, coll, mmr, state.get("funding_accum", 0.0), mark)
+        snapshot = {"mark": r2(mark), "liquidation_price": r2(liq), "distance_pct": r4(dist * 100),
+                    "funding_accum_est": r4(state.get("funding_accum", 0.0)), "price_age_seconds": age, "stale": stale}
+    except Exception:
+        pass
+    now = time.time()
+    out = {
+        "monitor_id": monitor_id, "tier": tier,
+        "status": status if expires_ts > now or status != "active" else "expired",
+        "asset": asset, "direction": direction,
+        "expires_at": datetime.fromtimestamp(expires_ts, timezone.utc).isoformat(),
+        "seconds_to_expiry": max(0, round(expires_ts - now)),
+        "thresholds": _json.loads(thr), "webhook_configured": bool(webhook),
+        "current": snapshot,
+        "alerts": [{"ts": datetime.fromtimestamp(a[0], timezone.utc).isoformat(), "type": a[1],
+                    "payload": _json.loads(a[2]), "webhook_delivered": bool(a[3])} for a in alerts],
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
+    if tier == "trial":
+        out["upgrade"] = "Extend to 30 days for $5 via x402: POST /v1/watch/extend {monitor_id, token}."
+    return out
+
+@app.delete("/v1/watch/{monitor_id}", tags=["Watch"], dependencies=auth)
+async def watch_cancel(monitor_id: str, token: Optional[str] = None,
+                       x_watch_token: Optional[str] = Header(None)):
+    """Cancel a Watch monitor (free). Prepaid time is not refunded (micro-amounts);
+    the monitor stops being evaluated immediately."""
+    hit("watch/cancel")
+    tok = token or x_watch_token
+    conn = _get_db()
+    try:
+        row = conn.execute("SELECT token FROM watch_monitors WHERE id=?", (monitor_id,)).fetchone()
+        if not row or row[0] != tok:
+            raise HTTPException(404, "monitor not found (or bad token)")
+        conn.execute("UPDATE watch_monitors SET status='cancelled' WHERE id=?", (monitor_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"monitor_id": monitor_id, "status": "cancelled"}
 
 # ══════════════════════════════════════════════════════════════════════════
 # BATCH ENDPOINT — up to 100 computations in one request
