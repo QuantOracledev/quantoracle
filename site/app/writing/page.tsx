@@ -35,6 +35,15 @@ interface Article {
  */
 const ARTICLES: Article[] = [
   {
+    title: '24/7 crypto liquidation alerts for your agent, in one registration',
+    description:
+      'QuantOracle Watch: register a perp position once and get HMAC-signed webhook alerts — funding-adjusted liquidation distance checked every 60 seconds, funding-rate flips, vol-regime changes. Free 48h trial that needs zero infrastructure (poll the status endpoint), then $5 per position per 30 days via x402.',
+    url: '/writing/crypto-liquidation-alerts-for-agents',
+    publishedAt: '2026-06-11',
+    tags: ['monitoring', 'liquidation', 'webhooks', 'x402', 'crypto'],
+    venue: 'site',
+  },
+  {
     title: 'Live crypto volatility & funding for your agent, in one call',
     description:
       'QuantOracle Live: give your agent fresh crypto realized volatility and perpetual funding rates with one API call. We fetch the live market data and run the math — no exchange integrations, rate limits, or geo-blocks to manage. 20 free calls/IP/day, then pay-per-call via x402.',

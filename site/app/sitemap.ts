@@ -47,6 +47,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/writing/batch-quant-api-calls`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/writing/sui-talus-quant-agent`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/writing/live-crypto-data-for-agents`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/writing/crypto-liquidation-alerts-for-agents`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE}/writing/langchain-reliable-quant-finance-math`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },

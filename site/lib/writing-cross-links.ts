@@ -81,6 +81,12 @@ export const WRITING_TUTORIALS: WritingTutorial[] = [
       'QuantOracle Live: give your agent fresh realized volatility + perp funding rates with one API call — we fetch the market data and run the math. 20 free/day, then pay-per-call via x402.',
   },
   {
+    slug: 'crypto-liquidation-alerts-for-agents',
+    title: '24/7 crypto liquidation alerts for your agent',
+    blurb:
+      'QuantOracle Watch: register a perp position once — we check it every 60s (funding-adjusted liq distance, funding flips, vol regime) and webhook you when it matters. Free 48h trial, then $5/position/30d via x402.',
+  },
+  {
     slug: 'langchain-reliable-quant-finance-math',
     title: 'Reliable quant finance math for your LangChain agent',
     blurb:
@@ -146,10 +152,17 @@ const RELATED: Record<string, string[]> = {
     'agent-framework-comparison-2026',
   ],
   'live-crypto-data-for-agents': [
+    'crypto-liquidation-alerts-for-agents',
     'batch-quant-api-calls',
     'quant-tools-mcp-server',
     'chaining-x402-paid-tool-calls',
     'anatomy-of-a-paying-quant-agent',
+  ],
+  'crypto-liquidation-alerts-for-agents': [
+    'live-crypto-data-for-agents',
+    'chaining-x402-paid-tool-calls',
+    'anatomy-of-a-paying-quant-agent',
+    'quant-tools-mcp-server',
   ],
   'langchain-reliable-quant-finance-math': [
     'vercel-ai-sdk-quant-tools',
@@ -209,6 +222,11 @@ const RELATED_CALCULATORS: Record<string, string[]> = {
     'crypto-liquidation-calculator',
     'impermanent-loss-calculator',
     'monte-carlo-simulation-calculator',
+  ],
+  'crypto-liquidation-alerts-for-agents': [
+    'crypto-liquidation-calculator',
+    'value-at-risk-calculator',
+    'position-size-calculator',
   ],
   'langchain-reliable-quant-finance-math': [
     'black-scholes-calculator',

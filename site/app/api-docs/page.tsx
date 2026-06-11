@@ -5,7 +5,7 @@ export const metadata = buildMetadata({
   path: '/api-docs',
   title: 'API for Quant Finance — 73 Endpoints + Batch, Free Tier, No Signup',
   description:
-    '73 deterministic quant finance endpoints (options, derivatives, risk, portfolio, statistics, crypto, FX, macro) plus a /batch endpoint and a new live market-data tier (real-time crypto volatility + perp funding rates). Free tier of 1,000 calls/IP/day, no API key. Pay-per-call x402 micropayments.',
+    '73 deterministic quant finance endpoints (options, derivatives, risk, portfolio, statistics, crypto, FX, macro) plus a /batch endpoint, a live market-data tier (real-time crypto volatility + perp funding rates), and QuantOracle Watch — 24/7 position monitoring with webhook alerts. Free tier of 1,000 calls/IP/day, no API key. Pay-per-call x402 micropayments.',
   keywords: [
     'quant finance API',
     'options API',
@@ -85,6 +85,13 @@ export default function ApiDocsPage() {
           maintaining a data feed itself. A separate paid tier — 20 free calls/IP/day, then
           pay-per-call via x402.
         </li>
+        <li>
+          <strong>QuantOracle Watch (new)</strong> — 24/7 position monitoring: register a crypto
+          perp position once (<code>/v1/watch/position</code>) and an isolated watcher re-evaluates
+          it every 60s — funding-adjusted liquidation distance, funding flips, vol-regime changes —
+          firing HMAC-signed webhooks. Free 48h trial (<code>/v1/watch/trial</code>) works by
+          polling alone; $5 per position per 30 days via x402.
+        </li>
       </ul>
 
       <h2>Pricing</h2>
@@ -112,6 +119,11 @@ export default function ApiDocsPage() {
           <strong>QuantOracle Live:</strong> <code>/v1/live/*</code> is paid (it fetches fresh
           market data, not part of the 1,000/day calculator tier). 20 free calls per IP per
           day, then $0.005–$0.01/call via x402. You pay for the freshness, not the math.
+        </li>
+        <li>
+          <strong>QuantOracle Watch:</strong> 24/7 position monitoring is priced per monitor, not
+          per call — <strong>$5 per position per 30 days</strong> via x402, with a free 48-hour
+          trial (one per IP per 30 days). Status and cancel endpoints are free.
         </li>
         <li>
           <strong>High-volume / enterprise:</strong> for flat-rate billing, an API key, an SLA, or

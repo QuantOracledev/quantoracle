@@ -61,7 +61,7 @@ const URLS = [
   `https://${HOST}/compare/sharpe-vs-information-ratio-vs-treynor`,
   `https://${HOST}/compare/z-score-vs-bollinger-bands-vs-rsi`,
 
-  // Writing (8)
+  // Writing (11)
   `https://${HOST}/writing/agentkit-reliable-quant-finance-math`,
   `https://${HOST}/writing/chaining-x402-paid-tool-calls`,
   `https://${HOST}/writing/vercel-ai-sdk-quant-tools`,
@@ -72,6 +72,7 @@ const URLS = [
   `https://${HOST}/writing/sui-talus-quant-agent`,
   `https://${HOST}/writing/live-crypto-data-for-agents`,
   `https://${HOST}/writing/langchain-reliable-quant-finance-math`,
+  `https://${HOST}/writing/crypto-liquidation-alerts-for-agents`,
 ];
 
 const body = {

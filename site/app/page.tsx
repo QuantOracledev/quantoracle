@@ -60,20 +60,21 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* QuantOracle Live — slim, dev-facing announcement of the new live-data tier.
+      {/* QuantOracle Watch — slim, dev-facing announcement of the flagship product.
           Kept to a single understated line so it doesn't compete with the calculator
-          hero; reuses the existing card + badge tokens to stay on-brand. */}
+          hero; reuses the existing card + badge tokens to stay on-brand. (Replaced
+          the Live-tier callout 2026-06-11 — Live remains on /pricing + /api-docs.) */}
       <section className="pb-8">
         <Link
-          href="/writing/live-crypto-data-for-agents"
+          href="/writing/crypto-liquidation-alerts-for-agents"
           className="group flex items-center gap-3 rounded-lg border border-accent/20 bg-accent/[0.03] px-4 py-3 text-sm hover:border-accent/40 transition"
         >
           <span className="text-[10px] uppercase tracking-wider bg-accent/15 text-accent px-2 py-0.5 rounded shrink-0">
             New
           </span>
           <span className="text-slate-300">
-            <strong className="text-slate-100">QuantOracle Live</strong> — real-time crypto
-            volatility &amp; funding rates for agents, fetched and computed in one call.
+            <strong className="text-slate-100">QuantOracle Watch</strong> — 24/7 liquidation,
+            funding &amp; vol alerts for your positions. Free 48h trial, then $5/30 days.
           </span>
           <span className="text-accent ml-auto shrink-0 transition-transform group-hover:translate-x-0.5">
             →
