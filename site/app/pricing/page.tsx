@@ -5,7 +5,7 @@ export const metadata = buildMetadata({
   path: '/pricing',
   title: 'Pricing — Free Tier + x402 Micropayments for Agents',
   description:
-    'QuantOracle API pricing: 1,000 free calls per IP per day (no signup, no API key), then $0.002–$0.10 USDC per call via x402 micropayments on Base or Solana. 10 composite workflows, a /v1/batch endpoint, and QuantOracle Live — a paid market-data tier (real-time crypto volatility + funding rates).',
+    'QuantOracle API pricing: 1,000 free calls per IP per day (no signup, no API key), then $0.002–$0.10 USDC per call via x402 micropayments on Base or Solana. 10 composite workflows, a /v1/batch endpoint, QuantOracle Live (real-time crypto volatility + funding rates), and QuantOracle Watch — 24/7 position monitoring at $5 per position per 30 days.',
   keywords: [
     'quantoracle pricing',
     'quant api pricing',
@@ -80,8 +80,9 @@ export default function PricingPage() {
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Pricing</h1>
         <p className="mt-4 text-slate-300 text-lg leading-relaxed">
           Free for most use cases. Paid composites for agents that want bundled
-          computation, plus a <code>/v1/batch</code> endpoint that dispatches up to 100
-          sub-requests in one HTTP call. Everything settled per-call via x402 USDC
+          computation, a <code>/v1/batch</code> endpoint that dispatches up to 100
+          sub-requests in one HTTP call, and QuantOracle Watch — 24/7 position
+          monitoring for $5 per position per 30 days. Everything settled via x402 USDC
           micropayments on Base or Solana — no signup, no API key, no billing system.
         </p>
       </header>
@@ -215,6 +216,61 @@ export default function PricingPage() {
           <strong className="text-accent">20 free calls per IP per day</strong>, then
           pay-per-call via x402 (Base or Solana). You pay for the freshness and the data pipeline —
           not the math.
+        </p>
+      </section>
+
+      {/* QuantOracle Watch — recurring monitoring */}
+      <section className="mb-12">
+        <h2 className="text-xl font-semibold mb-4">QuantOracle Watch — 24/7 position monitoring</h2>
+        <p className="text-sm text-slate-400 mb-5">
+          Every other endpoint answers once. Watch is the standing service: register a crypto perp
+          position and an isolated watcher re-evaluates it every 60 seconds — funding-adjusted
+          liquidation distance (warn/critical bands), funding-rate flips, vol-regime changes — and
+          sends HMAC-signed webhook alerts. Alerts are also recorded server-side, so the free trial
+          needs zero infrastructure: just poll the status endpoint.
+        </p>
+        <div className="overflow-x-auto rounded-lg border border-ink-700/60">
+          <table className="w-full text-sm">
+            <thead className="bg-ink-800/40">
+              <tr className="text-left">
+                <th className="px-4 py-2 text-xs uppercase tracking-wide text-slate-400">Endpoint</th>
+                <th className="px-4 py-2 text-xs uppercase tracking-wide text-slate-400">Price</th>
+                <th className="px-4 py-2 text-xs uppercase tracking-wide text-slate-400">What it does</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-300">
+              <tr className="border-t border-ink-700/40">
+                <td className="px-4 py-2 font-mono text-xs">watch/trial</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">Free</td>
+                <td className="px-4 py-2 text-sm">48-hour trial monitor — one per IP per 30 days, evaluable by polling alone</td>
+              </tr>
+              <tr className="border-t border-ink-700/40">
+                <td className="px-4 py-2 font-mono text-xs">watch/position</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">$5.00</td>
+                <td className="px-4 py-2 text-sm">Register a perp position for 30 days of 24/7 monitoring + webhook alerts</td>
+              </tr>
+              <tr className="border-t border-ink-700/40">
+                <td className="px-4 py-2 font-mono text-xs">watch/extend</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">$5.00</td>
+                <td className="px-4 py-2 text-sm">Add 30 days to a monitor (also upgrades a trial without re-registering)</td>
+              </tr>
+              <tr className="border-t border-ink-700/40">
+                <td className="px-4 py-2 font-mono text-xs">watch/{'{id}'} (GET / DELETE)</td>
+                <td className="px-4 py-2 font-mono text-accent text-sm">Free</td>
+                <td className="px-4 py-2 text-sm">Live status + alert history, or cancel — token auth</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 text-sm text-slate-300">
+          The math: a DIY loop polling <code>liquidation-price</code> once a minute past the free
+          tier costs ~$7.20/day in per-call fees. Watch is{' '}
+          <strong className="text-accent">$5 per position per 30 days</strong>, checks just as
+          often, and folds funding drift into the liquidation estimate. No exchange keys, no
+          custody — read-only market data in, webhooks out.{' '}
+          <Link href="/writing/crypto-liquidation-alerts-for-agents" className="text-accent">
+            Full walkthrough →
+          </Link>
         </p>
       </section>
 

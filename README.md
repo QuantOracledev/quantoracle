@@ -53,6 +53,7 @@
 - **10 composite workflows** that bundle 5-15 calculator calls (backtest strategies, rebalance planning, options strategy selection, hedging recommendations, full risk analysis, pairs signals, and more)
 - **Zero dependencies** for the 73 calculators + composites -- no market data, accounts, or third-party APIs; send numbers in, get numbers out
 - **QuantOracle Live (new)** -- a separate paid tier that *brings* the data: fresh crypto volatility (`/v1/live/volatility`) and perp funding rates (`/v1/live/funding-rates`). We fetch the live market data and run the math, so your agent doesn't have to. 20 free calls/IP/day to evaluate, then pay-per-call via x402.
+- **QuantOracle Watch (new)** -- 24/7 position monitoring: register a crypto perp position once and get HMAC-signed webhooks on funding-adjusted liquidation distance, funding flips, and vol-regime changes — re-checked every 60 seconds. Free 48h trial; $5 per position per 30 days via x402.
 - **Deterministic** -- the calculators always produce the same outputs for the same inputs, so agents can cache, verify, and chain calls
 - **Citation-verified** -- every formula tested against published textbook values (Hull, Wilmott, Bailey & Lopez de Prado)
 - **120 accuracy benchmarks** passing with analytical solutions
@@ -267,6 +268,7 @@ qo help
 | **Calculators** | All 63 | All 63 |
 | **Composite workflows** | None (paid-only) | All 10 |
 | **Live data tier** | 20 calls/day | Pay-per-call |
+| **Watch monitoring** | Free 48h trial (1 per IP / 30d) | $5 per position / 30 days |
 | **Rate headers** | Yes | Yes |
 
 Every response includes rate limit headers so agents can self-manage:
@@ -360,6 +362,31 @@ curl -X POST https://api.quantoracle.dev/v1/live/volatility \
 
 Results are cached server-side (volatility ~5 min, funding ~1 min); if an upstream feed is briefly unavailable, the API serves the last good value flagged `stale: true`, with `as_of_age_seconds` telling you how fresh the answer is.
 
+## QuantOracle Watch — 24/7 position monitoring
+
+Most monitoring agents rebuild the same loop: poll `crypto/liquidation-price` + `risk/var-parametric` on a timer, all day. **Watch replaces the loop** — register a crypto perp position once and an isolated watcher re-evaluates it every ~60 seconds: funding-adjusted liquidation distance (warn/critical bands with hysteresis), funding-rate sign flips, hourly vol-regime changes, and expiry warnings. Alerts fire as HMAC-signed webhooks (`X-QO-Signature`, key = your monitor token) *and* are recorded server-side, so the trial needs zero infrastructure — just poll.
+
+| Endpoint | Description | Price |
+|----------|-------------|-------|
+| `POST /v1/watch/trial` | Free 48-hour monitor — one per IP per 30 days | Free |
+| `POST /v1/watch/position` | Register a position for 30 days of monitoring | $5.00 |
+| `POST /v1/watch/extend` | +30 days (also upgrades a trial; body: `{monitor_id, token}`) | $5.00 |
+| `GET /v1/watch/{id}` | Live status + alert history (token auth) | Free |
+| `DELETE /v1/watch/{id}` | Cancel | Free |
+
+```bash
+curl -X POST https://api.quantoracle.dev/v1/watch/trial \
+  -H "Content-Type: application/json" \
+  -d '{"asset":"BTC","direction":"long","entry_price":62000,
+       "position_size":5000,"collateral":1000}'
+
+# → {"monitor_id":"w_...","token":"...","tier":"trial","status":"active",
+#    "liquidation_price":49910,"distance_pct":19.5,
+#    "status_url":"https://api.quantoracle.dev/v1/watch/w_...", ...}
+```
+
+No exchange keys, no custody, no execution — Watch reads public market data and sends webhooks, so the worst failure mode is a missed alert (the watcher heartbeat is published in [/health](https://api.quantoracle.dev/health) as `watcher_heartbeat_age_s`). Webhook targets are SSRF-guarded and deliveries retried. The economics: a DIY loop polling the same math once a minute past the free tier costs ~$7.20/day in per-call fees vs **$5 per 30 days**. Full walkthrough: [quantoracle.dev/writing/crypto-liquidation-alerts-for-agents](https://quantoracle.dev/writing/crypto-liquidation-alerts-for-agents).
+
 ## x402 Payments
 
 QuantOracle uses the [x402 protocol](https://x402.org) for pay-per-call micropayments. When an agent exhausts its free tier (or calls a paid-only composite), the API returns a standard `402` response with payment instructions advertising **both Base and Solana**. x402-compatible agents (Coinbase AgentKit, AgentCash, OpenClaw, etc.) handle the rest automatically:
@@ -397,7 +424,7 @@ npx agentcash fetch https://api.quantoracle.dev/v1/risk/full-analysis \
 
 ## MCP Server
 
-QuantOracle is available as a native MCP server with 75 tools (63 calculators + 10 composites + 2 live market-data endpoints), plus a batch tool. Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
+QuantOracle is available as a native MCP server with 79 tools (63 calculators + 10 composites + 2 live market-data endpoints + 3 QuantOracle Watch monitoring tools + batch). Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
 
 ### Install via npm
 
@@ -598,6 +625,18 @@ curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 
 *Paid from the first call (not part of the free tier); 20 free calls/IP/day. See [QuantOracle Live](#quantoracle-live--fresh-market-data--compute).*
 
+### Watch — position monitoring (5 endpoints)
+
+| Endpoint | Description | Price |
+|----------|-------------|-------|
+| `POST /v1/watch/trial` | Free 48-hour trial monitor (one per IP per 30 days) | Free |
+| `POST /v1/watch/position` | 24/7 monitoring of a perp position for 30 days | $5.00 |
+| `POST /v1/watch/extend` | Extend or upgrade a monitor by 30 days | $5.00 |
+| `GET /v1/watch/{id}` | Live status + alert history (token auth) | Free |
+| `DELETE /v1/watch/{id}` | Cancel a monitor | Free |
+
+*Priced per monitor, not per call. See [QuantOracle Watch](#quantoracle-watch--247-position-monitoring).*
+
 ### FX / Macro (7 endpoints)
 
 | Endpoint | Description | Price |
@@ -720,7 +759,7 @@ python tests/accuracy_benchmarks.py https://api.quantoracle.dev
 quantoracle/
   api/quantoracle.py        -- FastAPI app, 63 calculators + 10 composites, pure Python math
   worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments (Base + Solana)
-  mcp-server/src/index.ts    -- MCP server: 75 tools + batch over Streamable HTTP
+  mcp-server/src/index.ts    -- MCP server: 79 tools (incl. live data + Watch) over Streamable HTTP
   cli/                       -- quantoracle-cli: all endpoints in the terminal (npm)
   tests/
     test_integration.py      -- 65 integration tests (all endpoints, live API)

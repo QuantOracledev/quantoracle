@@ -25,6 +25,14 @@ interface Article {
 /** Tutorials and long-form articles on quantoracle.dev/writing. Newest first. */
 const WRITING_ARTICLES: Article[] = [
   {
+    slug: 'crypto-liquidation-alerts-for-agents',
+    title: '24/7 Crypto Liquidation Alerts for Your Agent — QuantOracle Watch',
+    description:
+      'Register a crypto perp position once and get HMAC-signed webhook alerts: funding-adjusted liquidation distance every 60 seconds, funding-rate flips, vol-regime changes. Free 48h trial with zero infrastructure, then $5 per position per 30 days via x402.',
+    publishedAt: '2026-06-11T16:00:00Z',
+    section: 'writing',
+  },
+  {
     slug: 'langchain-reliable-quant-finance-math',
     title: 'Reliable Quant Finance Math for Your LangChain Agent (in 10 Minutes)',
     description:
