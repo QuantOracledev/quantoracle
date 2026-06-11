@@ -117,6 +117,12 @@ const BODIES = {
   '/v1/batch': { requests: [{ endpoint: 'stats/zscore', params: { series: [10, 12, 14, 11, 13, 15] } }] },
   '/v1/live/volatility': { asset: 'BTC' },
   '/v1/live/funding-rates': { asset: 'BTC' },
+  // QuantOracle Watch endpoints are deliberately NOT auto-seeded: each run
+  // costs a real $5.00 and registers a fresh 30-day monitor (and /v1/watch/extend
+  // needs a live {monitor_id, token}). Seeded manually 2026-06-11 (txs
+  // 0x79658dcb… + 0xfd6ac2ab…, source=bazaar-seed, monitor w_KkF-XJ46).
+  // To re-seed: run the watch/position call by hand, then extend with its
+  // returned monitor_id + token.
 };
 
 const paths = Object.keys(BODIES);
