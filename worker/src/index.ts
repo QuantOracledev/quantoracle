@@ -118,6 +118,8 @@ const PRICES: Record<string, string> = {
   // the 1,000/day free calculator tier; gated by a 20/day free allowance instead.
   '/v1/live/volatility': '$0.01',
   '/v1/live/funding-rates': '$0.005',
+  // Crypto composite — liquidation + VaR + Kelly + live funding in one paid call
+  '/v1/crypto/leverage-check': '$0.015',
   // QuantOracle Watch — recurring revenue: $5 per monitored position per 30
   // days. Both are PAID_ONLY (no free tier); the free trial is the separate
   // unpriced /v1/watch/trial endpoint (1 per IP per 30d, enforced backend-side).
@@ -1009,6 +1011,7 @@ app.all('/v1/*', async (c, next) => {
   const PAID_ONLY = new Set([
     '/v1/watch/position',
     '/v1/watch/extend',
+    '/v1/crypto/leverage-check',
     '/v1/options/spread-scan',
     '/v1/indicators/regime-classify',
     '/v1/risk/full-analysis',

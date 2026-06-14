@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { CalculatorShell } from '@/components/CalculatorShell';
 import { Faq } from '@/components/FAQ';
 import { callQuantOracle } from '@/lib/api';
@@ -107,11 +108,51 @@ export default async function CryptoLiqPage({
       subtitle="Calculate the exact price at which a leveraged crypto position gets force-closed. Supports longs and shorts, any leverage, and accumulated funding payments. Isolated-margin model."
       inputs={<InputsCard inputs={inputs} />}
       results={result ? <ResultsCard inputs={inputs} result={result} /> : <ErrorCard />}
-      interpretation={result && <Interpretation inputs={inputs} result={result} />}
+      interpretation={
+        result && (
+          <>
+            <Interpretation inputs={inputs} result={result} />
+            <WatchCta result={result} />
+          </>
+        )
+      }
       faq={<Faq items={faqs} />}
       jsonLd={jsonLd}
       longform={<Longform />}
     />
+  );
+}
+
+// First-party cross-sell to QuantOracle Watch — NOT a sponsored slot. Someone
+// who just computed a liquidation price is the exact buyer for 24/7 liquidation
+// monitoring; the copy goes urgent when the position is already close.
+function WatchCta({ result }: { result: LiquidationResult }) {
+  const close = result.distance_pct > 0 && result.distance_pct < 20;
+  return (
+    <div className="mt-6 rounded-lg border border-accent/30 bg-accent/[0.04] p-5">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 border border-accent/30 rounded px-2 py-0.5">
+          QuantOracle Watch
+        </span>
+        <span className="text-[10px] uppercase tracking-wider text-slate-400">24/7 monitoring</span>
+      </div>
+      <div className="font-semibold text-slate-100 mb-1">
+        {close
+          ? `You're ${result.distance_pct.toFixed(1)}% from liquidation — want to be told before it's hit?`
+          : "Don't want to recompute this by hand every hour?"}
+      </div>
+      <p className="text-sm text-slate-300">
+        Register this position once and we watch it around the clock — funding-adjusted liquidation
+        distance, funding-rate flips, and volatility-regime shifts, pushed to a webhook the moment a
+        threshold trips. Free 48-hour trial (no infrastructure needed), then $5 per position for 30 days.
+      </p>
+      <Link
+        href="/writing/crypto-liquidation-alerts-for-agents"
+        className="mt-2 inline-block text-sm text-accent hover:underline"
+      >
+        How QuantOracle Watch works →
+      </Link>
+    </div>
   );
 }
 
