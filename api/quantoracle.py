@@ -365,6 +365,8 @@ PRICES = {
     # by a local lib because the agent doesn't bring the data).
     "live/volatility": 0.01,
     "live/funding-rates": 0.005,
+    # Crypto composite — liquidation + VaR + Kelly + live funding in one call
+    "crypto/leverage-check": 0.015,
     # QuantOracle Watch — recurring revenue: $5 per monitored position per 30
     # days (worker gates both as PAID_ONLY; /v1/watch/trial is free, 1/IP/30d).
     "watch/position": 5.00,
@@ -2063,6 +2065,7 @@ async def t33(req: T33In):
         "live_data": {
             "note": "Holding a perp? Funding erodes collateral over time and shifts this liq price. Pull the current rate from /v1/live/funding-rates ($0.005).",
             "funding": "/v1/live/funding-rates",
+            "bundle": "Also computing VaR + Kelly each cycle? /v1/crypto/leverage-check returns liquidation + VaR + Kelly + live funding in one call ($0.015).",
             # Context-aware: when the computed position is actually close to
             # liquidation, the pitch names its own distance — the moment of
             # demonstrated need is the highest-conversion ad slot we own.
@@ -4278,6 +4281,89 @@ async def live_funding_rates(req: LiveFundingIn):
         raise HTTPException(502, f"live funding unavailable for {asset}: {str(e)[:140]}")
     return {**data, "as_of_age_seconds": age, "stale": stale, "source": "okx",
             "ms": r2((time.perf_counter() - t0) * 1000)}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# CRYPTO LEVERAGE CHECK — paid composite ($0.015)
+# Bundles the exact set a crypto-leverage/risk agent assembles by hand each
+# cycle (liquidation + VaR + Kelly) and adds the live perp funding rate + a
+# synthesized risk verdict — one call instead of four, with a data add-on the
+# separate endpoints don't give.
+# ══════════════════════════════════════════════════════════════════════════
+class CryptoLeverageCheckIn(BaseModel):
+    asset: str = Field(..., description="Crypto asset symbol (BTC, ETH, SOL...) — drives the live funding rate + carry")
+    direction: Literal["long", "short"] = Field(..., description="Position direction")
+    entry_price: float = Field(..., gt=0, description="Entry price (USD)")
+    position_size: float = Field(..., gt=0, description="Notional position size (USD)")
+    collateral: float = Field(..., gt=0, description="Collateral backing the position (USD)")
+    maintenance_margin_rate: float = Field(0.005, ge=0, lt=0.5, description="Maintenance margin rate (0.005 = 0.5%)")
+    returns: list[float] = Field(..., min_length=10, description="Daily return series for the asset (>=10) — drives VaR/CVaR + Kelly")
+    confidence_levels: list[float] = Field([0.95, 0.99], description="VaR/CVaR confidence levels")
+    holding_period_days: int = Field(1, ge=1, description="VaR holding period in days")
+    mark_price: Optional[float] = Field(None, gt=0, description="Current mark price (defaults to entry_price)")
+
+@app.post("/v1/crypto/leverage-check", tags=["Crypto"], dependencies=auth)
+async def crypto_leverage_check(req: CryptoLeverageCheckIn):
+    """One-call risk panel for a leveraged crypto position: liquidation distance,
+    parametric VaR/CVaR (scaled to your notional), Kelly leverage, the LIVE perp
+    funding rate + its annual carry on your position, and a synthesized risk-flag
+    verdict. Replaces firing and stitching crypto/liquidation-price +
+    risk/var-parametric + risk/kelly + live/funding-rates yourself. PAID composite."""
+    t0 = time.perf_counter(); hit("crypto/leverage-check")
+    asset = _norm_sym(req.asset)
+    mark = req.mark_price or req.entry_price
+    # Live funding — best-effort; the panel still returns if OKX is briefly down.
+    funding = fage = fstale = None
+    try:
+        funding, fage, fstale = await cached_fetch(f"fund:{asset}", 60, lambda: _fetch_okx_funding(asset))
+    except Exception:
+        funding = None
+    # Liquidation (isolated margin, measured against the mark) — inline so this
+    # composite has no forward dependency on the Watch helpers below.
+    size, coll, mmr = req.position_size, req.collateral, req.maintenance_margin_rate
+    if req.direction == "long":
+        liq = max(0.0, req.entry_price * (1 - (coll - size * mmr) / size)) if size > 0 else 0.0
+        dist = (mark - liq) / mark if mark > 0 else 0.0
+    else:
+        liq = req.entry_price * (1 + (coll - size * mmr) / size) if size > 0 else 0.0
+        dist = (liq - mark) / mark if mark > 0 else 0.0
+    # Parametric VaR/CVaR (same math as risk/var-parametric), scaled to notional.
+    R = req.returns; m = mu(R); s = sd(R); hpf = math.sqrt(req.holding_period_days)
+    var_out = {}
+    for cl in req.confidence_levels:
+        z = _norm_inv(1 - cl)
+        var_hp = -(m + z * s) * hpf
+        cvar_hp = -(m - s * npdf(z) / (1 - cl)) * hpf
+        var_out[f"{int(cl*100)}"] = {"var_pct": r4(var_hp * 100), "cvar_pct": r4(cvar_hp * 100),
+                                     "var_usd": r2(var_hp * size), "cvar_usd": r2(cvar_hp * size)}
+    # Kelly leverage from the return series (continuous: mean / variance).
+    v = va(R); kelly_lev = m / v if v > 0 else 0.0
+    cur_lev = size / coll if coll else 0.0
+    # Live funding carry on THIS position (positive = you pay per year).
+    fund_block = {"unavailable": True}; carry = None
+    if funding:
+        ann = funding.get("annualized_rate") or 0.0
+        carry = (ann if req.direction == "long" else -ann) * size
+        fund_block = {"funding_rate": funding.get("funding_rate"), "annualized_rate": ann,
+                      "regime": funding.get("regime"), "carry_cost_annual_usd": r2(carry),
+                      "as_of_age_seconds": fage, "stale": fstale, "source": "okx"}
+    # Synthesized verdict — the part a 4-call stitch can't give you.
+    flags = []
+    dp = dist * 100
+    if dp < 10: flags.append("liquidation_distance_critical")
+    elif dp < 20: flags.append("liquidation_distance_elevated")
+    if carry is not None and carry > 0: flags.append("paying_funding")
+    if kelly_lev > 0 and cur_lev > kelly_lev: flags.append("over_kelly_sizing")
+    return {
+        "asset": asset, "direction": req.direction, "mark_price": r2(mark),
+        "liquidation": {"liquidation_price": r2(liq), "distance_pct": r4(dp),
+                        "max_loss_before_liq_usd": r2(coll - size * mmr)},
+        "var": {"holding_period_days": req.holding_period_days, "volatility_annual": r4(s * math.sqrt(252)), "levels": var_out},
+        "kelly": {"full_kelly_leverage": r4(kelly_lev), "half_kelly_leverage": r4(kelly_lev / 2), "current_leverage": r2(cur_lev)},
+        "live_funding": fund_block,
+        "flags": flags,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════
