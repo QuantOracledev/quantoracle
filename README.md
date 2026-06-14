@@ -371,6 +371,7 @@ Most monitoring agents rebuild the same loop: poll `crypto/liquidation-price` + 
 | `POST /v1/watch/trial` | Free 48-hour monitor — one per IP per 30 days | Free |
 | `POST /v1/watch/position` | Register a position for 30 days of monitoring | $5.00 |
 | `POST /v1/watch/extend` | +30 days (also upgrades a trial; body: `{monitor_id, token}`) | $5.00 |
+| `PATCH /v1/watch/{id}` | Update position params after you add margin / resize / move it | Free |
 | `GET /v1/watch/{id}` | Live status + alert history (token auth) | Free |
 | `DELETE /v1/watch/{id}` | Cancel | Free |
 
@@ -625,13 +626,14 @@ curl https://mcp.quantoracle.dev/.well-known/mcp/server-card.json
 
 *Paid from the first call (not part of the free tier); 20 free calls/IP/day. See [QuantOracle Live](#quantoracle-live--fresh-market-data--compute).*
 
-### Watch — position monitoring (5 endpoints)
+### Watch — position monitoring (6 endpoints)
 
 | Endpoint | Description | Price |
 |----------|-------------|-------|
 | `POST /v1/watch/trial` | Free 48-hour trial monitor (one per IP per 30 days) | Free |
 | `POST /v1/watch/position` | 24/7 monitoring of a perp position for 30 days | $5.00 |
 | `POST /v1/watch/extend` | Extend or upgrade a monitor by 30 days | $5.00 |
+| `PATCH /v1/watch/{id}` | Update position params (direction/entry/size/collateral/mmr/webhook/thresholds) | Free |
 | `GET /v1/watch/{id}` | Live status + alert history (token auth) | Free |
 | `DELETE /v1/watch/{id}` | Cancel a monitor | Free |
 

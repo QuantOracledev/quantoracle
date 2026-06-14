@@ -4376,6 +4376,16 @@ class WatchExtendIn(BaseModel):
     monitor_id: str = Field(..., description="Monitor id returned at registration")
     token: str = Field(..., description="Monitor token returned at registration")
 
+class WatchUpdateIn(BaseModel):
+    token: str = Field(..., description="Monitor token from registration")
+    direction: Optional[Literal["long", "short"]] = Field(None, description="New position direction")
+    entry_price: Optional[float] = Field(None, gt=0, description="New entry price")
+    position_size: Optional[float] = Field(None, gt=0, description="New notional position size (USD)")
+    collateral: Optional[float] = Field(None, gt=0, description="New collateral (USD) — set this after adding/removing margin")
+    maintenance_margin_rate: Optional[float] = Field(None, ge=0, lt=0.5, description="New maintenance margin rate")
+    webhook_url: Optional[str] = Field(None, description="New webhook URL; pass \"\" to remove the webhook")
+    thresholds: Optional[WatchThresholds] = Field(None, description="New alert thresholds")
+
 def _thresholds_dict(t):
     t = t or WatchThresholds()
     return {"warn_pct": t.warn_pct, "critical_pct": t.critical_pct,
@@ -4472,6 +4482,49 @@ async def watch_extend(req: WatchExtendIn):
     return {"monitor_id": req.monitor_id, "status": "active", "tier": "paid",
             "expires_at": datetime.fromtimestamp(new_exp, timezone.utc).isoformat(),
             "ms": r2((time.perf_counter() - t0) * 1000)}
+
+@app.patch("/v1/watch/{monitor_id}", tags=["Watch"], dependencies=auth)
+async def watch_update(monitor_id: str, req: WatchUpdateIn):
+    """Update a live monitor's position parameters (free, token auth). Change any of
+    direction / entry_price / position_size / collateral / maintenance_margin_rate /
+    webhook_url / thresholds when you add margin, resize, or move a position, so the
+    liquidation math keeps tracking reality instead of the snapshot at registration.
+    Expiry and tier are unchanged; the monitor re-evaluates cleanly on the next tick."""
+    t0 = time.perf_counter(); hit("watch/update")
+    conn = _get_db()
+    try:
+        row = conn.execute("SELECT token, asset, direction, entry_price, position_size, collateral, mmr, webhook_url, thresholds, state FROM watch_monitors WHERE id=?", (monitor_id,)).fetchone()
+        if not row or row[0] != req.token:
+            raise HTTPException(404, "monitor not found (or bad token)")
+        _, asset, direction, entry, size, coll, mmr, webhook, thr_j, state_j = row
+        if req.webhook_url is not None:
+            if req.webhook_url != "" and not _webhook_ok(req.webhook_url):
+                raise HTTPException(400, "webhook_url rejected: must resolve to a public http(s) host (no private/internal addresses)")
+            webhook = req.webhook_url
+        if req.direction is not None: direction = req.direction
+        if req.entry_price is not None: entry = req.entry_price
+        if req.position_size is not None: size = req.position_size
+        if req.collateral is not None: coll = req.collateral
+        if req.maintenance_margin_rate is not None: mmr = req.maintenance_margin_rate
+        thr = _thresholds_dict(req.thresholds) if req.thresholds is not None else _json.loads(thr_j)
+        # Reset position-relative state so the next tick re-evaluates from scratch
+        # against the new params (funding accrual was tied to the old position).
+        st = _json.loads(state_j)
+        st["funding_accum"] = 0.0; st["band"] = "ok"; st["alert_ts"] = {}
+        conn.execute(
+            "UPDATE watch_monitors SET direction=?, entry_price=?, position_size=?, collateral=?, mmr=?, webhook_url=?, thresholds=?, state=? WHERE id=?",
+            (direction, entry, size, coll, mmr, webhook, _json.dumps(thr), _json.dumps(st), monitor_id))
+        conn.commit()
+    finally:
+        conn.close()
+    liq, dist = _watch_liq(direction, entry, size, coll, mmr, 0.0, entry)
+    return {
+        "monitor_id": monitor_id, "status": "updated", "asset": asset, "direction": direction,
+        "entry_price": entry, "position_size": size, "collateral": coll, "maintenance_margin_rate": mmr,
+        "liquidation_price": r2(liq), "distance_pct_at_entry": r4(dist * 100),
+        "webhook_configured": bool(webhook), "thresholds": thr,
+        "ms": r2((time.perf_counter() - t0) * 1000),
+    }
 
 @app.get("/v1/watch/{monitor_id}", tags=["Watch"], dependencies=auth)
 async def watch_status(monitor_id: str, token: Optional[str] = None,

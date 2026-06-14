@@ -210,6 +210,7 @@ function verifyWatchWebhook(rawBody: string, signature: string, token: string) {
           <li><code>POST /v1/watch/position</code> — <strong>$5.00</strong> / position / 30 days (x402)</li>
           <li><code>POST /v1/watch/extend</code> — <strong>$5.00</strong>, +30 days, also upgrades a trial</li>
           <li><code>GET /v1/watch/{'{monitor_id}'}</code> — free status + alert history (token auth)</li>
+          <li><code>PATCH /v1/watch/{'{monitor_id}'}</code> — free; update position params (added margin, resized, moved) so alerts keep tracking reality</li>
           <li><code>DELETE /v1/watch/{'{monitor_id}'}</code> — free cancel</li>
         </ul>
         <p>
