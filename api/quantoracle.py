@@ -4224,6 +4224,35 @@ async def _fetch_kraken_vol(asset):
         out["regime"] = "ELEVATED" if ratio > 1.2 else "SUPPRESSED" if ratio < 0.8 else "NORMAL"
     return out
 
+def _history_context(kind, asset, value, value_key, window_days=30):
+    """Where `value` sits within the last `window_days` of our own collected
+    live_history for this kind/asset — the historical context a live-only feed
+    can't give. Honest about the ACTUAL window span + sample count, so a young
+    dataset reads as a short window (e.g. 4d) rather than a fake 30d, and it
+    auto-deepens as the archive fills. Returns None if too little data yet.
+    `value_key` is an internal literal (whitelisted below), never user input."""
+    if value is None or value_key not in ("funding_rate", "realized_vol_30d", "annualized_rate"):
+        return None
+    try:
+        cutoff = time.time() - window_days * 86400
+        conn = _get_db()
+        expr = "json_extract(json,'$." + value_key + "')"
+        row = conn.execute(
+            f"SELECT COUNT(*), MIN({expr}), MAX({expr}), "
+            f"SUM(CASE WHEN {expr} <= ? THEN 1 ELSE 0 END), MIN(ts), MAX(ts) "
+            "FROM live_history WHERE kind=? AND asset=? AND ts>=?",
+            (value, kind, asset, cutoff)).fetchone()
+        conn.close()
+        n = row[0] or 0
+        if n < 24 or row[1] is None:
+            return None
+        lo, hi, below = row[1], row[2], row[3] or 0
+        return {"window_days": round((row[5] - row[4]) / 86400, 1), "samples": n,
+                "percentile": round(100 * below / n), "min": r6(lo), "max": r6(hi),
+                "is_window_high": value >= hi, "is_window_low": value <= lo}
+    except Exception:
+        return None
+
 class LiveVolIn(BaseModel):
     asset: str = Field("BTC", description="Crypto asset symbol, e.g. BTC, ETH, SOL (USD pair).")
 
@@ -4238,7 +4267,9 @@ async def live_volatility(req: LiveVolIn):
         data, age, stale = await cached_fetch(f"vol:{asset}", 300, lambda: _fetch_kraken_vol(asset))
     except Exception as e:
         raise HTTPException(502, f"live volatility unavailable for {asset}: {str(e)[:140]}")
+    ctx = _history_context("vol", asset, data.get("realized_vol_30d"), "realized_vol_30d")
     return {**data, "as_of_age_seconds": age, "stale": stale, "source": "kraken",
+            **({"history_context": ctx} if ctx else {}),
             "ms": r2((time.perf_counter() - t0) * 1000)}
 
 # ---- Live funding rate (OKX) ------------------------------------------------
@@ -4279,7 +4310,9 @@ async def live_funding_rates(req: LiveFundingIn):
         data, age, stale = await cached_fetch(f"fund:{asset}", 60, lambda: _fetch_okx_funding(asset))
     except Exception as e:
         raise HTTPException(502, f"live funding unavailable for {asset}: {str(e)[:140]}")
+    ctx = _history_context("fund", asset, data.get("funding_rate"), "funding_rate")
     return {**data, "as_of_age_seconds": age, "stale": stale, "source": "okx",
+            **({"history_context": ctx} if ctx else {}),
             "ms": r2((time.perf_counter() - t0) * 1000)}
 
 
