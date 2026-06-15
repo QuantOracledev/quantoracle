@@ -1,0 +1,7 @@
+[Unit]
+Description=QuantOracle metrics.db rotating backup (one-shot)
+After=quantoracle.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/quantoracle/backup-db.sh
