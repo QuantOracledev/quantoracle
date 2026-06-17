@@ -152,6 +152,17 @@ function liveTrialKey(ip: string): string {
   return `live-trial:${ip}:${date}`;
 }
 
+// btoa() only encodes Latin1, but x402 PAYMENT-REQUIRED payloads can carry
+// non-ASCII (em-dashes etc. in endpoint descriptions / output schemas) — which
+// made empty-body 402 probes (the kind x402 scanners/clients fire to discover
+// a price) throw 500. Base64-encode the UTF-8 bytes instead (spec-correct).
+function b64utf8(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
 // ── x402 discovery endpoint ────────────────────────────────────────────
 
 // USDC contract addresses
@@ -803,7 +814,7 @@ app.post('/v1/batch', async (c, next) => {
     };
     await attachBazaarExt(paymentRequired, '/v1/batch', c.env);
     return c.json(paymentRequired, 402, {
-      'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+      'PAYMENT-REQUIRED': b64utf8(JSON.stringify(paymentRequired)),
     });
   }
 
@@ -1000,7 +1011,7 @@ app.all('/v1/*', async (c, next) => {
       };
       await attachBazaarExt(paymentRequired, path, c.env);
       return c.json(paymentRequired, 402, {
-        'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+        'PAYMENT-REQUIRED': b64utf8(JSON.stringify(paymentRequired)),
       });
     }
     // Stash body for later use since we already consumed the stream
@@ -1191,7 +1202,7 @@ app.all('/v1/*', async (c, next) => {
       await attachBazaarExt(paymentRequired, path, c.env);
 
       return c.json(paymentRequired, 402, {
-        'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+        'PAYMENT-REQUIRED': b64utf8(JSON.stringify(paymentRequired)),
       });
     }
 
