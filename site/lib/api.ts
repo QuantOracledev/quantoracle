@@ -33,11 +33,19 @@ export async function callQuantOracle<T = unknown>(
   // headers() throws outside a request context (e.g. during build); tolerate
   // that case silently.
   let forwardedUA = '';
+  let forwardedIP = '';
   try {
     const h = await headers();
     forwardedUA = h.get('user-agent') || '';
+    // Vercel populates x-forwarded-for / x-real-ip with the real visitor IP.
+    // Forward it so the backend attributes the human, not Vercel's serverless
+    // egress IP (all the backend would otherwise see on a server-side fetch).
+    forwardedIP =
+      (h.get('x-forwarded-for') || '').split(',')[0].trim() ||
+      h.get('x-real-ip') ||
+      '';
   } catch {
-    // build-time or test context — no forwarded UA available
+    // build-time or test context — no forwarded headers available
   }
 
   const ctrl = new AbortController();
@@ -49,6 +57,7 @@ export async function callQuantOracle<T = unknown>(
         'Content-Type': 'application/json',
         'X-Source': 'quantoracle-site',
         ...(forwardedUA ? { 'X-Forwarded-User-Agent': forwardedUA.slice(0, 250) } : {}),
+        ...(forwardedIP ? { 'X-Forwarded-Client-IP': forwardedIP.slice(0, 64) } : {}),
       },
       body: JSON.stringify(body),
       signal: ctrl.signal,

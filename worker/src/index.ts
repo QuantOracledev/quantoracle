@@ -1219,6 +1219,11 @@ app.all('/v1/*', async (c, next) => {
     'X-Real-IP': ip,
     'CF-Connecting-IP': ip,
     'User-Agent': c.req.header('User-Agent') || '',
+    // Forward the real-visitor UA + IP that quantoracle.dev's SSR layer attaches,
+    // so backend metrics attribute the human behind the server-side fetch (not
+    // Next.js's "node" UA / Vercel's egress IP). Empty for all other callers.
+    'X-Forwarded-User-Agent': c.req.header('X-Forwarded-User-Agent') || '',
+    'X-Forwarded-Client-IP': c.req.header('X-Forwarded-Client-IP') || '',
     'X-Source': c.req.header('X-Source') || '',
     'X-MCP-Client': c.req.header('X-MCP-Client') || '',
     'X-Watch-Token': c.req.header('X-Watch-Token') || '',
