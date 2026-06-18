@@ -26,6 +26,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 _request_ip: ContextVar[str] = ContextVar("request_ip", default="unknown")
 _request_source: ContextVar[str] = ContextVar("request_source", default="unknown")
 _request_user_agent: ContextVar[str] = ContextVar("request_user_agent", default="")
+# Attribution-only IP for logging (prefers the real visitor IP forwarded by our
+# SSR frontend). Kept separate from _request_ip so abuse-control logic (watch
+# trial /64 limits) always uses the true, un-spoofable connection IP.
+_request_log_ip: ContextVar[str] = ContextVar("request_log_ip", default="unknown")
 
 def _classify_source(x_source: str, user_agent: str, mcp_client: str = "") -> str:
     """Classify traffic source for metrics segmentation."""
@@ -88,12 +92,19 @@ async def capture_client_ip(request: Request, call_next):
     fwd_ua = request.headers.get("x-forwarded-user-agent", "")
     mcp_client = request.headers.get("x-mcp-client", "")
     stored_ua = (fwd_ua or mcp_client or raw_ua)[:200]
+    # Attribution-only IP: our SSR frontend forwards the real visitor IP as
+    # X-Forwarded-Client-IP (otherwise the backend sees only Vercel's egress IP
+    # on a server-side fetch). Used for logging attribution ONLY — abuse control
+    # below keeps using `ip` (the true connection IP), since this header is
+    # caller-settable and must not be trusted for the watch-trial /64 limit.
+    log_ip = request.headers.get("x-forwarded-client-ip", "").split(",")[0].strip() or ip
     source = _classify_source(
         request.headers.get("x-source", ""),
         fwd_ua or raw_ua,
         mcp_client,
     )
     _request_ip.set(ip)
+    _request_log_ip.set(log_ip)
     _request_source.set(source)
     _request_user_agent.set(stored_ua)
     return await call_next(request)
@@ -375,7 +386,7 @@ PRICES = {
 
 def hit(ep):
     """Record an API call — persisted to SQLite immediately."""
-    ip = _request_ip.get("unknown")
+    ip = _request_log_ip.get("unknown")  # attribution IP (real visitor behind SSR), not the abuse-control IP
     source = _request_source.get("unknown")
     if source in ("sampler", "watcher"):
         return  # internal services (sampler timer / watch loop), not API usage
