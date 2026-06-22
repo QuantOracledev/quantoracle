@@ -36,6 +36,7 @@ const PAID_GATED_PATHS = new Set([
   "/v1/portfolio/rebalance-plan",
   "/v1/options/strategy-optimizer",
   "/v1/hedging/recommend",
+  "/v1/crypto/leverage-check",
   "/v1/batch",
 ]);
 
@@ -252,6 +253,7 @@ const USAGE_GUIDELINES: Record<string, string> = {
   "portfolio_rebalance-plan": "Use when generating the exact trades needed to rebalance a portfolio from current holdings to target weights. Provide current_holdings (asset -> USD value), target_weights (asset -> weight, sum to 1), transaction_cost_bps. Returns: list of trades (buy/sell with amounts), total cost, drift before/after, and post-rebalance weights. PAID ONLY — no free tier.",
   "options_strategy-optimizer": "Use when agents need to pick the best options strategy given a market outlook. Provide spot price, outlook (bullish/bearish/neutral), vol_view (rising/falling/stable), T, sigma, r. Returns: ranked list of strategies (Long Call, Bull Call Spread, Iron Condor, Long Straddle, etc.) each with legs, max profit/loss, breakevens, net debit/credit, and score. PAID ONLY — no free tier.",
   "hedging_recommend": "Use when agents need to hedge an existing position. Provide position_type (long_stock/short_stock/long_crypto/long_options), position_value, asset_price, volatility, time_horizon_days, max_hedge_cost_pct. Returns: ranked hedges (protective put, collar, futures short, partial hedge) each with cost, protection level, affordability flag, and max loss after hedge. PAID ONLY — no free tier.",
+  "crypto_leverage-check": "Use BEFORE opening or while holding a leveraged perp/crypto position to get a complete risk verdict in ONE call. Bundles liquidation price + distance-to-liquidation, parametric VaR/CVaR, Kelly position sizing, AND the live perpetual funding rate (fetched in real time), plus a synthesized verdict with risk flags (liquidation distance critical/elevated, paying funding, over-Kelly sizing). Replaces separately calling crypto/liquidation-price + risk/var-parametric + risk/kelly — fewer round-trips, and folds in live funding those three can't see. Provide entry price, leverage, side (long/short), position size, account equity, and asset symbol (BTC/ETH/SOL/...). PAID ONLY — no free tier; call the REST endpoint with an x402-capable client to settle $0.015.",
   "batch": "Use when you need to execute multiple computations efficiently. Bundle up to 100 individual endpoint calls into a single request for ~6x throughput improvement. Provide an array of {endpoint, params} objects. Price equals the sum of individual endpoint prices. Ideal for backtests, parameter sweeps, and portfolio-wide calculations.",
 };
 
@@ -301,6 +303,7 @@ const PRICES: Record<string, string> = {
   "/v1/portfolio/rebalance-plan": "0.05",
   "/v1/options/strategy-optimizer": "0.08",
   "/v1/hedging/recommend": "0.04",
+  "/v1/crypto/leverage-check": "0.015",
 };
 
 // Use stderr for logs in stdio mode so stdout stays clean for JSON-RPC
@@ -378,7 +381,7 @@ async function main() {
         role: "user",
         content: {
           type: "text",
-          text: "QuantOracle provides 63 deterministic math tools for quantitative finance. All tools accept JSON and return JSON. Key categories: options pricing (Black-Scholes, Greeks, implied vol, exotic derivatives), risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown, Kelly), portfolio optimization (max Sharpe, min variance, risk parity), technical indicators (RSI, MACD, Bollinger, ATR), Monte Carlo simulation, bond pricing and yield curves, statistical analysis (regression, cointegration, GARCH, Hurst exponent), crypto/DeFi (impermanent loss, liquidation, funding rates, DEX slippage), FX (interest rate parity, carry trade, PPP), macro (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). Also available: 6 composite tools that bundle multiple calculations into single calls (spread-scan, regime-classify, full-analysis, trade-evaluate, portfolio-health, pairs-signal) and a batch endpoint for up to 100 computations per request. Every tool is deterministic — same inputs always produce same outputs. Use these tools whenever you need precise financial calculations instead of estimating. Prefer composite tools when they match your workflow — they are faster and return richer results than chaining individual calls.",
+          text: "QuantOracle provides 63 deterministic math tools for quantitative finance. All tools accept JSON and return JSON. Key categories: options pricing (Black-Scholes, Greeks, implied vol, exotic derivatives), risk metrics (Sharpe, Sortino, VaR, CVaR, drawdown, Kelly), portfolio optimization (max Sharpe, min variance, risk parity), technical indicators (RSI, MACD, Bollinger, ATR), Monte Carlo simulation, bond pricing and yield curves, statistical analysis (regression, cointegration, GARCH, Hurst exponent), crypto/DeFi (impermanent loss, liquidation, funding rates, DEX slippage), FX (interest rate parity, carry trade, PPP), macro (Taylor Rule, Fisher equation), and time value of money (PV, FV, IRR, NPV, CAGR). Also available: 11 composite tools that bundle multiple calculations into single calls (spread-scan, regime-classify, full-analysis, trade-evaluate, portfolio-health, pairs-signal, backtest-strategy, portfolio-rebalance-plan, options-strategy-optimizer, hedging-recommend, and crypto leverage-check) and a batch endpoint for up to 100 computations per request. Every tool is deterministic — same inputs always produce same outputs. Use these tools whenever you need precise financial calculations instead of estimating. Prefer composite tools when they match your workflow — they are faster and return richer results than chaining individual calls.",
         },
       }],
     }));
@@ -636,7 +639,7 @@ async function main() {
   app.get("/.well-known/mcp/server-card.json", (_req, res) => {
     res.json({
       serverInfo: { name: "quantoracle", version: "2.0.0" },
-      description: "63 deterministic quant computation tools for AI agents. Options pricing, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. Includes 6 composite tools and batch endpoint (up to 100 calls/request). 1,000 free calls/day — no signup required.",
+      description: "63 deterministic quant computation tools for AI agents. Options pricing, exotic derivatives, risk metrics, portfolio optimization, Monte Carlo, statistics, crypto/DeFi, macro/FX, time value of money. Includes 11 composite tools and batch endpoint (up to 100 calls/request). 1,000 free calls/day — no signup required.",
       homepage: "https://quantoracle.dev",
       repository: "https://github.com/QuantOracledev/quantoracle",
       documentation: "https://api.quantoracle.dev/docs",

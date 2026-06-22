@@ -425,7 +425,7 @@ npx agentcash fetch https://api.quantoracle.dev/v1/risk/full-analysis \
 
 ## MCP Server
 
-QuantOracle is available as a native MCP server with 79 tools (63 calculators + 10 composites + 2 live market-data endpoints + 3 QuantOracle Watch monitoring tools + batch). Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
+QuantOracle is available as a native MCP server with 80 tools (63 calculators + 11 composites + 2 live market-data endpoints + 3 QuantOracle Watch monitoring tools + batch). Works with Claude Desktop, Cursor, Windsurf, Smithery, and any MCP-compatible client.
 
 ### Install via npm
 
@@ -759,9 +759,9 @@ python tests/accuracy_benchmarks.py https://api.quantoracle.dev
 
 ```
 quantoracle/
-  api/quantoracle.py        -- FastAPI app, 63 calculators + 10 composites, pure Python math
+  api/quantoracle.py        -- FastAPI app, 63 calculators + 11 composites, pure Python math
   worker/src/index.ts        -- Cloudflare Worker: rate limiting + x402 payments (Base + Solana)
-  mcp-server/src/index.ts    -- MCP server: 79 tools (incl. live data + Watch) over Streamable HTTP
+  mcp-server/src/index.ts    -- MCP server: 80 tools (incl. live data + Watch) over Streamable HTTP
   cli/                       -- quantoracle-cli: all endpoints in the terminal (npm)
   tests/
     test_integration.py      -- 65 integration tests (all endpoints, live API)

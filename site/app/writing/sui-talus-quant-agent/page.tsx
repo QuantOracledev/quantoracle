@@ -98,7 +98,7 @@ export default function Page() {
         <p>
           The Sui agent ecosystem is MCP-native — the Sui AI Agent Kit standardizes DeFi tool access
           over the Model Context Protocol, and most agent hosts speak it. QuantOracle runs a hosted
-          MCP server that exposes <strong>all 79 tools</strong>. Point your agent at it and you&apos;re
+          MCP server that exposes <strong>all 80 tools</strong>. Point your agent at it and you&apos;re
           done — no install, no build, no wallet:
         </p>
         <pre><code className="language-json">{`{

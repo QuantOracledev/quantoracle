@@ -12,7 +12,7 @@ LLMs that compute Black-Scholes, VaR, or liquidation prices in-context drift sil
 
 ### Route A — MCP (recommended, zero code)
 
-The Sui agent ecosystem is MCP-native. QuantOracle runs a hosted MCP server exposing **all 79 tools** (73 calculators + batch + live market data + QuantOracle Watch). Point your agent at it — no install, no build, chain-agnostic:
+The Sui agent ecosystem is MCP-native. QuantOracle runs a hosted MCP server exposing **all 80 tools** (74 calculators + batch + live market data + QuantOracle Watch). Point your agent at it — no install, no build, chain-agnostic:
 
 ```jsonc
 // MCP client config (Sui AI Agent Kit, Claude Desktop, Cursor, any MCP host)
@@ -107,7 +107,7 @@ const tools = Object.fromEntries(
 | `quant_live_volatility` | **Live** realized vol (7/30/90d) + regime — fresh data + compute | $0.01 (20 free/day) |
 | `quant_live_funding_rates` | **Live** perp funding rate + annualized carry | $0.005 (20 free/day) |
 
-Need more? The hosted MCP server (Route A) exposes all 79 tools; this pack curates the most useful for Sui DeFi agents.
+Need more? The hosted MCP server (Route A) exposes all 80 tools; this pack curates the most useful for Sui DeFi agents.
 
 ## Payments
 
