@@ -23,7 +23,7 @@ interface Tier {
 }
 
 const FREE_FEATURES = [
-  '1,000 calls per IP per day, no signup, no API key',
+  '1,000 calls/IP/day on the core calculators, no signup, no API key',
   'All 63 calculator endpoints (Black-Scholes, Kelly, Monte Carlo, Sharpe, VaR, GARCH, Hurst, etc.)',
   '15 free interactive calculators at quantoracle.dev',
   'OpenAPI spec, MCP HTTP server, LangChain toolkit, AgentKit action provider',
@@ -106,7 +106,12 @@ export default function PricingPage() {
             The free tier covers nearly all human use and most agent use. The paid tiers exist
             for agents that need higher volume, for the 10 composite endpoints that bundle
             multiple calculations, or for <code>/v1/batch</code> when you want to dispatch
-            many computations in one HTTP call.
+            many computations in one HTTP call. Two endpoint groups have a smaller free
+            allowance than the 1,000/day calculator tier: the <strong>live-data</strong> endpoints
+            (20/day) and the <strong>crypto-risk</strong> trio — <code>liquidation-price</code>,{' '}
+            <code>var-parametric</code>, <code>kelly</code> (50/day shared, then the{' '}
+            <code>leverage-check</code> bundle or per-call x402). Calls via the MCP server keep
+            the full 1,000/day.
           </p>
         </div>
       </section>
@@ -382,8 +387,9 @@ export default function PricingPage() {
             </h3>
             <p>
               No. The free tier requires no account, no email, no API key — just hit the
-              endpoint up to 1,000 times per day per IP. The paid tier requires a wallet that
-              holds USDC on Base or Solana, but no QuantOracle account.
+              endpoint up to 1,000 times per day per IP (a few are metered tighter: live-data at
+              20/day and the crypto-risk trio at 50/day shared). The paid tier requires a wallet
+              that holds USDC on Base or Solana, but no QuantOracle account.
             </p>
           </div>
           <div>
