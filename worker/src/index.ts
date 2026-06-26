@@ -152,6 +152,25 @@ function liveTrialKey(ip: string): string {
   return `live-trial:${ip}:${date}`;
 }
 
+// ── Free-tier experiment (started 2026-06-25) ──────────────────────────
+// The 3 crypto-risk endpoints the recurring agents (node-client, btc-terminal)
+// hammer for free share ONE tight daily bucket, so daily *production* use hits
+// a wall and the path of least resistance becomes the leverage-check bundle
+// ($0.015 = all three + live perp funding + a verdict in a single call).
+// 50/day combined ≈ 16 full liquidation+var+kelly loops: generous to evaluate,
+// binds on production. Everything else stays on the 1,000/day calculator tier.
+// REVERT: set RISK_FREE_DAILY huge (or empty RISK_PATHS) + redeploy.
+const RISK_FREE_DAILY = 50;
+const RISK_PATHS = new Set([
+  '/v1/crypto/liquidation-price',
+  '/v1/risk/var-parametric',
+  '/v1/risk/kelly',
+]);
+function riskKey(ip: string): string {
+  const date = new Date().toISOString().slice(0, 10);
+  return `risk:${ip}:${date}`;  // ONE shared bucket across the 3 endpoints
+}
+
 // btoa() only encodes Latin1, but x402 PAYMENT-REQUIRED payloads can carry
 // non-ASCII (em-dashes etc. in endpoint descriptions / output schemas) — which
 // made empty-body 402 probes (the kind x402 scanners/clients fire to discover
@@ -1158,12 +1177,16 @@ app.all('/v1/*', async (c, next) => {
   // allowance (LIVE_FREE_DAILY) instead of the 1,000/day calculator quota.
   if (price !== undefined) {
     const isLive = path.startsWith('/v1/live/');
-    const key = isLive ? liveTrialKey(ip) : todayKey(ip);
-    const effLimit = isLive ? LIVE_FREE_DAILY : limit;
+    const isRisk = RISK_PATHS.has(path);
+    const key = isLive ? liveTrialKey(ip) : isRisk ? riskKey(ip) : todayKey(ip);
+    const effLimit = isLive ? LIVE_FREE_DAILY : isRisk ? RISK_FREE_DAILY : limit;
     const count = parseInt((await c.env.RATE_LIMITS.get(key)) || '0');
 
     if (count >= effLimit) {
-      // Free tier exhausted — return x402 payment required
+      // Free tier exhausted — return x402 payment required. For the risk-loop
+      // endpoints, redirect the agent to the cheaper-per-loop leverage-check
+      // bundle instead of just charging for this one call.
+      const riskPitch = `Free limit reached (${RISK_FREE_DAILY}/day shared across liquidation-price + var-parametric + kelly; resets 00:00 UTC). Get all three + live perp funding + a risk verdict in ONE call: POST /v1/crypto/leverage-check ($0.015). Or pay per-call via x402 to continue this endpoint.`;
       const atomicUsdc = String(Math.round(parseFloat(price.replace('$', '')) * 1_000_000));
       const outputSchema = await getOutputSchema(path, c.env);
       const baseAcc: any = {
@@ -1194,7 +1217,7 @@ app.all('/v1/*', async (c, next) => {
         error: 'Payment required',
         resource: {
           url: `https://api.quantoracle.dev${path}`,
-          description: `QuantOracle: ${path}`,
+          description: isRisk ? riskPitch : `QuantOracle: ${path}`,
           mimeType: 'application/json',
         },
         accepts,

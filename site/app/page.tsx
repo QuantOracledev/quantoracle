@@ -142,7 +142,7 @@ export default function HomePage() {
           You don&apos;t need to know what x402 micropayments or A2A AgentCards are to use these
           calculators. They&apos;re free for humans, full stop. If you&apos;re a developer and want
           to embed any of this math in your own app, the <Link href="/api-docs">API docs</Link> are a
-          click away — first 1,000 calls/IP/day are free, no signup, and{' '}
+          click away — first 1,000 calls/IP/day on the core calculators are free, no signup, and{' '}
           <Link href="/pricing">paid composite workflows</Link> start at $0.015 USDC via x402 when
           you need a full risk audit or hedge recommendation in one call.
         </p>

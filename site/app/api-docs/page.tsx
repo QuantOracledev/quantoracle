@@ -97,8 +97,10 @@ export default function ApiDocsPage() {
       <h2>Pricing</h2>
       <ul className="list-disc list-inside text-sm space-y-1 text-slate-300">
         <li>
-          <strong>Free tier:</strong> 1,000 calls per IP per day across the 63 calculator
-          endpoints, no signup, no API key. Composite workflows and <code>/v1/batch</code>{' '}
+          <strong>Free tier:</strong> 1,000 calls per IP per day across the calculators,
+          no signup, no API key — except the crypto-risk trio (<code>liquidation-price</code>,{' '}
+          <code>var-parametric</code>, <code>kelly</code>: 50/day shared) and live-data (20/day),
+          metered tighter on the REST API. Composite workflows and <code>/v1/batch</code>{' '}
           are paid-only.
         </li>
         <li>
