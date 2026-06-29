@@ -157,6 +157,7 @@ async def add_brand_meta(request: Request, call_next):
                 "powered_by": "QuantOracle",
                 "url": "https://quantoracle.dev",
                 "docs": "https://api.quantoracle.dev/docs",
+                "community": "Building with QuantOracle? Questions, feedback, or request a tool: https://github.com/QuantOracledev/quantoracle/discussions",
             }
             if calculator_path:
                 data["_meta"]["calculator"] = f"https://quantoracle.dev{calculator_path}"
