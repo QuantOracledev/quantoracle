@@ -17,6 +17,11 @@ SOLANA_WALLET_ADDRESS = "9biztrXscReJ3Wi8EfkD2gL3WXzYUmzTEohD26Bxp39u"
 binding = "RATE_LIMITS"
 id = "a3999e7ed36249508ea1c0ac9c79ad31"
 
+# NOTE: the native Workers rate-limit binding ([[unsafe.bindings]] type=ratelimit)
+# was tried here 2026-07-09 but is INERT on this account — .limit() returned
+# success for 480/480 sustained requests in a load test. Burst protection lives
+# in a Cloudflare WAF rate-limiting rule instead (edge-enforced, before the Worker).
+
 # Custom domain routing
 # After deploy, add custom domain in Cloudflare dashboard:
 # Workers & Pages > quantoracle > Settings > Domains & Routes
