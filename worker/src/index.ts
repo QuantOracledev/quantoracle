@@ -17,6 +17,9 @@ interface Env {
   CDP_API_KEY_SECRET: string;
   ADMIN_KEY: string;
   OWNER_KEY: string;
+  // Per-API secret from the RapidAPI provider dashboard. INERT until set
+  // (wrangler secret put RAPIDAPI_PROXY_SECRET). Treat like OWNER_KEY.
+  RAPIDAPI_PROXY_SECRET?: string;
   INTERNAL_SETTLEMENT_KEY?: string;
 }
 
@@ -981,6 +984,41 @@ app.all('/v1/*', async (c, next) => {
     const resp = await fetch(backendUrl, {
       method: c.req.method,
       headers,
+      body: c.req.method !== 'GET' ? await c.req.text() : undefined,
+    });
+    const data = await resp.json();
+    return c.json(data as any, resp.status as any);
+  }
+
+  // ── API-marketplace ingress (RapidAPI-style gateway) ────────────────────
+  // Marketplace subscribers pay via subscription tiers billed by the
+  // marketplace, and the gateway enforces plan quotas upstream — so requests
+  // bearing the per-API proxy secret bypass x402 and the free-tier counters.
+  // Inert until the RAPIDAPI_PROXY_SECRET Worker secret is set. The same
+  // pattern works for any gateway marketplace that sends a static secret
+  // header (adjust the header name if we list elsewhere).
+  const rapidSecret = c.req.header('X-RapidAPI-Proxy-Secret');
+  if (rapidSecret && c.env.RAPIDAPI_PROXY_SECRET && rapidSecret === c.env.RAPIDAPI_PROXY_SECRET) {
+    // Stateful subscription products (watch/* — priced per position, not per
+    // request) and quota-arbitrage routes (batch = up to 100 computations in
+    // one request) stay x402-only and are excluded from the listing.
+    if (path.startsWith('/v1/watch') || path === '/v1/batch') {
+      return c.json({
+        error: 'not_available_via_marketplace',
+        message: `This endpoint is only available on the direct API via x402: https://api.quantoracle.dev${path}`,
+      }, 403);
+    }
+    const resp = await fetch(`${c.env.BACKEND_URL}${path}`, {
+      method: c.req.method,
+      headers: {
+        'Content-Type': c.req.header('Content-Type') || 'application/json',
+        // RapidAPI forwards the subscriber's real IP in X-Forwarded-For.
+        'X-Forwarded-For': c.req.header('X-Forwarded-For') || ip,
+        'X-Real-IP': c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() || ip,
+        'CF-Connecting-IP': ip,
+        'User-Agent': c.req.header('User-Agent') || '',
+        'X-Source': 'rapidapi',
+      },
       body: c.req.method !== 'GET' ? await c.req.text() : undefined,
     });
     const data = await resp.json();
