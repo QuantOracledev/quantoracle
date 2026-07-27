@@ -1,0 +1,369 @@
+{
+ "haiku": {
+  "errors": {
+   "P008": 0.335339065090909,
+   "P009": 0.335339065090909,
+   "P011": 3.1680370428071427,
+   "P013": 0.0007682403510024789,
+   "P026": 0.1707670043415342,
+   "P040": 0.8585786438,
+   "P048": 1.0,
+   "P049": 0.11795538529644282,
+   "P051": 0.4117647058823529
+  },
+  "counts": {
+   "CORRECT": 49,
+   "SIGN": 1,
+   "WRONG": 9
+  },
+  "core_counts": {
+   "CORRECT": 44,
+   "SIGN": 1,
+   "WRONG": 9
+  },
+  "by_cat": {
+   "Crypto": {
+    "CORRECT": 5,
+    "SIGN": 1
+   },
+   "Derivatives": {
+    "CORRECT": 3,
+    "WRONG": 3
+   },
+   "FX/Macro": {
+    "WRONG": 1,
+    "CORRECT": 5
+   },
+   "Fixed Income": {
+    "CORRECT": 6
+   },
+   "Indicators": {
+    "CORRECT": 5,
+    "WRONG": 1
+   },
+   "Monte Carlo": {
+    "CORRECT": 2
+   },
+   "Options": {
+    "CORRECT": 6
+   },
+   "Portfolio": {
+    "CORRECT": 2,
+    "WRONG": 1
+   },
+   "Risk": {
+    "CORRECT": 6
+   },
+   "Statistics": {
+    "WRONG": 3,
+    "CORRECT": 3
+   },
+   "TVM": {
+    "CORRECT": 6
+   }
+  },
+  "magnitudes": {
+   ">20%    (catastrophic)": 6,
+   "<0.1%   (noise)": 1,
+   "5-20%   (serious)": 2
+  },
+  "outcomes": {
+   "P001": "CORRECT",
+   "P002": "CORRECT",
+   "P003": "CORRECT",
+   "P004": "CORRECT",
+   "P005": "CORRECT",
+   "P006": "SIGN",
+   "P007": "CORRECT",
+   "P008": "WRONG",
+   "P009": "WRONG",
+   "P010": "CORRECT",
+   "P011": "WRONG",
+   "P012": "CORRECT",
+   "P013": "WRONG",
+   "P014": "CORRECT",
+   "P015": "CORRECT",
+   "P016": "CORRECT",
+   "P017": "CORRECT",
+   "P018": "CORRECT",
+   "P019": "CORRECT",
+   "P020": "CORRECT",
+   "P021": "CORRECT",
+   "P022": "CORRECT",
+   "P023": "CORRECT",
+   "P024": "CORRECT",
+   "P025": "CORRECT",
+   "P026": "WRONG",
+   "P027": "CORRECT",
+   "P028": "CORRECT",
+   "P029": "CORRECT",
+   "P030": "CORRECT",
+   "P031": "CORRECT",
+   "P032": "CORRECT",
+   "P033": "CORRECT",
+   "P034": "CORRECT",
+   "P035": "CORRECT",
+   "P036": "CORRECT",
+   "P037": "CORRECT",
+   "P038": "CORRECT",
+   "P039": "CORRECT",
+   "P040": "WRONG",
+   "P041": "CORRECT",
+   "P042": "CORRECT",
+   "P043": "CORRECT",
+   "P044": "CORRECT",
+   "P045": "CORRECT",
+   "P046": "CORRECT",
+   "P047": "CORRECT",
+   "P048": "WRONG",
+   "P049": "WRONG",
+   "P050": "CORRECT",
+   "P051": "WRONG",
+   "P052": "CORRECT",
+   "P053": "CORRECT",
+   "P054": "CORRECT",
+   "P055": "CORRECT",
+   "P056": "CORRECT",
+   "P057": "CORRECT",
+   "P058": "CORRECT",
+   "P059": "CORRECT"
+  }
+ },
+ "opus": {
+  "errors": {
+   "P049": 0.11795538527517412,
+   "P053": 0.124600211453296
+  },
+  "counts": {
+   "CORRECT": 56,
+   "SCALE": 1,
+   "WRONG": 2
+  },
+  "core_counts": {
+   "CORRECT": 51,
+   "SCALE": 1,
+   "WRONG": 2
+  },
+  "by_cat": {
+   "Crypto": {
+    "CORRECT": 6
+   },
+   "Derivatives": {
+    "CORRECT": 6
+   },
+   "FX/Macro": {
+    "CORRECT": 6
+   },
+   "Fixed Income": {
+    "CORRECT": 6
+   },
+   "Indicators": {
+    "CORRECT": 6
+   },
+   "Monte Carlo": {
+    "CORRECT": 2
+   },
+   "Options": {
+    "CORRECT": 6
+   },
+   "Portfolio": {
+    "CORRECT": 3
+   },
+   "Risk": {
+    "CORRECT": 5,
+    "SCALE": 1
+   },
+   "Statistics": {
+    "CORRECT": 4,
+    "WRONG": 2
+   },
+   "TVM": {
+    "CORRECT": 6
+   }
+  },
+  "magnitudes": {
+   "5-20%   (serious)": 2
+  },
+  "outcomes": {
+   "P001": "CORRECT",
+   "P002": "CORRECT",
+   "P003": "CORRECT",
+   "P004": "CORRECT",
+   "P005": "CORRECT",
+   "P006": "CORRECT",
+   "P007": "CORRECT",
+   "P008": "CORRECT",
+   "P009": "CORRECT",
+   "P010": "CORRECT",
+   "P011": "CORRECT",
+   "P012": "CORRECT",
+   "P013": "CORRECT",
+   "P014": "CORRECT",
+   "P015": "CORRECT",
+   "P016": "CORRECT",
+   "P017": "CORRECT",
+   "P018": "CORRECT",
+   "P019": "CORRECT",
+   "P020": "CORRECT",
+   "P021": "CORRECT",
+   "P022": "CORRECT",
+   "P023": "CORRECT",
+   "P024": "CORRECT",
+   "P025": "CORRECT",
+   "P026": "CORRECT",
+   "P027": "CORRECT",
+   "P028": "CORRECT",
+   "P029": "CORRECT",
+   "P030": "CORRECT",
+   "P031": "CORRECT",
+   "P032": "CORRECT",
+   "P033": "CORRECT",
+   "P034": "CORRECT",
+   "P035": "CORRECT",
+   "P036": "CORRECT",
+   "P037": "CORRECT",
+   "P038": "CORRECT",
+   "P039": "CORRECT",
+   "P040": "CORRECT",
+   "P041": "CORRECT",
+   "P042": "CORRECT",
+   "P043": "SCALE",
+   "P044": "CORRECT",
+   "P045": "CORRECT",
+   "P046": "CORRECT",
+   "P047": "CORRECT",
+   "P048": "CORRECT",
+   "P049": "WRONG",
+   "P050": "CORRECT",
+   "P051": "CORRECT",
+   "P052": "CORRECT",
+   "P053": "WRONG",
+   "P054": "CORRECT",
+   "P055": "CORRECT",
+   "P056": "CORRECT",
+   "P057": "CORRECT",
+   "P058": "CORRECT",
+   "P059": "CORRECT"
+  }
+ },
+ "sonnet": {
+  "errors": {
+   "P040": 0.8585786437626906,
+   "P049": 0.11795538527517394,
+   "P053": 0.1328410089921629
+  },
+  "counts": {
+   "CORRECT": 55,
+   "WRONG": 3,
+   "SCALE": 1
+  },
+  "core_counts": {
+   "CORRECT": 50,
+   "WRONG": 3,
+   "SCALE": 1
+  },
+  "by_cat": {
+   "Crypto": {
+    "CORRECT": 6
+   },
+   "Derivatives": {
+    "CORRECT": 6
+   },
+   "FX/Macro": {
+    "CORRECT": 6
+   },
+   "Fixed Income": {
+    "CORRECT": 6
+   },
+   "Indicators": {
+    "CORRECT": 6
+   },
+   "Monte Carlo": {
+    "CORRECT": 2
+   },
+   "Options": {
+    "CORRECT": 6
+   },
+   "Portfolio": {
+    "CORRECT": 2,
+    "WRONG": 1
+   },
+   "Risk": {
+    "CORRECT": 5,
+    "SCALE": 1
+   },
+   "Statistics": {
+    "CORRECT": 4,
+    "WRONG": 2
+   },
+   "TVM": {
+    "CORRECT": 6
+   }
+  },
+  "magnitudes": {
+   ">20%    (catastrophic)": 1,
+   "5-20%   (serious)": 2
+  },
+  "outcomes": {
+   "P001": "CORRECT",
+   "P002": "CORRECT",
+   "P003": "CORRECT",
+   "P004": "CORRECT",
+   "P005": "CORRECT",
+   "P006": "CORRECT",
+   "P007": "CORRECT",
+   "P008": "CORRECT",
+   "P009": "CORRECT",
+   "P010": "CORRECT",
+   "P011": "CORRECT",
+   "P012": "CORRECT",
+   "P013": "CORRECT",
+   "P014": "CORRECT",
+   "P015": "CORRECT",
+   "P016": "CORRECT",
+   "P017": "CORRECT",
+   "P018": "CORRECT",
+   "P019": "CORRECT",
+   "P020": "CORRECT",
+   "P021": "CORRECT",
+   "P022": "CORRECT",
+   "P023": "CORRECT",
+   "P024": "CORRECT",
+   "P025": "CORRECT",
+   "P026": "CORRECT",
+   "P027": "CORRECT",
+   "P028": "CORRECT",
+   "P029": "CORRECT",
+   "P030": "CORRECT",
+   "P031": "CORRECT",
+   "P032": "CORRECT",
+   "P033": "CORRECT",
+   "P034": "CORRECT",
+   "P035": "CORRECT",
+   "P036": "CORRECT",
+   "P037": "CORRECT",
+   "P038": "CORRECT",
+   "P039": "CORRECT",
+   "P040": "WRONG",
+   "P041": "CORRECT",
+   "P042": "CORRECT",
+   "P043": "SCALE",
+   "P044": "CORRECT",
+   "P045": "CORRECT",
+   "P046": "CORRECT",
+   "P047": "CORRECT",
+   "P048": "CORRECT",
+   "P049": "WRONG",
+   "P050": "CORRECT",
+   "P051": "CORRECT",
+   "P052": "CORRECT",
+   "P053": "WRONG",
+   "P054": "CORRECT",
+   "P055": "CORRECT",
+   "P056": "CORRECT",
+   "P057": "CORRECT",
+   "P058": "CORRECT",
+   "P059": "CORRECT"
+  }
+ }
+}
