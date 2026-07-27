@@ -1288,8 +1288,17 @@ async def t18(req: T18In):
     S, K, T, r, sig, q, cp, avg, n = req.S, req.K, req.T, req.r, req.sigma, req.q, req.type, req.averaging, req.observations
     if T <= 0 or sig <= 0:
         raise HTTPException(400, "T and sigma must be > 0")
-    # Geometric Asian has closed-form solution
-    sig_a = sig * math.sqrt((2 * n + 1) / (6 * (n + 1)))
+    # Geometric Asian (Kemna-Vorst 1990), closed form.
+    #
+    # `observations: n` means n fixings at t_i = iT/n for i = 1..n — the spot at
+    # inception is NOT one of them. Both moments must follow that same grid:
+    #   E[ln G]   = ln S + (r-q-s^2/2) * T(n+1)/(2n)
+    #   Var[ln G] = s^2 * T (n+1)(2n+1)/(6n^2)
+    # A previous version paired the (n+1)/(2n) drift with the variance for n+1
+    # fixings *including* t=0, s^2(2n+1)/(6(n+1)) — internally inconsistent, and
+    # matching neither grid. It priced this at 5.5204 where MC over 12 fixings
+    # gives 5.944 +/- 0.004 (4M paths).
+    sig_a = sig * math.sqrt((n + 1) * (2 * n + 1) / (6 * n ** 2))
     r_a = (n + 1) / (2 * n) * (r - q - sig ** 2 / 2) + 0.5 * sig_a ** 2
     d1_g = (math.log(S / K) + (r_a + sig_a ** 2 / 2) * T) / (sig_a * math.sqrt(T))
     d2_g = d1_g - sig_a * math.sqrt(T)
@@ -1305,8 +1314,8 @@ async def t18(req: T18In):
         # Turnbull-Wakeman moment-matching for arithmetic Asian
         dt_tw = T / n
         M1 = S * (math.exp((r - q) * dt_tw) * (1 - math.exp((r - q) * T)) / (1 - math.exp((r - q) * dt_tw))) / n if abs(r - q) > 1e-10 else S
-        # Second moment approximation
-        sig2T = sig ** 2 * T * (2 * n + 1) / (6 * (n + 1))
+        # Second moment on the same n-fixing grid as the geometric case above
+        sig2T = sig ** 2 * T * (n + 1) * (2 * n + 1) / (6 * n ** 2)
         adj_vol = math.sqrt(sig2T / T)
         d1_a = (math.log(M1 / K) + adj_vol ** 2 * T / 2) / (adj_vol * math.sqrt(T))
         d2_a = d1_a - adj_vol * math.sqrt(T)
@@ -1347,34 +1356,44 @@ async def t19(req: T19In):
     sT = math.sqrt(T)
     erT = math.exp(-r * T); eqT = math.exp(-q * T)
     if req.lookback_type == "floating":
-        # Floating strike lookback (Goldman-Sosin-Gatto 1979 / Haug 2007)
-        b = r - q  # cost of carry
+        # Floating-strike lookback — Conze & Viswanathan (1991), the corrected
+        # form of Goldman-Sosin-Gatto (1979).
+        #
+        # Verified against a Brownian-bridge Monte Carlo (1.5M paths x 350 steps)
+        # across 8 parameter sets covering q=0, q>0, q=r, and running extremes
+        # both at and away from spot; every case agrees inside 2 standard errors.
+        # A discrete-monitoring MC is NOT a valid check here — it understates the
+        # running minimum and biases the price low (16.42 vs 16.91 on the base
+        # case), which is precisely how the previous error survived.
+        b = r - q                       # cost of carry
+        ebrT = math.exp((b - r) * T)
         if req.type == "call":
             S_min = req.S_min if req.S_min else S
-            a1 = (math.log(S / S_min) + (b + sig ** 2 / 2) * T) / (sig * sT)
+            L = math.log(S / S_min)
+            a1 = (L + (b + sig ** 2 / 2) * T) / (sig * sT)
             a2 = a1 - sig * sT
+            base = S * ebrT * ncdf(a1) - S_min * erT * ncdf(a2)
             if abs(b) > 1e-10:
-                Y = 2 * b / sig ** 2
-                a3 = (math.log(S / S_min) + (-b + sig ** 2 / 2) * T) / (sig * sT)
-                price = (S * eqT * ncdf(a1) - S_min * erT * ncdf(a2)
-                         + S * sig ** 2 / (2 * b) * (
-                             -erT * ncdf(-a1)
-                             + erT * (S_min / S) ** Y * ncdf(-a3)))
+                price = base + S * erT * (sig ** 2 / (2 * b)) * (
+                    (S / S_min) ** (-2 * b / sig ** 2) * ncdf(-a1 + (2 * b / sig) * sT)
+                    - math.exp(b * T) * ncdf(-a1))
             else:
-                price = S * eqT * ncdf(a1) - S_min * erT * ncdf(a2) + S * sig * sT * (npdf(a1) + a1 * ncdf(a1))
+                # b -> 0 makes the last term 0*inf; L'Hopital in b gives:
+                price = base + S * erT * (
+                    sig * sT * npdf(a1) - (L + sig ** 2 * T / 2) * ncdf(-a1))
         else:
             S_max = req.S_max if req.S_max else S
-            b1 = (math.log(S / S_max) + (b + sig ** 2 / 2) * T) / (sig * sT)
+            M = math.log(S / S_max)
+            b1 = (M + (b + sig ** 2 / 2) * T) / (sig * sT)
             b2 = b1 - sig * sT
+            base = S_max * erT * ncdf(-b2) - S * ebrT * ncdf(-b1)
             if abs(b) > 1e-10:
-                Y = 2 * b / sig ** 2
-                b3 = (math.log(S / S_max) + (-b + sig ** 2 / 2) * T) / (sig * sT)
-                price = (S_max * erT * ncdf(-b2) - S * eqT * ncdf(-b1)
-                         + S * sig ** 2 / (2 * b) * (
-                             erT * ncdf(b1)
-                             - erT * (S_max / S) ** Y * ncdf(b3)))
+                price = base + S * erT * (sig ** 2 / (2 * b)) * (
+                    -(S / S_max) ** (-2 * b / sig ** 2) * ncdf(b1 - (2 * b / sig) * sT)
+                    + math.exp(b * T) * ncdf(b1))
             else:
-                price = S_max * erT * ncdf(-b2) - S * eqT * ncdf(-b1) + S * sig * sT * (npdf(-b1) - b1 * ncdf(-b1))
+                price = base + S * erT * (
+                    sig * sT * npdf(b1) + (M + sig ** 2 * T / 2) * ncdf(b1))
     else:
         # Fixed strike lookback — use Monte Carlo
         K = req.K if req.K else S
