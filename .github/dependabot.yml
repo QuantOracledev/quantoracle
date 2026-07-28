@@ -1,0 +1,55 @@
+# Dependabot config for a project in maintenance mode.
+#
+# Intent: keep getting told about real vulnerabilities in code that is actually
+# deployed, and stop being told about everything else. QuantOracle is frozen —
+# no feature work — so routine version drift is noise, but a live paywall and a
+# public API still need security patches.
+#
+# `open-pull-requests-limit: 0` disables ROUTINE version-update PRs while leaving
+# Dependabot SECURITY updates fully enabled (those are governed by the repo's
+# security settings, not by this file). Grouping then collapses what does arrive
+# into one PR per ecosystem instead of one per package.
+#
+# Deployed surfaces, and why each is here:
+#   worker/      Cloudflare Worker — the x402 paywall. Ships the @x402 stack.
+#   mcp-server/  Express + MCP SDK, runs on the droplet.
+#   site/        Next.js on Vercel, public marketing + calculators.
+#
+# Deliberately NOT listed: integrations/* . Those are reference implementations
+# published as tutorials; nothing runs them in production. A tutorial's lockfile
+# does not warrant a PR. They are not deleted, because a live post on the site
+# curls those files directly from raw.githubusercontent.
+#
+# Triage rule that saves the most time: before patching, check whether the
+# package is reachable from a RUNTIME dependency or only from the build tree —
+# a Cloudflare Worker cannot execute sharp, but it does ship axios via @x402.
+# Getting that backwards means either chasing noise or shipping a real hole.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /worker
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      worker-security:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /mcp-server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      mcp-security:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      site-security:
+        patterns: ["*"]
