@@ -16,8 +16,11 @@
     "hono": "^4.12.31"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.0.0",
+    "@cloudflare/workers-types": "^5.20260727.1",
     "typescript": "^5.0.0",
     "wrangler": "^4.103.0"
+  },
+  "overrides": {
+    "axios": "^1.18.1"
   }
 }

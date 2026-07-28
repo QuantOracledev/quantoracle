@@ -41,6 +41,7 @@ UA = "quantoracle-watch/1.0 (+https://quantoracle.dev)"
 KRAKEN_PAIR = {"BTC": "XBTUSD"}
 TICK_SECS = 60
 REALERT_SECS = 6 * 3600          # re-alert cadence while still in breach
+FUNDING_FLIP_DEADBAND = 5e-5     # ignore funding sign-flips within +/-this per-interval rate (~5.5% APR). BTC funding was observed dithering at ~1.1e-5 (annualized ~1%) and crossing sign, so 1e-5 was too tight and still spammed; 5e-5 sits well above that noise floor while still catching real reversals (real meaningful funding is ~1e-4+).
 PAID_EXPIRY_WARN_SECS = 3 * 86400
 TRIAL_EXPIRY_WARN_SECS = 6 * 3600
 UPGRADE_CTA = "Extend 30 days for $5 via x402: POST https://api.quantoracle.dev/v1/watch/extend {monitor_id, token}."
@@ -227,7 +228,7 @@ def tick(verbose=False):
                 # Positive funding costs longs; negative costs shorts.
                 signed = rate if m["direction"] == "long" else -rate
                 st["funding_accum"] = st.get("funding_accum", 0.0) + signed * m["position_size"] * (dt / interval_s)
-                sign = 1 if rate > 1e-9 else (-1 if rate < -1e-9 else 0)
+                sign = 1 if rate > FUNDING_FLIP_DEADBAND else (-1 if rate < -FUNDING_FLIP_DEADBAND else 0)
                 prev = st.get("last_funding_sign")
                 if thr.get("funding_flip") and prev not in (None, 0) and sign != 0 and sign != prev:
                     record_alert(conn, m, "funding_flip",

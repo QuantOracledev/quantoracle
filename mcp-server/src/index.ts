@@ -37,6 +37,11 @@ const PAID_GATED_PATHS = new Set([
   "/v1/options/strategy-optimizer",
   "/v1/hedging/recommend",
   "/v1/crypto/leverage-check",
+  // Watch = paid-only recurring product ($5/30d). Route through the Worker so
+  // x402 is enforced; without these two, MCP served them backend-direct for FREE
+  // (leak found + fixed 2026-07-18). /v1/watch/trial stays free (backend-limited).
+  "/v1/watch/position",
+  "/v1/watch/extend",
   "/v1/batch",
 ]);
 
