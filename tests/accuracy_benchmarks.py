@@ -2054,6 +2054,179 @@ check(
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
+# REGRESSION GUARDS — 2026-07-29 accuracy audit
+# ══════════════════════════════════════════════════════════════════════════════
+# One check per defect the audit found, each written so it FAILS if the defect
+# returns. See eval/ACCURACY-AUDIT-2026-07-29.md.
+#
+# Read this before adding barrier/lookback cases: every expected value below comes
+# from an INDEPENDENT implementation (Reiner-Rubinstein and Conze-Viswanathan written
+# fresh from Hull/Haug, each cross-agreed with a continuous-monitoring Brownian-bridge
+# Monte Carlo) — never from QuantOracle's own output. An expected value produced by the
+# code under test cannot fail, which is exactly how the Asian-option error survived
+# months with a citation attached.
+#
+# And note WHERE the barriers sit. The pre-existing barrier test used H=50 against
+# S=100, so far from spot that every barrier term is ~0 and the result is
+# indistinguishable from the vanilla price. It passed against a pricer that was wrong
+# by 31-232%. These cases put the barrier where it actually binds.
+
+# ── A1: barrier exponent on the strike term, (H/S)^(2mu) not (H/S)^(2mu+2) ────
+for _name, _kind, _bt, _K, _H, _exp in [
+    ("down-out call", "call", "down-out", 95, 90, 9.229795),
+    ("down-in call", "call", "down-in", 95, 90, 1.847725),
+    ("up-out put", "put", "up-out", 105, 110, 6.470606),
+    ("up-in put", "put", "up-in", 105, 110, 1.925425),
+    # These two had NO closed form before the audit and fell to a 5k-path Monte
+    # Carlo, which returned a different price on every call (8-14% spread).
+    ("up-out call (was MC)", "call", "up-out", 95, 115, 1.483770),
+    ("down-out put (was MC)", "put", "down-out", 105, 90, 0.687350),
+]:
+    check(
+        name="Barrier %s, barrier NEAR spot (K=%g H=%g)" % (_name, _K, _H),
+        endpoint="/v1/derivatives/barrier-option",
+        category="Derivatives",
+        payload={"S": 100, "K": _K, "H": _H, "T": 0.5, "r": 0.05, "sigma": 0.25,
+                 "type": _kind, "barrier_type": _bt},
+        field_path="price",
+        expected=_exp,
+        tol=0.01,
+        citation="Reiner-Rubinstein (Hull ch.26) computed independently; agrees with a "
+                 "400k-path Brownian-bridge continuous-monitoring MC inside 2 s.e. "
+                 "See eval/ACCURACY-AUDIT-2026-07-29.md A1.",
+    )
+
+# in/out parity. Only meaningful now that each leg is priced independently — while
+# the code computed `in = vanilla - out`, this identity held by construction and so
+# could not detect that both legs were wrong together.
+check(
+    name="Barrier in/out parity: down-out + down-in = vanilla (independent legs)",
+    endpoint="/v1/derivatives/barrier-option",
+    category="Derivatives",
+    payload={"S": 100, "K": 95, "H": 90, "T": 0.5, "r": 0.05, "sigma": 0.25,
+             "type": "call", "barrier_type": "down-out"},
+    field_path="price",
+    expected=11.0775 - 1.847725,
+    tol=0.01,
+    citation="Vanilla 11.0775 minus the independently-priced down-in 1.847725.",
+)
+
+# ── A3: fixed-strike lookback must use the closed form, not a discrete-grid MC ─
+check(
+    name="Lookback fixed-strike CALL (closed form, not discrete MC)",
+    endpoint="/v1/derivatives/lookback-option",
+    category="Derivatives",
+    payload={"S": 100, "T": 0.5, "r": 0.05, "sigma": 0.3, "type": "call",
+             "lookback_type": "fixed", "K": 100},
+    field_path="price",
+    expected=19.131636,
+    tol=0.01,
+    citation="Conze-Viswanathan fixed-strike lookback, computed independently; "
+             "bridge MC gives 19.115 +/- 0.070. A 252-step discrete MC reads ~18.29 "
+             "(4.3% low) because grid monitoring understates the running maximum.",
+)
+check(
+    name="Lookback fixed-strike PUT (closed form, not discrete MC)",
+    endpoint="/v1/derivatives/lookback-option",
+    category="Derivatives",
+    payload={"S": 100, "T": 0.5, "r": 0.05, "sigma": 0.3, "type": "put",
+             "lookback_type": "fixed", "K": 100},
+    field_path="price",
+    expected=14.440519,
+    tol=0.01,
+    citation="Conze-Viswanathan; bridge MC 14.423 +/- 0.044. Discrete MC read ~13.61.",
+)
+
+# ── A6: charm must differ between call and put once q > 0 ─────────────────────
+check(
+    name="Charm (call) with dividend yield q=0.05",
+    endpoint="/v1/options/price",
+    category="Options",
+    payload={"S": 250, "K": 240, "T": 2.0, "r": 0.04, "sigma": 0.35, "q": 0.05,
+             "type": "call"},
+    field_path="greeks.charm",
+    expected=4.65518e-05,
+    tol=2e-7,
+    citation="d(delta)/dt including the q*e^{-qT}*N(d1) term. Dropping that term "
+             "returns -2.954e-05 — the wrong SIGN — and gives calls and puts the "
+             "same charm.",
+)
+check(
+    name="Charm (put) with q=0.05 must NOT equal the call's",
+    endpoint="/v1/options/price",
+    category="Options",
+    payload={"S": 250, "K": 240, "T": 2.0, "r": 0.04, "sigma": 0.35, "q": 0.05,
+             "type": "put"},
+    field_path="greeks.charm",
+    expected=-7.73986e-05,
+    tol=2e-7,
+    citation="Put charm carries -q*e^{-qT}*N(-d1); differs from the call by q*e^{-qT}.",
+)
+
+# ── A7: RSI must use Wilder smoothing, not a simple mean ─────────────────────
+_RSI_SERIES = [100 + 6 * math.sin(i / 5) + 0.3 * i for i in range(60)]
+check(
+    name="RSI uses Wilder smoothing (not a simple mean of n changes)",
+    endpoint="/v1/indicators/technical",
+    category="Indicators",
+    payload={"prices": _RSI_SERIES, "period": 14},
+    field_path="rsi",
+    expected=60.3576,
+    tol=0.01,
+    citation="Wilder (1978) smoothed averages, as TradingView/StockCharts compute. "
+             "A simple mean of the last 14 changes gives 36.30 on this series — a "
+             "24-point error that flips the endpoint's own BULLISH/BEARISH label.",
+)
+
+# ── A2: regression per-parameter stats must align with `coefficients` ────────
+check(
+    name="Regression: standard_errors aligns with coefficients (slope, not intercept)",
+    endpoint="/v1/stats/linear-regression",
+    category="Statistics",
+    payload={"x": [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+             "y": [2.1, 3.9, 6.2, 7.8, 10.1, 12.2, 13.8, 16.1, 18.0, 20.2]},
+    field_path="standard_errors.0",
+    expected=0.018242,
+    tol=1e-5,
+    citation="OLS slope standard error. Index 0 used to hold the INTERCEPT's 0.113191, "
+             "so standard_errors[i] described a different parameter than coefficients[i].",
+)
+check(
+    name="Regression: p_values[0] is the SLOPE's p-value",
+    endpoint="/v1/stats/linear-regression",
+    category="Statistics",
+    payload={"x": [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+             "y": [2.1, 3.9, 6.2, 7.8, 10.1, 12.2, 13.8, 16.1, 18.0, 20.2]},
+    field_path="p_values.0",
+    expected=0.0,
+    tol=1e-6,
+    citation="True slope p = 5.2e-14 (rounds to 0 at 6dp). This returned the "
+             "intercept's p = 1.0, inverting the significance conclusion.",
+)
+
+# ── A8: min_vol must actually minimise variance ───────────────────────────────
+# Two UNCORRELATED assets (period-2 vs period-4 alternation gives exactly rho=0),
+# with sigma_HI = 2*sigma_LO. For uncorrelated assets the min-variance weights are
+# w ∝ 1/sigma_i^2, so w = (0.2, 0.8) — verified against numpy.
+# Do NOT use two same-period alternating series here: they are perfectly correlated,
+# Sigma is singular, and the endpoint legitimately falls back instead of solving.
+check(
+    name="Portfolio min_vol reaches the true constrained optimum",
+    endpoint="/v1/portfolio/optimize",
+    category="Portfolio",
+    payload={"returns": {
+        "HI": [0.02, -0.02] * 30,
+        "LO": [0.01, 0.01, -0.01, -0.01] * 15,
+    }, "mode": "min_vol"},
+    field_path="weights.LO",
+    expected=0.8,
+    tol=0.01,
+    citation="Uncorrelated assets => w ∝ 1/sigma^2; sigma_HI=2*sigma_LO => w_LO=4/5. "
+             "The old fixed-step (0.01) projected gradient stalled short of this on "
+             "12 of 12 audit datasets (mean +1.89% excess vol).",
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
 # RUN + PRINT RESULTS
 # ══════════════════════════════════════════════════════════════════════════════
 
