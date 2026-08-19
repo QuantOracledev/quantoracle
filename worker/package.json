@@ -13,7 +13,7 @@
     "@x402/extensions": "^2.9.0",
     "@x402/hono": "^2.9.0",
     "@x402/svm": "^2.10.0",
-    "hono": "^4.12.31"
+    "hono": "^4.13.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260727.1",
@@ -21,6 +21,8 @@
     "wrangler": "^4.103.0"
   },
   "overrides": {
-    "axios": "^1.18.1"
+    "axios": "^1.18.1",
+    "fast-uri": "^3.1.5",
+    "undici": "^7.29.0"
   }
 }
