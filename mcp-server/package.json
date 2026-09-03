@@ -60,7 +60,7 @@
   },
   "overrides": {
     "hono": "^4.13.1",
-    "fast-uri": "^3.1.5",
+    "fast-uri": "^3.1.7",
     "ip-address": "^10.4.0"
   }
 }
