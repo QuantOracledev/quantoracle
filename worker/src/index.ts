@@ -405,7 +405,13 @@ async function getOutputSchema(path: string, env: Env): Promise<any | null> {
     };
   }
 
-  const summary: string = ep.summary || ep.description || `QuantOracle ${path.replace('/v1/', '')}`;
+  // FastAPI auto-generates `summary` from the handler name (e.g. "T28" for
+  // `async def t28`), which is meaningless to Bazaar/x402 indexers. Prefer the
+  // docstring-derived `description`, and only fall back to a summary that is
+  // not an auto-generated handler id.
+  const autoSummary = typeof ep.summary === 'string' && /^T\d+$/i.test(ep.summary.trim());
+  const summary: string =
+    ep.description || (!autoSummary && ep.summary) || `QuantOracle ${path.replace('/v1/', '')}`;
   const schema = {
     input: {
       discoverable: true,
