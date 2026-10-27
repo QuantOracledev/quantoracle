@@ -27,7 +27,7 @@
     "typescript": "^5.4.5"
   },
   "overrides": {
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "js-yaml": "^4.3.2",
     "nanoid": "^3.3.18",
     "postcss-selector-parser": "^6.1.3",
